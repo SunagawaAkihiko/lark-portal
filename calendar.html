@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>予定カレンダー</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="calendar.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="app-header">
+        <a href="index.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 戻る</a>
+        <h1><i class="fa-regular fa-calendar-check"></i> 予定カレンダー</h1>
+        <!-- 絞り込みボタンの代わりに直下のタブを使用 -->
+    </header>
+
+    <!-- 事業所選択タブ（横にスクロール可能） -->
+    <div class="office-tabs" id="office-tabs">
+        <!-- JSでタブが追加される -->
+    </div>
+
+    <!-- ローディング -->
+    <div id="loading" class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>予定を読み込み中...</p>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <main id="main-content" class="calendar-container hidden">
+        
+        <!-- 上部：選択された日の予定 -->
+        <section class="selected-day-section">
+            <h2 class="section-title" id="selected-date-title">今日の予定</h2>
+            <div id="selected-day-events" class="events-list">
+                <!-- イベントカードが入る -->
+            </div>
+        </section>
+
+        <!-- 下部：1ヶ月カレンダー -->
+        <section class="monthly-calendar-section">
+            <div class="calendar-header">
+                <button id="prev-month" class="month-nav-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                <h2 id="current-month-title">2026年 4月</h2>
+                <button id="next-month" class="month-nav-btn"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="calendar-grid">
+                <div class="weekday sun">日</div>
+                <div class="weekday">月</div>
+                <div class="weekday">火</div>
+                <div class="weekday">水</div>
+                <div class="weekday">木</div>
+                <div class="weekday">金</div>
+                <div class="weekday sat">土</div>
+            </div>
+            <!-- カレンダーの日付がここに入る -->
+            <div id="calendar-days" class="calendar-days"></div>
+        </section>
+
+    </main>
+
+    <!-- 追加ボタン -->
+    <button id="add-event-fab" class="add-event-fab"><i class="fa-solid fa-pen"></i> 登録</button>
+
+    <!-- 予定登録モーダル -->
+    <div id="add-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>新しい予定を登録</h2>
+                <button id="close-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="add-event-form" class="event-form">
+                <div class="form-group">
+                    <label>日付</label>
+                    <div class="date-time-selectors">
+                        <select id="input-year" required></select> <span class="dt-label">年</span>
+                        <select id="input-month" required></select> <span class="dt-label">月</span>
+                        <select id="input-day" required></select> <span class="dt-label">日</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>事業所</label>
+                    <select id="input-office" required>
+                        <option value="">選択してください</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>氏名</label>
+                    <select id="input-name-select" required>
+                        <option value="">先に事業所を選択してください</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>予定時間</label>
+                    <div class="date-time-selectors">
+                        <select id="input-hour" required></select> <span class="dt-label">時</span>
+                        <select id="input-minute" required></select> <span class="dt-label">分</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>予定内容</label>
+                    <select id="input-type" required>
+                        <option value="">選択してください</option>
+                        <option value="外部病院受診">外部病院受診</option>
+                        <option value="訪問診療">訪問診療</option>
+                        <option value="要介護認定訪問調査">要介護認定訪問調査</option>
+                        <option value="担当者会議">担当者会議</option>
+                        <option value="家族と外出">家族と外出</option>
+                        <option value="面会">面会</option>
+                        <option value="訪問歯科">訪問歯科</option>
+                        <option value="訪問看護">訪問看護</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>自由入力（補足メモ）</label>
+                    <input type="text" id="input-memo" placeholder="例：往診時間14:00〜">
+                </div>
+                <button type="submit" class="submit-btn" id="submit-event-btn">登録する</button>
+                <div id="submit-loading" class="hidden" style="text-align: center; margin-top: 10px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> 登録中...
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="calendar.js"></script>
+</body>
+</html>
