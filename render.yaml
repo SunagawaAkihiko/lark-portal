@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: lark-portal
+    env: static
+    buildCommand: ''
+    staticPublishPath: ./
