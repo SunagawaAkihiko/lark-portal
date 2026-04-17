@@ -11,7 +11,7 @@ const portalLinks = [
         title: "予定カレンダー",
         description: "スケジュールの確認や登録を行います",
         icon: "fa-calendar-days",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pge9ZhRdApsgVj7K"
+        url: "calendar.html"
     },
     {
         title: "各種データ",
