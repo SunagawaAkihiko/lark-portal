@@ -9,6 +9,7 @@ const API_BASE = isLocal
 
 let calendarData = [];
 let customersData = []; // Larkの顧客情報
+let fieldOptions = {}; // カレンダーテーブルのフィールド選択肢（Larkの正確な選択肢名を保持する）
 let currentOfficeFilter = "";
 
 let currentDate = new Date(); // 現在表示中の月（カレンダー用）
@@ -72,12 +73,16 @@ async function fetchInitialData() {
 }
 
 // Larkのフィールド定義APIから単一選択の選択肢を取得し、フォームに動的反映する
+// 取得した選択肢はglobalのfieldOptionsに保持し、氏名フォームの生成にも利用する
 async function fetchFieldOptions() {
     try {
         const res = await fetch(`${API_BASE}/api/calendar/fields`);
         if (!res.ok) return;
         const json = await res.json();
         const data = json.data || {};
+
+        // グローバル変数に保存（updateNameSelectOptionsで参照するため）
+        fieldOptions = data;
 
         // 「予定選択」の選択肢を動的に生成する
         const typeSelect = document.getElementById('input-type');
@@ -164,27 +169,50 @@ async function fetchCalendarData() {
 }
 
 function extractOffices(data) {
-    const offices = new Set();
-    data.forEach(item => { if (item.office) offices.add(item.office); });
-    
+    // 顧客マスターから事業所名を抽出する（スペース除去して比較用）
+    const customerOffices = new Set();
+    data.forEach(item => { if (item.office) customerOffices.add(item.office.trim()); });
+
+    // カレンダーテーブルの「事業所」Lark選択肢が取得済みであれば優先して使用する
+    // これにより inputOffice の value が必ずLarkの正確な選択肢文字列になる
+    const calendarOfficeOptions = fieldOptions['事業所'] || [];
+    let officeArray;
+    if (calendarOfficeOptions.length > 0) {
+        // Lark選択肢の中で顧客マスターにも存在する事業所のみ表示する
+        officeArray = calendarOfficeOptions.filter(calOff =>
+            Array.from(customerOffices).some(custOff =>
+                custOff.replace(/\s/g, '') === calOff.replace(/\s/g, '')
+            )
+        );
+        // Lark選択肢にない事業所も顧客マスターにあれば追加する（念のため）
+        customerOffices.forEach(custOff => {
+            if (!officeArray.some(o => o.replace(/\s/g, '') === custOff.replace(/\s/g, ''))) {
+                officeArray.push(custOff);
+            }
+        });
+    } else {
+        // フォールバック：顧客データの事業所名をそのまま使用する
+        officeArray = Array.from(customerOffices);
+    }
+
     // 任意の並び順を設定
     const order = ["大浦家", "上津役家"];
-    const officeArray = Array.from(offices).sort((a, b) => {
+    officeArray.sort((a, b) => {
         let idxA = order.indexOf(a);
         let idxB = order.indexOf(b);
         if (idxA === -1) idxA = 999;
         if (idxB === -1) idxB = 999;
         return idxA - idxB;
     });
-    
+
     officeTabs.innerHTML = '';
     inputOffice.innerHTML = '<option value="">選択してください</option>';
-    
+
     // 初期選択を最初の事業所に
     if (officeArray.length > 0 && !currentOfficeFilter) {
         currentOfficeFilter = officeArray[0];
     }
-    
+
     officeArray.forEach(off => {
         const btn = document.createElement('button');
         btn.className = 'office-tab';
@@ -192,7 +220,7 @@ function extractOffices(data) {
         btn.dataset.office = off;
         btn.textContent = off;
         officeTabs.appendChild(btn);
-        
+
         const option = document.createElement('option');
         option.value = off; option.textContent = off;
         inputOffice.appendChild(option);
@@ -211,24 +239,38 @@ function extractOffices(data) {
 }
 
 function updateNameSelectOptions(office) {
-    inputNameSelect.innerHTML = '<option value="">選択してください</option>';
-    
     if (!office) {
         inputNameSelect.innerHTML = '<option value="">先に事業所を選択してください</option>';
-        inputNameText.classList.add('hidden');
-        inputNameText.disabled = true;
         return;
     }
 
-    const names = new Set();
+    inputNameSelect.innerHTML = '<option value="">選択してください</option>';
+
+    // カレンダーテーブルの「氏名」単一選択オプション（Larkの正確な文字列）
+    // これを使わないと SingleSelectFieldConvFail (code=1254062) が発生する
+    const calendarNames = fieldOptions['氏名'] || [];
+
+    // 顧客マスターから対象事業所・契約中の利用者名を取得する（スペース除去して比較用に使う）
+    const customerNamesInOffice = new Set();
     customersData.forEach(item => {
-        // 契約が「終了」の人は除外する
         if (item.office === office && item.name && !item.status.includes('終了')) {
-            names.add(item.name.trim());
+            customerNamesInOffice.add(item.name.trim().replace(/\s/g, ''));
         }
     });
 
-    Array.from(names).sort().forEach(n => {
+    let namesToShow;
+    if (calendarNames.length > 0) {
+        // カレンダー選択肢を優先：顧客マスターの該当事業所に存在する名前のみ表示する
+        // スペースを無視して突き合わせることで表記ゆれ（半角スペース等）を吸収する
+        namesToShow = calendarNames.filter(calName => {
+            return customerNamesInOffice.has(calName.replace(/\s/g, ''));
+        });
+    } else {
+        // fieldOptionsが未取得の場合はフォールバックとして顧客データをそのまま使用する
+        namesToShow = Array.from(customerNamesInOffice).sort();
+    }
+
+    namesToShow.sort().forEach(n => {
         const opt = document.createElement('option');
         opt.value = n; opt.textContent = n;
         inputNameSelect.appendChild(opt);
