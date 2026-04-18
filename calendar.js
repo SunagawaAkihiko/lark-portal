@@ -1,4 +1,12 @@
-const API_BASE = "https://attendance-app-irf1.onrender.com"; // 本番環境
+// URLがローカル(localhost, 127.0.0.1) または ファイルプロトコル(file://) の場合はローカルのNodeサーバーを参照する
+const isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1' ||
+                window.location.protocol === 'file:';
+
+const API_BASE = isLocal
+    ? "http://localhost:3000"
+    : "https://attendance-app-irf1.onrender.com";
+
 
 let calendarData = [];
 let customersData = []; // Larkの顧客情報
