@@ -216,8 +216,6 @@
       color: var(--text-color);
       line-height: 1.15;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     /* 単位（kg / ml など） */
     .record-grid-unit {
@@ -227,16 +225,17 @@
       margin-left: 0.1rem;
     }
     /* テキスト・選択値は2列分の幅で左寄せ表示 */
+    /* テキスト・選択値はグリッド全幅に広げて1行で収める */
     .record-grid-item.wide {
-      grid-column: span 2;
+      grid-column: 1 / -1;
       text-align: left;
       padding: 0.35rem 0.6rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
-    .record-grid-item.wide .record-grid-label { margin-bottom: 0; white-space: nowrap; }
-    .record-grid-item.wide .record-grid-value { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-grid-item.wide .record-grid-label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
+    .record-grid-item.wide .record-grid-value { font-size: 0.95rem; white-space: nowrap; }
     .no-records {
       text-align: center;
       color: var(--text-muted);
