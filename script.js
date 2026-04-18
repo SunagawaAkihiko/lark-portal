@@ -17,7 +17,7 @@ const portalLinks = [
         title: "各種データ",
         description: "バイタル、体重、排便、食事摂取量、水分摂取量などのデータ閲覧・登録を行います",
         icon: "fa-database",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgePfVQfRj1rBX7H"
+        url: "care-record.html"
     },
     {
         title: "ヘルパー記録",
