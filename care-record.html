@@ -368,10 +368,21 @@
       border-left: 4px solid #7c6b5e;
       gap: 0.8rem;
     }
-    .delete-record-info { flex: 1; }
-    .delete-record-info .dr-name  { font-weight: 700; font-size: 1rem; }
-    .delete-record-info .dr-date  { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
-    .delete-record-info .dr-vals  { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .delete-record-info { flex: 1; min-width: 0; }
+    /* 日付: カードと同様にオレンジ・やや大きめで一番目立つ */
+    .delete-record-info .dr-date { font-size: 1rem; font-weight: 700; color: var(--primary-color); }
+    /* 氏名: 日付の下に太字で表示 */
+    .delete-record-info .dr-name { font-size: 0.95rem; font-weight: 700; margin-top: 0.15rem; }
+    /* データ概要: 明るいグレーより少し濃く、1行で収める */
+    .delete-record-info .dr-vals {
+      font-size: 0.82rem;
+      color: var(--text-color);
+      opacity: 0.7;
+      margin-top: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .delete-item-btn {
       flex-shrink: 0;
       background: #e63946;
@@ -731,6 +742,20 @@
       }
     }
 
+    // ==================== モーダル開閉ヘルパー ====================
+    // モーダルを開く際にbodyのスクロールを固定して横揺れを防ぐ
+    function openModal(el) {
+      el.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal(el) {
+      el.classList.add('hidden');
+      // すべてのモーダルが閉じた場合のみスクロールを復元する
+      if (document.querySelectorAll('.modal:not(.hidden)').length === 0) {
+        document.body.style.overflow = '';
+      }
+    }
+
     // ==================== 登録モーダル制御 ====================
     fabAdd.addEventListener('click', () => {
       const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
@@ -745,7 +770,7 @@
       buildDynamicFields(currentTable);
       formMsg.textContent = '';
       formMsg.className   = 'form-msg';
-      addModal.classList.remove('hidden');
+      openModal(addModal);
     });
 
     // 登録モーダル内の事業所変更で氏名リストを更新する
@@ -753,8 +778,8 @@
       updateNameOptions(inputOffice.value, inputName);
     });
 
-    closeAddModal.addEventListener('click', () => addModal.classList.add('hidden'));
-    addModal.addEventListener('click', e => { if (e.target === addModal) addModal.classList.add('hidden'); });
+    closeAddModal.addEventListener('click', () => closeModal(addModal));
+    addModal.addEventListener('click', e => { if (e.target === addModal) closeModal(addModal); });
 
     // ==================== 動的フィールド生成 ====================
     // テーブルごとに固有フィールドの入力欄をHTMLで生成する
@@ -823,7 +848,7 @@
         formMsg.textContent = '登録しました！';
         formMsg.className   = 'form-msg ok';
         setTimeout(() => {
-          addModal.classList.add('hidden');
+          closeModal(addModal);
           // 登録後に一覧を再取得する
           loadRecords(office, selName.value);
         }, 800);
@@ -844,11 +869,11 @@
         return;
       }
       buildDeleteList();
-      deleteModal.classList.remove('hidden');
+      openModal(deleteModal);
     });
 
-    closeDeleteModal.addEventListener('click', () => deleteModal.classList.add('hidden'));
-    deleteModal.addEventListener('click', e => { if (e.target === deleteModal) deleteModal.classList.add('hidden'); });
+    closeDeleteModal.addEventListener('click', () => closeModal(deleteModal));
+    deleteModal.addEventListener('click', e => { if (e.target === deleteModal) closeModal(deleteModal); });
 
     // ==================== 削除一覧の構築 ====================
     function buildDeleteList() {
@@ -862,8 +887,8 @@
 
         return `<div class="delete-record-item" data-id="${r.id}">
           <div class="delete-record-info">
-            <div class="dr-name">${r.name || '—'}</div>
             <div class="dr-date">${r.date || '—'}</div>
+            <div class="dr-name">${r.name || '—'}</div>
             ${summary ? `<div class="dr-vals">${summary}</div>` : ''}
           </div>
           <button class="delete-item-btn" data-id="${r.id}">
