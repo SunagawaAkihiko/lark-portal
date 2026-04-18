@@ -60,8 +60,25 @@
 
     </main>
 
-    <!-- 追加ボタン -->
+    <!-- 削除ボタン（左下） -->
+    <button id="delete-event-fab" class="delete-event-fab"><i class="fa-solid fa-trash"></i> 削除</button>
+
+    <!-- 追加ボタン（右下） -->
     <button id="add-event-fab" class="add-event-fab"><i class="fa-solid fa-pen"></i> 登録</button>
+
+    <!-- 予定削除モーダル -->
+    <div id="delete-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-trash"></i> 予定を削除</h2>
+                <button id="close-delete-modal-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p id="delete-modal-date-label" class="delete-date-label"></p>
+            <div id="delete-event-list" class="delete-event-list">
+                <!-- 削除対象の予定リストがJSで挿入される -->
+            </div>
+        </div>
+    </div>
 
     <!-- 予定登録モーダル -->
     <div id="add-modal" class="modal hidden">

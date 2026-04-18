@@ -198,17 +198,32 @@ body {
     background-color: var(--today-color);
 }
 
-/* FAB */
-.add-event-fab {
-    position: fixed; bottom: 2rem; right: 2rem;
+/* FAB 共通ベース */
+.add-event-fab,
+.delete-event-fab {
+    position: fixed; bottom: 2rem;
     padding: 1rem 1.5rem; border-radius: 30px;
-    background-color: var(--today-color); color: white;
-    border: none; font-size: 1.1rem; font-weight: bold;
-    box-shadow: 0 4px 10px rgba(247, 37, 133, 0.4);
+    color: white; border: none; font-size: 1.1rem; font-weight: bold;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     gap: 0.5rem; z-index: 20; transition: transform 0.2s;
 }
-.add-event-fab:active { transform: scale(0.95); }
+.add-event-fab:active,
+.delete-event-fab:active { transform: scale(0.95); }
+
+/* 登録FAB（右下） */
+.add-event-fab {
+    right: 2rem;
+    background-color: var(--today-color);
+    box-shadow: 0 4px 10px rgba(231, 111, 81, 0.4);
+}
+
+/* 削除FAB（左下） */
+.delete-event-fab {
+    left: 2rem;
+    background-color: #7c6b5e;
+    box-shadow: 0 4px 10px rgba(100, 80, 60, 0.3);
+}
+.delete-event-fab:hover { background-color: #6a5a4e; }
 
 /* モーダル */
 .filter-panel, .modal {
@@ -275,6 +290,134 @@ body {
     color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 500;
+}
+
+/* 削除モーダル内のスタイル */
+.delete-date-label {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+.delete-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+/* 削除候補イベントカード（タップで削除） */
+.delete-event-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    border-left: 4px solid #7c6b5e;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    gap: 0.8rem;
+}
+.delete-event-item-info {
+    flex: 1;
+}
+.delete-event-item-info .ev-time {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+.delete-event-item-info .ev-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 0.2rem;
+}
+.delete-event-item-info .ev-type {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+/* 削除実行ボタン（各カード内） */
+.delete-item-btn {
+    flex-shrink: 0;
+    background: #e63946;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: background 0.2s;
+}
+.delete-item-btn:active { background: #c02030; }
+/* 削除候補がない場合 */
+.no-delete-events {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 0;
+}
+
+/* ================================================
+   横画面レイアウト（スマートフォン横向き）
+   カレンダーを左側、選択日の予定を右側に並べる
+   ================================================ */
+@media (orientation: landscape) and (max-height: 600px) {
+    /* ヘッダーとタブを小さくして縦スペースを節約する */
+    .app-header {
+        padding: 0.5rem 1rem;
+    }
+    .app-header h1 { font-size: 1rem; }
+    .office-tabs {
+        padding: 0.4rem 1rem;
+        top: 46px; /* 縮んだヘッダーに合わせて調整 */
+    }
+
+    /* コンテナを横並びに切り替える */
+    .calendar-container {
+        flex-direction: row;
+        align-items: flex-start;
+        max-width: 100%;
+        padding: 0.6rem;
+        padding-bottom: 4rem;
+        gap: 0.8rem;
+        /* 画面高から ヘッダー＋タブ分を引いた高さに収める */
+        max-height: calc(100vh - 90px);
+        overflow: hidden;
+    }
+
+    /* カレンダーを左側に固定（順序を入れ替える） */
+    .monthly-calendar-section {
+        order: 0;
+        flex: 0 0 52%;
+        overflow-y: auto;
+        max-height: calc(100vh - 90px);
+    }
+
+    /* 予定リストを右側に（スクロール可能） */
+    .selected-day-section {
+        order: 1;
+        flex: 1;
+        overflow-y: auto;
+        max-height: calc(100vh - 90px);
+    }
+
+    /* 横画面ではカレンダーのセルを少し小さくする */
+    .day-cell {
+        font-size: 0.85rem;
+    }
+    .calendar-header h2 { font-size: 1rem; }
+
+    /* FABを少し小さく */
+    .add-event-fab,
+    .delete-event-fab {
+        padding: 0.7rem 1.1rem;
+        font-size: 0.95rem;
+        bottom: 1rem;
+    }
+    .add-event-fab { right: 1rem; }
+    .delete-event-fab { left: 1rem; }
 }
 
 /* アニメーション */

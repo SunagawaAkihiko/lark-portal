@@ -27,6 +27,13 @@ const addEventForm = document.getElementById('add-event-form');
 const inputOffice = document.getElementById('input-office');
 const inputNameSelect = document.getElementById('input-name-select');
 
+// 削除モーダル関連のDOM要素
+const deleteEventFab = document.getElementById('delete-event-fab');
+const deleteModal = document.getElementById('delete-modal');
+const closeDeleteModalBtn = document.getElementById('close-delete-modal-btn');
+const deleteEventList = document.getElementById('delete-event-list');
+const deleteModalDateLabel = document.getElementById('delete-modal-date-label');
+
 const calendarDays = document.getElementById('calendar-days');
 const currentMonthTitle = document.getElementById('current-month-title');
 const prevMonthBtn = document.getElementById('prev-month');
@@ -41,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     addEventFab.addEventListener('click', () => addModal.classList.remove('hidden'));
     closeModalBtn.addEventListener('click', () => addModal.classList.add('hidden'));
     addEventForm.addEventListener('submit', handleAddEvent);
+
+    // 削除FABクリック → 選択中の日付のイベントリストを削除モーダルに表示する
+    deleteEventFab.addEventListener('click', openDeleteModal);
+    closeDeleteModalBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
 
     prevMonthBtn.addEventListener('click', () => changeMonth(-1));
     nextMonthBtn.addEventListener('click', () => changeMonth(1));
@@ -491,6 +502,81 @@ function renderSelectedDay() {
         `;
         selectedDayEvents.appendChild(card);
     });
+}
+
+// 削除モーダルを開き、選択中の日付・事業所の予定一覧を表示する
+function openDeleteModal() {
+    const dateStr = formatYMD(selectedDate);
+    const formatted = dateStr.replace(/-/g, '/');
+    deleteModalDateLabel.textContent = `${formatted} の予定（${currentOfficeFilter}）`;
+
+    // 選択中の日付＋事業所でフィルタリングして表示する
+    const filtered = getFilteredData().filter(item => item.date === dateStr);
+    const sorted = filtered.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+
+    deleteEventList.innerHTML = '';
+
+    if (sorted.length === 0) {
+        deleteEventList.innerHTML = `<div class="no-delete-events">この日の予定はありません</div>`;
+    } else {
+        sorted.forEach(ev => {
+            const item = document.createElement('div');
+            item.className = 'delete-event-item';
+            item.innerHTML = `
+                <div class="delete-event-item-info">
+                    <div class="ev-time">${ev.time || "未定"}</div>
+                    <div class="ev-name">${ev.name || "名称なし"}</div>
+                    <div class="ev-type">${ev.type || ""} ${ev.memo ? '／' + ev.memo : ''}</div>
+                </div>
+                <button class="delete-item-btn" data-id="${ev.id}">
+                    <i class="fa-solid fa-trash"></i> 削除
+                </button>
+            `;
+            // 削除ボタンにイベントを付与する
+            item.querySelector('.delete-item-btn').addEventListener('click', () => {
+                handleDeleteEvent(ev.id, ev.name, ev.time, item);
+            });
+            deleteEventList.appendChild(item);
+        });
+    }
+
+    deleteModal.classList.remove('hidden');
+}
+
+// 指定されたレコードIDの予定をLark APIから削除する
+async function handleDeleteEvent(recordId, name, time, itemEl) {
+    const label = `${name || "この予定"}（${time || "未定"}）`;
+    if (!confirm(`「${label}」を削除しますか？`)) return;
+
+    // ボタンを無効化してダブルタップを防ぐ
+    const btn = itemEl.querySelector('.delete-item-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/calendar/delete/${recordId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error("削除リクエスト失敗");
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || "削除失敗");
+
+        // 削除成功 → カードをフェードアウトして除去する
+        itemEl.style.transition = 'opacity 0.3s';
+        itemEl.style.opacity = '0';
+        setTimeout(() => itemEl.remove(), 300);
+
+        // 予定データを再取得して画面を更新する
+        loading.classList.remove('hidden');
+        mainContent.classList.add('hidden');
+        deleteModal.classList.add('hidden');
+        fetchCalendarData();
+
+    } catch(err) {
+        alert('削除に失敗しました: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-trash"></i> 削除';
+    }
 }
 
 async function handleAddEvent(e) {
