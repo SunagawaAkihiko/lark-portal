@@ -336,6 +336,12 @@
       outline: none;
       border-color: var(--primary-color);
     }
+    /* iOSでdate入力がネイティブ幅になるのを防ぐ */
+    .form-group input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+    }
     .submit-btn {
       width: 100%;
       padding: 0.85rem;
