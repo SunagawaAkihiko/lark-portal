@@ -7,7 +7,6 @@ const API_BASE = isLocal
     ? "http://localhost:3000"
     : "https://attendance-app-irf1.onrender.com";
 
-
 let calendarData = [];
 let customersData = []; // Larkの顧客情報
 let currentOfficeFilter = "";
@@ -68,7 +67,54 @@ function formatYMD(dateObj) {
 
 async function fetchInitialData() {
     await fetchCustomersData();
+    await fetchFieldOptions();
     await fetchCalendarData();
+}
+
+// Larkのフィールド定義APIから単一選択の選択肢を取得し、フォームに動的反映する
+async function fetchFieldOptions() {
+    try {
+        const res = await fetch(`${API_BASE}/api/calendar/fields`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const data = json.data || {};
+
+        // 「予定選択」の選択肢を動的に生成する
+        const typeSelect = document.getElementById('input-type');
+        if (data['予定選択'] && typeSelect) {
+            typeSelect.innerHTML = '<option value="">選択してください</option>';
+            data['予定選択'].forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                typeSelect.appendChild(opt);
+            });
+        }
+
+        // 「予定時間」の選択肢を動的に生成する
+        const hourSelect = document.getElementById('input-hour');
+        const minuteSelect = document.getElementById('input-minute');
+        if (data['予定時間'] && hourSelect) {
+            // 既存の選択肢をクリアして再生成する
+            hourSelect.innerHTML = '';
+            minuteSelect.innerHTML = '';
+
+            data['予定時間'].forEach(name => {
+                const opt = document.createElement('option');
+                // 「未定」は空値、それ以外はそのまま値にする
+                opt.value = name === '未定' ? '' : name;
+                opt.textContent = name;
+                hourSelect.appendChild(opt);
+            });
+
+            // 分セレクトは使わないので非表示にする（時間は予定時間の1セレクトで完結）
+            minuteSelect.style.display = 'none';
+            const dtLabel = minuteSelect.nextElementSibling;
+            if (dtLabel) dtLabel.style.display = 'none';
+        }
+    } catch(e) {
+        console.warn('[fetchFieldOptions] 選択肢の取得に失敗しました（フォールバックを使用）:', e);
+    }
 }
 
 async function fetchCustomersData() {
@@ -408,16 +454,13 @@ function renderSelectedDay() {
 async function handleAddEvent(e) {
     e.preventDefault();
     
-   
-
     const y = document.getElementById('input-year').value;
     const m = document.getElementById('input-month').value;
     const d = document.getElementById('input-day').value;
     const dateStr = `${y}-${m}-${d}`;
 
-    const h = document.getElementById('input-hour').value;
-    const min = document.getElementById('input-minute').value;
-    const timeStr = (h === '' || min === '') ? '' : `${h}:${min}`;
+    // 予定時間はLarkのフィールド定義から動的生成した1セレクト（HH:MM形式または空）
+    const timeStr = document.getElementById('input-hour').value || '';
 
     const payload = {
         date: dateStr,
