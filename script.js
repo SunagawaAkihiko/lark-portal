@@ -9,7 +9,7 @@
 const portalLinks = [
     {
         title: "予定カレンダー",
-        description: "スケジュールの確認や登録を行います",
+        description: "本日の予定確認とスケジュールの新規登録",
         icon: "fa-calendar-days",
         url: "calendar.html"
     },

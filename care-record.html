@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ケア記録</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ==================== 変数・リセット ==================== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+    }
+    .hidden { display: none !important; }
+
+    /* ==================== 事業所タブバー（1段目・最上部） ==================== */
+    /* pill形状・オレンジ系カラー（テーブルタブのブラウン角丸と対比） */
+    .office-tabs {
+      display: flex;
+      overflow-x: auto;
+      background: var(--bg-color);
+      padding: 0.6rem 1rem;
+      gap: 0.6rem;
+      position: sticky;
+      top: 0;
+      z-index: 21;
+      box-shadow: 0 1px 4px rgba(139,115,95,0.10);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .office-tabs::-webkit-scrollbar { display: none; }
+    /* 事業所タブ: 丸みが大きいpill形状、オレンジ系カラー */
+    .office-tab {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 0.38rem 1.3rem;
+      border-radius: 20px;
+      border: 1.5px solid var(--primary-color);
+      background: var(--card-bg);
+      color: var(--primary-color);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .office-tab.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    /* ==================== テーブルタブバー（2段目） ==================== */
+    /* 角丸が小さい長方形・ブラウン系カラー（事業所タブのpill/オレンジと対比） */
+    .tab-bar {
+      display: flex;
+      overflow-x: auto;
+      background: #ede0d4;
+      padding: 0.55rem 1rem;
+      gap: 0.5rem;
+      position: sticky;
+      top: 44px; /* 事業所タブバーの高さ分オフセット */
+      z-index: 20;
+      border-bottom: 2px solid #c9a98a;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    /* テーブルタブ: 角丸が小さい長方形、ブラウン系カラー */
+    .tab-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 0.4rem 1.1rem;
+      border-radius: 6px;
+      border: 1.5px solid #9a7a6b;
+      background: #f5ebe0;
+      color: #6b4f3a;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .tab-btn.active {
+      background: #6b4f3a;
+      color: white;
+      border-color: #6b4f3a;
+    }
+
+    /* ==================== 氏名フィルターバー（3段目） ==================== */
+    .name-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 1rem;
+      background: var(--bg-color);
+      position: sticky;
+      top: 96px; /* 事業所タブ(44px) + テーブルタブ(52px) の合計高さ */
+      z-index: 18;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .name-bar select {
+      flex: 1;
+      padding: 0.6rem 0.5rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--text-color);
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="5"><path fill="%23888" d="M0 0l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 0.6rem center;
+      background-size: 10px 5px;
+      background-color: var(--card-bg);
+    }
+    /* 「全員」ボタン: 選択中の事業所の全データを表示する */
+    .all-btn {
+      padding: 0.6rem 1rem;
+      border: 1.5px solid var(--primary-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--primary-color);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .all-btn:active {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    /* ==================== メインコンテンツ ==================== */
+    .main-content {
+      padding: 1rem;
+      padding-bottom: 7rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ==================== ローディング ==================== */
+    .loading-state {
+      text-align: center;
+      padding: 3rem 0;
+      color: var(--text-muted);
+    }
+    .loading-state i { font-size: 2rem; color: var(--primary-color); display: block; margin-bottom: 0.8rem; }
+
+    /* ==================== レコードカード（A案: 数値ボックス型） ==================== */
+    .record-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--primary-color);
+    }
+    /* ヘッダー: 氏名（左）＋ 日付（右） */
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+    }
+    .record-date { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+    .record-name { font-size: 1rem; font-weight: 700; }
+    /* 各項目を小ボックスに入れてグリッド配置する */
+    .record-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+      gap: 0.4rem;
+    }
+    .record-grid-item {
+      background: white;
+      border-radius: 8px;
+      padding: 0.35rem 0.3rem 0.45rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    /* ラベル（ボックス上部に小さく） */
+    .record-grid-label {
+      display: block;
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      margin-bottom: 0.18rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* 値（大きく中央に） */
+    .record-grid-value {
+      display: block;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-color);
+      line-height: 1.15;
+    }
+    /* 単位（kg / ml など） */
+    .record-grid-unit {
+      font-size: 0.66rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 0.1rem;
+    }
+    /* テキスト・選択値は2列分の幅で左寄せ表示 */
+    .record-grid-item.wide {
+      grid-column: span 2;
+      text-align: left;
+      padding: 0.35rem 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .record-grid-item.wide .record-grid-label { margin-bottom: 0; white-space: nowrap; }
+    .record-grid-item.wide .record-grid-value { font-size: 0.95rem; }
+    .no-records {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 3rem 0;
+      background: var(--card-bg);
+      border-radius: 12px;
+    }
+
+    /* ==================== FABボタン ==================== */
+    /* 共通ベース */
+    .fab {
+      position: fixed;
+      bottom: 1.8rem;
+      padding: 0.9rem 1.4rem;
+      border-radius: 30px;
+      border: none;
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 30;
+      transition: transform 0.15s;
+    }
+    .fab:active { transform: scale(0.95); }
+    /* 登録FAB（右下） */
+    .fab-add {
+      right: 1.5rem;
+      background-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(231,111,81,0.4);
+    }
+    /* 削除FAB（左下） */
+    .fab-delete {
+      left: 1.5rem;
+      background-color: #7c6b5e;
+      box-shadow: 0 4px 10px rgba(100,80,60,0.3);
+    }
+
+    /* ==================== モーダル（ボトムシート型） ==================== */
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+    }
+    .modal-content {
+      background: var(--bg-color);
+      width: 100%;
+      padding: 1.5rem;
+      border-radius: 20px 20px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.8rem;
+    }
+    .modal-header h2 { font-size: 1.1rem; }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    /* ==================== 登録フォーム ==================== */
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.88rem;
+      margin-bottom: 0.4rem;
+      color: var(--text-muted);
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: var(--card-bg);
+      color: var(--text-color);
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary-color);
+      color: white;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+    .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .form-msg {
+      text-align: center;
+      margin-top: 0.8rem;
+      font-size: 0.9rem;
+      min-height: 1.2em;
+    }
+    .form-msg.ok  { color: #2a9d4e; }
+    .form-msg.err { color: #e63946; }
+
+    /* ==================== 削除モーダル ==================== */
+    .delete-record-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.7rem;
+      border-left: 4px solid #7c6b5e;
+      gap: 0.8rem;
+    }
+    .delete-record-info { flex: 1; }
+    .delete-record-info .dr-name  { font-weight: 700; font-size: 1rem; }
+    .delete-record-info .dr-date  { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .delete-record-info .dr-vals  { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .delete-item-btn {
+      flex-shrink: 0;
+      background: #e63946;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .delete-item-btn:active { background: #c02030; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== 1段目: 事業所タブ（最上部・タップ形式） ===== -->
+  <div class="office-tabs" id="office-tabs">
+    <button class="office-tab active" data-office="大浦家">大浦家</button>
+    <button class="office-tab"        data-office="上津役家">上津役家</button>
+  </div>
+
+  <!-- ===== 2段目: テーブル切り替えタブ（入浴バイタル先頭） ===== -->
+  <nav class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-table="bathing">入浴バイタル</button>
+    <button class="tab-btn"        data-table="vital">不調バイタル</button>
+    <button class="tab-btn"        data-table="weight">体重管理</button>
+    <button class="tab-btn"        data-table="bowel">排便管理</button>
+    <button class="tab-btn"        data-table="meal">食事摂取量</button>
+    <button class="tab-btn"        data-table="water">水分摂取量</button>
+    <button class="tab-btn"        data-table="supply">消耗品提供</button>
+  </nav>
+
+  <!-- ===== 3段目: 氏名セレクト + 全員ボタン ===== -->
+  <div class="name-bar">
+    <select id="sel-name">
+      <option value="">氏名を選択</option>
+    </select>
+    <button class="all-btn" id="all-btn">全員</button>
+  </div>
+
+  <!-- ===== レコード一覧エリア ===== -->
+  <main class="main-content">
+    <div id="loading" class="loading-state hidden">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <p>読み込み中...</p>
+    </div>
+    <div id="record-list">
+      <!-- 事業所または氏名を選択すると自動取得 -->
+    </div>
+  </main>
+
+  <!-- ===== 削除FABボタン（左下） ===== -->
+  <button class="fab fab-delete" id="fab-delete">
+    <i class="fa-solid fa-trash"></i> 削除
+  </button>
+
+  <!-- ===== 登録FABボタン（右下） ===== -->
+  <button class="fab fab-add" id="fab-add">
+    <i class="fa-solid fa-pen"></i> 記録
+  </button>
+
+  <!-- ===== 登録モーダル（ボトムシート） ===== -->
+  <div class="modal hidden" id="add-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">ケア記録を登録</h2>
+        <button class="close-btn" id="close-add-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="add-form">
+        <div class="form-group">
+          <label>日付 <span style="color:#e63946">*</span></label>
+          <input type="date" id="input-date" required>
+        </div>
+        <div class="form-group">
+          <label>事業所 <span style="color:#e63946">*</span></label>
+          <select id="input-office" required>
+            <option value="">選択してください</option>
+            <option value="大浦家">大浦家</option>
+            <option value="上津役家">上津役家</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>氏名 <span style="color:#e63946">*</span></label>
+          <select id="input-name" required>
+            <option value="">先に事業所を選択してください</option>
+          </select>
+        </div>
+        <!-- テーブル固有フィールド（JSで動的生成） -->
+        <div id="dynamic-fields"></div>
+        <button type="submit" class="submit-btn" id="submit-btn">登録する</button>
+        <div class="form-msg" id="form-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== 削除モーダル（ボトムシート） ===== -->
+  <div class="modal hidden" id="delete-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-trash" style="margin-right:.4rem"></i>削除するレコードを選択</h2>
+        <button class="close-btn" id="close-delete-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="delete-record-list">
+        <!-- 現在表示中のレコード一覧がJSで挿入される -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ==================== 定数 ====================
+    // バックエンドAPIのベースURL（Render本番環境）
+    const API_BASE = 'https://attendance-app-irf1.onrender.com';
+
+    // テーブルキーごとの表示フィールド定義
+    // server.js の CARE_TABLES.displayFields と同期させること
+    const TABLE_DEFS = {
+      vital: {
+        label: '不調時バイタル一覧',
+        fields: [
+          { name: '血圧(上)', type: 'number', placeholder: '例: 120' },
+          { name: '血圧(下)', type: 'number', placeholder: '例: 80'  },
+          { name: '脈拍',     type: 'number', placeholder: '例: 72'  },
+          { name: '体温',     type: 'number', placeholder: '例: 36.5', step: '0.1' },
+          { name: 'SPO2',     type: 'number', placeholder: '例: 98'  },
+        ],
+      },
+      bathing: {
+        label: '入浴時バイタル',
+        fields: [
+          { name: '血圧(上)', type: 'number', placeholder: '例: 120' },
+          { name: '血圧(下)', type: 'number', placeholder: '例: 80'  },
+          { name: '脈拍',     type: 'number', placeholder: '例: 72'  },
+          { name: '体温',     type: 'number', placeholder: '例: 36.5', step: '0.1' },
+          { name: 'SPO2',     type: 'number', placeholder: '例: 98'  },
+          { name: '勤務区分', type: 'select', options: ['日勤'] },
+        ],
+      },
+      weight: {
+        label: '体重管理',
+        fields: [
+          { name: '体重', type: 'number', placeholder: '例: 55.2', step: '0.1', unit: 'kg' },
+        ],
+      },
+      bowel: {
+        label: '排便管理',
+        fields: [
+          { name: '排便タイプ', type: 'select', options: ['普通便','軟便','水様便'] },
+          { name: '排便量',     type: 'select', options: ['付着～卵１未満','卵１つ分','卵２つ分','卵３つ分以上'] },
+        ],
+      },
+      meal: {
+        label: '食事摂取量',
+        fields: [
+          { name: '主食', type: 'select', options: ['1割','2割','3割','4割','5割','6割','7割','8割','9割','10割'] },
+          { name: '副菜', type: 'select', options: ['1割','2割','3割','4割','5割','6割','7割','8割','9割','10割'] },
+        ],
+      },
+      water: {
+        label: '水分摂取量',
+        fields: [
+          { name: 'ml', type: 'number', placeholder: '例: 800', unit: 'ml' },
+        ],
+      },
+      supply: {
+        label: '消耗品提供',
+        fields: [
+          { name: '商品',             type: 'select', options: ['歯ブラシ','歯磨き粉','義歯洗浄剤','マウスウォッシュ','Pトイレ消臭剤','その他'] },
+          { name: 'その他で提供したもの', type: 'text', placeholder: '商品名を入力' },
+          { name: '個数',             type: 'number', placeholder: '例: 1' },
+        ],
+      },
+    };
+
+    // ==================== 状態変数 ====================
+    let currentTable  = 'bathing'; // 現在表示中のテーブルキー（入浴バイタルが先頭）
+    let currentOffice = '大浦家';  // 現在選択中の事業所
+    let loadedRecords = [];         // 最後に取得したレコード一覧（削除モーダルで使用）
+    // 顧客情報APIから取得した事業所別氏名マップ（動的に更新される）
+    let officeNamesMap = {};
+
+    // ==================== DOM要素 ====================
+    const tabBar         = document.getElementById('tab-bar');
+    const officeTabs     = document.getElementById('office-tabs');
+    const selName        = document.getElementById('sel-name');
+    const allBtn         = document.getElementById('all-btn');
+    const loadingEl      = document.getElementById('loading');
+    const recordList     = document.getElementById('record-list');
+    const fabAdd         = document.getElementById('fab-add');
+    const fabDelete      = document.getElementById('fab-delete');
+    const addModal       = document.getElementById('add-modal');
+    const deleteModal    = document.getElementById('delete-modal');
+    const closeAddModal  = document.getElementById('close-add-modal');
+    const closeDeleteModal = document.getElementById('close-delete-modal');
+    const modalTitle     = document.getElementById('modal-title');
+    const addForm        = document.getElementById('add-form');
+    const inputDate      = document.getElementById('input-date');
+    const inputOffice    = document.getElementById('input-office');
+    const inputName      = document.getElementById('input-name');
+    const dynamicFields  = document.getElementById('dynamic-fields');
+    const submitBtn      = document.getElementById('submit-btn');
+    const formMsg        = document.getElementById('form-msg');
+    const deleteRecordList = document.getElementById('delete-record-list');
+
+    // ==================== 初期化 ====================
+    // 今日の日付を日付入力の初期値にする
+    inputDate.value = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+    // 顧客情報テーブルから氏名リストを動的取得する（ハードコードをなくす）
+    fetchCustomers();
+
+    // ==================== テーブルタブ切り替え ====================
+    tabBar.addEventListener('click', e => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTable = btn.dataset.table;
+      // タブ切り替え時にリストをクリアする
+      recordList.innerHTML = '';
+      loadedRecords = [];
+    });
+
+    // ==================== 事業所タブ切り替え ====================
+    // タップで事業所を選択し、即座にレコードを取得する
+    officeTabs.addEventListener('click', e => {
+      const btn = e.target.closest('.office-tab');
+      if (!btn) return;
+      document.querySelectorAll('.office-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentOffice = btn.dataset.office;
+      // 氏名リストを選択した事業所に合わせて更新する
+      updateNameOptions(currentOffice, selName);
+      selName.value = ''; // 氏名選択をリセット
+      // 事業所の全データを自動取得する
+      loadRecords(currentOffice, '');
+    });
+
+    // ==================== 氏名選択 → 絞り込み取得 ====================
+    selName.addEventListener('change', () => {
+      if (selName.value) {
+        loadRecords(currentOffice, selName.value);
+      }
+    });
+
+    // ==================== 全員ボタン → 事業所全データ取得 ====================
+    allBtn.addEventListener('click', () => {
+      selName.value = '';
+      loadRecords(currentOffice, '');
+    });
+
+    // ==================== 顧客情報の動的取得 ====================
+    // 顧客情報テーブルからAPIで氏名リストを取得し、officeNamesMapを構築する。
+    // これにより新しい利用者が追加された場合も自動でドロップダウンに反映される。
+    async function fetchCustomers() {
+      try {
+        const res  = await fetch(`${API_BASE}/api/customers/get`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        // 事業所ごとに氏名をグルーピングする
+        const map = {};
+        for (const c of data.data) {
+          if (!c.name) continue;
+          if (!map[c.office]) map[c.office] = [];
+          if (!map[c.office].includes(c.name)) map[c.office].push(c.name);
+        }
+        officeNamesMap = map;
+      } catch (e) {
+        console.warn('[fetchCustomers] 取得失敗（オフライン時は無視）:', e.message);
+      }
+      // 取得完了後に初期事業所の氏名リストをセットする
+      updateNameOptions(currentOffice, selName);
+    }
+
+    // ==================== 氏名リスト更新ヘルパー ====================
+    // officeNamesMapが取得済みならそれを使い、未取得ならリストを空にする
+    function updateNameOptions(officeVal, targetSelect) {
+      const names = officeNamesMap[officeVal] || [];
+      targetSelect.innerHTML = '<option value="">氏名を選択</option>';
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        targetSelect.appendChild(opt);
+      });
+    }
+
+    // ==================== レコード取得・表示 ====================
+    async function loadRecords(office, name) {
+      loadingEl.classList.remove('hidden');
+      recordList.innerHTML = '';
+      loadedRecords = [];
+
+      try {
+        const params = new URLSearchParams({ table: currentTable });
+        if (office) params.append('office', office);
+        if (name)   params.append('name',   name);
+
+        const res  = await fetch(`${API_BASE}/api/care/records?${params}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '取得エラー');
+
+        // 取得結果をキャッシュしておく（削除モーダルで使用）
+        loadedRecords = data.data;
+
+        if (data.data.length === 0) {
+          recordList.innerHTML = '<div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>記録がありません</div>';
+          return;
+        }
+
+        const tableDef = TABLE_DEFS[currentTable];
+        recordList.innerHTML = data.data.map(r => {
+          // 各フィールドをA案のボックス形式でHTMLに変換する
+          const gridItems = tableDef.fields
+            .filter(f => r.fields[f.name] !== undefined)
+            .map(f => {
+              const val = r.fields[f.name];
+              if (f.type === 'number') {
+                // 数値: 大きく中央に、単位は右隣に小さく
+                const unit = f.unit ? `<span class="record-grid-unit">${f.unit}</span>` : '';
+                return `<div class="record-grid-item">
+                  <span class="record-grid-label">${f.name}</span>
+                  <span class="record-grid-value">${val}${unit}</span>
+                </div>`;
+              } else {
+                // テキスト・選択値: 2列分の幅でラベルと値を横並び
+                return `<div class="record-grid-item wide">
+                  <span class="record-grid-label">${f.name}</span>
+                  <span class="record-grid-value">${val}</span>
+                </div>`;
+              }
+            }).join('');
+
+          const officeBadge = r.office
+            ? `<span style="font-size:.72rem;background:var(--primary-light);color:var(--primary-color);padding:.1rem .45rem;border-radius:4px;font-weight:700;margin-left:.4rem">${r.office}</span>`
+            : '';
+
+          return `<div class="record-card">
+            <div class="record-header">
+              <span class="record-name">${r.name || '—'}${officeBadge}</span>
+              <span class="record-date">${r.date || '—'}</span>
+            </div>
+            <div class="record-grid">${gridItems || '<span style="color:var(--text-muted);font-size:.88rem">データなし</span>'}</div>
+          </div>`;
+        }).join('');
+
+      } catch (err) {
+        recordList.innerHTML = `<div class="no-records" style="color:#e63946"><i class="fa-solid fa-triangle-exclamation"></i><br>${err.message}</div>`;
+      } finally {
+        loadingEl.classList.add('hidden');
+      }
+    }
+
+    // ==================== 登録モーダル制御 ====================
+    fabAdd.addEventListener('click', () => {
+      const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
+      modalTitle.textContent = `${label}を登録`;
+
+      // 現在の事業所選択をモーダルへ引き継ぐ
+      inputOffice.value = currentOffice;
+      updateNameOptions(currentOffice, inputName);
+      // 氏名セレクトの選択もあれば引き継ぐ
+      if (selName.value) inputName.value = selName.value;
+
+      buildDynamicFields(currentTable);
+      formMsg.textContent = '';
+      formMsg.className   = 'form-msg';
+      addModal.classList.remove('hidden');
+    });
+
+    // 登録モーダル内の事業所変更で氏名リストを更新する
+    inputOffice.addEventListener('change', () => {
+      updateNameOptions(inputOffice.value, inputName);
+    });
+
+    closeAddModal.addEventListener('click', () => addModal.classList.add('hidden'));
+    addModal.addEventListener('click', e => { if (e.target === addModal) addModal.classList.add('hidden'); });
+
+    // ==================== 動的フィールド生成 ====================
+    // テーブルごとに固有フィールドの入力欄をHTMLで生成する
+    function buildDynamicFields(tableKey) {
+      const fields = TABLE_DEFS[tableKey]?.fields || [];
+      dynamicFields.innerHTML = fields.map(f => {
+        const id = `dynfield-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        if (f.type === 'select') {
+          const opts = f.options.map(o => `<option value="${o}">${o}</option>`).join('');
+          return `<div class="form-group">
+            <label for="${id}">${f.name}</label>
+            <select id="${id}" data-field="${f.name}">
+              <option value="">選択してください</option>${opts}
+            </select>
+          </div>`;
+        } else if (f.type === 'number') {
+          const step = f.step ? `step="${f.step}"` : '';
+          const ph   = f.placeholder ? `placeholder="${f.placeholder}"` : '';
+          const unit = f.unit ? `<span style="font-size:.82rem;color:var(--text-muted);margin-left:.3rem">${f.unit}</span>` : '';
+          return `<div class="form-group">
+            <label for="${id}">${f.name}${unit}</label>
+            <input type="number" id="${id}" data-field="${f.name}" ${step} ${ph} inputmode="decimal">
+          </div>`;
+        } else {
+          const ph = f.placeholder ? `placeholder="${f.placeholder}"` : '';
+          return `<div class="form-group">
+            <label for="${id}">${f.name}</label>
+            <input type="text" id="${id}" data-field="${f.name}" ${ph}>
+          </div>`;
+        }
+      }).join('');
+    }
+
+    // ==================== フォーム送信（登録） ====================
+    addForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const date   = inputDate.value;
+      const office = inputOffice.value;
+      const name   = inputName.value;
+
+      if (!date || !office || !name) {
+        formMsg.textContent = '日付・事業所・氏名は必須です。';
+        formMsg.className   = 'form-msg err';
+        return;
+      }
+
+      // 動的フィールドの値を収集する
+      const fields = {};
+      dynamicFields.querySelectorAll('[data-field]').forEach(el => {
+        if (el.value !== '') fields[el.dataset.field] = el.value;
+      });
+
+      submitBtn.disabled    = true;
+      submitBtn.textContent = '登録中...';
+      formMsg.textContent   = '';
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table: currentTable, date, office, name, fields }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '登録に失敗しました');
+
+        formMsg.textContent = '登録しました！';
+        formMsg.className   = 'form-msg ok';
+        setTimeout(() => {
+          addModal.classList.add('hidden');
+          // 登録後に一覧を再取得する
+          loadRecords(office, selName.value);
+        }, 800);
+      } catch (err) {
+        formMsg.textContent = err.message;
+        formMsg.className   = 'form-msg err';
+      } finally {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = '登録する';
+      }
+    });
+
+    // ==================== 削除モーダル制御 ====================
+    // 削除FABをタップしたとき、現在表示中のレコード一覧を削除モーダルに展開する
+    fabDelete.addEventListener('click', () => {
+      if (loadedRecords.length === 0) {
+        alert('削除できるレコードがありません。先に一覧を表示してください。');
+        return;
+      }
+      buildDeleteList();
+      deleteModal.classList.remove('hidden');
+    });
+
+    closeDeleteModal.addEventListener('click', () => deleteModal.classList.add('hidden'));
+    deleteModal.addEventListener('click', e => { if (e.target === deleteModal) deleteModal.classList.add('hidden'); });
+
+    // ==================== 削除一覧の構築 ====================
+    function buildDeleteList() {
+      const tableDef = TABLE_DEFS[currentTable];
+      deleteRecordList.innerHTML = loadedRecords.map(r => {
+        // 固有フィールドの値を1行サマリーとして表示する
+        const summary = tableDef.fields
+          .filter(f => r.fields[f.name] !== undefined)
+          .map(f => `${f.name}: ${r.fields[f.name]}`)
+          .join(' / ');
+
+        return `<div class="delete-record-item" data-id="${r.id}">
+          <div class="delete-record-info">
+            <div class="dr-name">${r.name || '—'}</div>
+            <div class="dr-date">${r.date || '—'}</div>
+            ${summary ? `<div class="dr-vals">${summary}</div>` : ''}
+          </div>
+          <button class="delete-item-btn" data-id="${r.id}">
+            <i class="fa-solid fa-trash"></i> 削除
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    // ==================== レコード削除実行 ====================
+    // 削除モーダル内の各削除ボタンを押したとき API を呼び出す
+    deleteRecordList.addEventListener('click', async e => {
+      const btn = e.target.closest('.delete-item-btn');
+      if (!btn) return;
+
+      const recordId = btn.dataset.id;
+      if (!confirm('このレコードを削除してもよいですか？')) return;
+
+      btn.disabled   = true;
+      btn.textContent = '削除中...';
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${recordId}?table=${currentTable}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '削除に失敗しました');
+
+        // 削除成功時: loadedRecordsから除去してUIを更新する
+        loadedRecords = loadedRecords.filter(r => r.id !== recordId);
+        buildDeleteList(); // 削除モーダルの一覧を再描画する
+        await loadRecords(currentOffice, selName.value); // メイン一覧も再取得する
+      } catch (err) {
+        alert(`削除エラー: ${err.message}`);
+        btn.disabled   = false;
+        btn.textContent = '削除';
+      }
+    });
+  </script>
+</body>
+</html>
