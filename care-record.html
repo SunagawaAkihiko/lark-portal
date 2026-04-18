@@ -171,14 +171,15 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.06);
       border-left: 4px solid var(--primary-color);
     }
-    /* ヘッダー: 氏名（左）＋ 日付（右） */
+    /* ヘッダー: 日付（上）＋ 氏名（下）を縦積みで左揃え */
     .record-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
       margin-bottom: 0.6rem;
     }
-    .record-date { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+    .record-date { font-size: 1.05rem; color: var(--primary-color); font-weight: 700; }
     .record-name { font-size: 1rem; font-weight: 700; }
     /* 各項目を小ボックスに入れてグリッド配置する */
     .record-grid {
