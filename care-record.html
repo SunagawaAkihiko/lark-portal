@@ -208,13 +208,16 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* 値（大きく中央に） */
+    /* 値（大きく中央に・折り返しなし） */
     .record-grid-value {
       display: block;
       font-size: 1.15rem;
       font-weight: 700;
       color: var(--text-color);
       line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     /* 単位（kg / ml など） */
     .record-grid-unit {
@@ -233,7 +236,7 @@
       gap: 0.5rem;
     }
     .record-grid-item.wide .record-grid-label { margin-bottom: 0; white-space: nowrap; }
-    .record-grid-item.wide .record-grid-value { font-size: 0.95rem; }
+    .record-grid-item.wide .record-grid-value { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .no-records {
       text-align: center;
       color: var(--text-muted);
