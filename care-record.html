@@ -509,7 +509,7 @@
           { name: '脈拍',     type: 'number', placeholder: '例: 72'  },
           { name: '体温',     type: 'number', placeholder: '例: 36.5', step: '0.1' },
           { name: 'SPO2',     type: 'number', placeholder: '例: 98'  },
-          { name: '勤務区分', type: 'select', options: ['日勤'] },
+          // 勤務区分は非表示（ユーザー指示により削除）
         ],
       },
       weight: {
@@ -583,6 +583,8 @@
     inputDate.value = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
     // 顧客情報テーブルから氏名リストを動的取得する（ハードコードをなくす）
     fetchCustomers();
+    // ページ読み込み時にデフォルト事業所の全員データを自動表示する
+    loadRecords(currentOffice, '');
 
     // ==================== テーブルタブ切り替え ====================
     tabBar.addEventListener('click', e => {
@@ -711,10 +713,11 @@
             ? `<span style="font-size:.72rem;background:var(--primary-light);color:var(--primary-color);padding:.1rem .45rem;border-radius:4px;font-weight:700;margin-left:.4rem">${r.office}</span>`
             : '';
 
+          // ヘッダー: 日付を左、氏名（事業所バッジ付き）を右に配置
           return `<div class="record-card">
             <div class="record-header">
-              <span class="record-name">${r.name || '—'}${officeBadge}</span>
               <span class="record-date">${r.date || '—'}</span>
+              <span class="record-name">${r.name || '—'}${officeBadge}</span>
             </div>
             <div class="record-grid">${gridItems || '<span style="color:var(--text-muted);font-size:.88rem">データなし</span>'}</div>
           </div>`;
