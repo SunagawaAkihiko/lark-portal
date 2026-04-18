@@ -289,6 +289,8 @@
       border-radius: 20px 20px 0 0;
       max-height: 92vh;
       overflow-y: auto;
+      overflow-x: hidden; /* 横方向へのはみ出しを防止 */
+      box-sizing: border-box;
     }
     .modal-header {
       display: flex;
@@ -319,6 +321,8 @@
     .form-group input,
     .form-group select {
       width: 100%;
+      max-width: 100%; /* iOSでdate入力が親幅を超えるのを防ぐ */
+      box-sizing: border-box;
       padding: 0.75rem;
       border: 1.5px solid var(--border-color);
       border-radius: 8px;
@@ -368,7 +372,7 @@
       border-left: 4px solid #7c6b5e;
       gap: 0.8rem;
     }
-    .delete-record-info { flex: 1; min-width: 0; }
+    .delete-record-info { flex: 1; min-width: 0; overflow: hidden; }
     /* 日付: カードと同様にオレンジ・やや大きめで一番目立つ */
     .delete-record-info .dr-date { font-size: 1rem; font-weight: 700; color: var(--primary-color); }
     /* 氏名: 日付の下に太字で表示 */
