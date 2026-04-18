@@ -567,9 +567,10 @@
       supply: {
         label: '消耗品提供',
         fields: [
-          { name: '商品',             type: 'select', options: ['歯ブラシ','歯磨き粉','義歯洗浄剤','マウスウォッシュ','Pトイレ消臭剤','その他'] },
-          { name: 'その他で提供したもの', type: 'text', placeholder: '商品名を入力' },
+          // 個数を先頭（左の小ボックス）、商品をその右（rightfill）に並べて1行表示
           { name: '個数',             type: 'number', placeholder: '例: 1' },
+          { name: '商品',             type: 'select', rightfill: true, options: ['歯ブラシ','歯磨き粉','義歯洗浄剤','マウスウォッシュ','Pトイレ消臭剤','その他'] },
+          { name: 'その他で提供したもの', type: 'text', placeholder: '商品名を入力' },
         ],
       },
     };
@@ -725,8 +726,14 @@
                   <span class="record-grid-label">${f.name}</span>
                   <span class="record-grid-value">${val}${unit}</span>
                 </div>`;
+              } else if (f.rightfill) {
+                // rightfill: 直前の数値ボックスの右側を埋める（grid-column: 2/-1 で同一行に収める）
+                return `<div class="record-grid-item wide" style="grid-column: 2 / -1;">
+                  <span class="record-grid-label">${f.name}</span>
+                  <span class="record-grid-value">${val}</span>
+                </div>`;
               } else {
-                // テキスト・選択値: 2列分の幅でラベルと値を横並び
+                // テキスト・選択値: グリッド全幅で左寄せ
                 return `<div class="record-grid-item wide">
                   <span class="record-grid-label">${f.name}</span>
                   <span class="record-grid-value">${val}</span>
