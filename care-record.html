@@ -593,9 +593,8 @@
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTable = btn.dataset.table;
-      // タブ切り替え時にリストをクリアする
-      recordList.innerHTML = '';
-      loadedRecords = [];
+      // タブ切り替え時は選択中の氏名でそのまま再取得する（氏名未選択なら全員表示）
+      loadRecords(currentOffice, selName.value);
     });
 
     // ==================== 事業所タブ切り替え ====================
