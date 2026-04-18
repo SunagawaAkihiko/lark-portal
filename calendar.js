@@ -400,12 +400,7 @@ function renderSelectedDay() {
 async function handleAddEvent(e) {
     e.preventDefault();
     
-    // ダミー中のスキップ処理
-    if (API_BASE.includes("localhost")) {
-        alert("ダミーテスト中につき、実際の登録処理はスキップされました。デザインはOKでしょうか？");
-        addModal.classList.add('hidden');
-        return;
-    }
+   
 
     const y = document.getElementById('input-year').value;
     const m = document.getElementById('input-month').value;
