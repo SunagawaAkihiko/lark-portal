@@ -9,17 +9,13 @@
     <link rel="stylesheet" href="calendar.css">
 </head>
 <body>
-    <!-- ヘッダー -->
+    <!-- ヘッダー：左に「戻る」、中央にタイトル、右に事業所選択タブ -->
     <header class="app-header">
         <a href="index.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 戻る</a>
         <h1><i class="fa-regular fa-calendar-check"></i> 予定カレンダー</h1>
-        <!-- 絞り込みボタンの代わりに直下のタブを使用 -->
+        <!-- 事業所選択タブ（ヘッダー右側に配置） -->
+        <div class="office-tabs" id="office-tabs"></div>
     </header>
-
-    <!-- 事業所選択タブ（横にスクロール可能） -->
-    <div class="office-tabs" id="office-tabs">
-        <!-- JSでタブが追加される -->
-    </div>
 
     <!-- ローディング -->
     <div id="loading" class="loading-state">
