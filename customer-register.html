@@ -661,30 +661,8 @@
     }
 
 
-    // ============================================================
-    // zipcloud住所ルックアップ（JSONP方式）
-    // scriptタグでCORSを完全回避する。タイムアウトは10秒。
-    // ============================================================
-    function zipcloudJsonp(zipcode) {
-      return new Promise((resolve, reject) => {
-        const cb = '_zc' + Date.now();
-        const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
-        function cleanup() {
-          clearTimeout(timer);
-          delete window[cb];
-          const s = document.getElementById('_zcScript');
-          if (s) s.remove();
-        }
-        window[cb] = function(d) { cleanup(); resolve(d); };
-        const s = document.createElement('script');
-        s.id = '_zcScript';
-        s.onerror = function() { cleanup(); reject(new Error('load error')); };
-        s.src = 'https://zipcloud.ibsreg.jp/api/search?zipcode=' + zipcode + '&callback=' + cb;
-        document.head.appendChild(s);
-      });
-    }
-
     // zipcloudレスポンスから住所文字列を組み立てるヘルパー
+    // address3に「以下に掲載がない場合」が含まれる場合は除外する
     function parseZipcloudResult(d) {
       if (!d || !d.results || !d.results.length) return '';
       const a  = d.results[0];
@@ -695,7 +673,10 @@
     // ============================================================
     // 郵便番号から住所を検索する
     // prefix: 'honnin' / 'fam1' / 'mail'
-    // 方法①JSONP → ②teraren(fetch) → ③サーバープロキシ の順で試みる
+    //
+    // ① teraren（CORS対応・高速）
+    // ② サーバープロキシ・zipcloud（最も確実・リトライあり）
+    //    Renderスリープ中の場合は2秒待って最大3回リトライする
     // ============================================================
     async function searchZip(prefix) {
       const zipInput = document.getElementById(prefix + 'Zip');
@@ -714,32 +695,32 @@
       try {
         let pref = '';
 
-        // ── 方法①: zipcloud JSONP（scriptタグ経由・CORS完全回避） ──
-        if (!pref) {
-          try {
-            const d = await zipcloudJsonp(zipcode);
-            pref = parseZipcloudResult(d);
-          } catch { /* 失敗時は次の方法へ */ }
-        }
+        // ── ①: postcode.teraren.com（CORS対応・fetch直接） ──
+        try {
+          const r = await fetch('https://postcode.teraren.com/postcodes/' + zipcode + '.json');
+          if (r.ok) {
+            const d = await r.json();
+            pref = (d.prefecture || '') + (d.city || '') + (d.town || '');
+          }
+        } catch { /* ネットワークエラー等は無視して②へ */ }
 
-        // ── 方法②: postcode.teraren.com（CORS対応・fetch直接） ──
-        if (!pref) {
-          try {
-            const r = await fetch('https://postcode.teraren.com/postcodes/' + zipcode + '.json');
-            if (r.ok) {
-              const d = await r.json();
-              pref = (d.prefecture || '') + (d.city || '') + (d.town || '');
-            }
-          } catch { /* 失敗時は次の方法へ */ }
-        }
-
-        // ── 方法③: サーバープロキシ（Renderが起きている場合に有効） ──
-        if (!pref) {
+        // ── ②: サーバープロキシ（zipcloud経由・最大3回リトライ） ──
+        // Renderフリー枠はスリープするため、失敗時は2秒待ってリトライする
+        for (let attempt = 1; attempt <= 3; attempt++) {
           try {
             const r = await fetch(API_BASE + '/api/zipcode?zipcode=' + zipcode);
             const d = await r.json();
-            pref = parseZipcloudResult(d);
-          } catch { /* 失敗時は空のまま */ }
+            const candidate = parseZipcloudResult(d);
+            // teraren より詳しい結果（文字数が多い）なら上書きする
+            if (candidate.length > pref.length) pref = candidate;
+            if (pref) break; // 取得できたらリトライ不要
+          } catch { /* サーバー未起動等は無視 */ }
+
+          if (attempt < 3 && !pref) {
+            // サーバーが起動するのを2秒待ってリトライする
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 接続中…';
+            await new Promise(res => setTimeout(res, 2000));
+          }
         }
 
         if (!pref) {
@@ -757,7 +738,6 @@
       } catch (e) {
         showToast('住所検索でエラーが発生しました。', 'error');
       } finally {
-        // エラー・成功問わず必ずボタンを元に戻す
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 検索';
       }
