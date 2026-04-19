@@ -209,8 +209,8 @@
 
   <div class="form-container">
 
-    <!-- ===== 基本情報 ===== -->
-    <div class="section-heading"><i class="fa-solid fa-circle-info"></i> 基本情報</div>
+    <!-- ===== 本人基本情報 ===== -->
+    <div class="section-heading"><i class="fa-solid fa-circle-info"></i> 本人基本情報</div>
 
     <div class="form-row">
       <div class="form-group">
@@ -322,25 +322,24 @@
 
     <div class="form-group">
       <label>住所</label>
-      <!-- 本人住所と同じ／別の住所を選択 -->
       <div class="addr-toggle">
-        <button class="addr-toggle-btn active">本人住所と同じ</button>
-        <button class="addr-toggle-btn">別の住所を登録</button>
+        <button class="addr-toggle-btn active" onclick="toggleAddr(this,'fam1-addr')">本人住所と同じ</button>
+        <button class="addr-toggle-btn"        onclick="toggleAddr(this,'fam1-addr')">別の住所を登録</button>
       </div>
-      <!-- 「本人住所と同じ」選択時 -->
-      <div class="addr-same-label">
+      <!-- 「本人住所と同じ」選択時に表示 -->
+      <div id="fam1-addr-same" class="addr-same-label">
         <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
         本人住所がそのまま登録されます
       </div>
-      <!-- 「別の住所を登録」選択時（非表示状態のプレビュー） -->
-      <!--
-      <div class="zip-row">
-        <input type="text" placeholder="郵便番号" maxlength="7" inputmode="numeric">
-        <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+      <!-- 「別の住所を登録」選択時に表示 -->
+      <div id="fam1-addr-input" style="display:none">
+        <div class="zip-row">
+          <input type="text" placeholder="郵便番号（数字7桁）" maxlength="7" inputmode="numeric">
+          <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+        </div>
+        <div class="address-auto">← 郵便番号を入力して検索すると自動入力されます</div>
+        <input type="text" placeholder="番地・建物名を入力" style="margin-top:.4rem">
       </div>
-      <div class="address-auto">都道府県・市区町村（自動）</div>
-      <input type="text" placeholder="番地・建物名を入力">
-      -->
     </div>
 
     <!-- ===== 家族② ===== -->
@@ -390,12 +389,20 @@
     <div class="form-group">
       <label>【郵便物送付先】住所</label>
       <div class="addr-toggle">
-        <button class="addr-toggle-btn active">本人住所と同じ</button>
-        <button class="addr-toggle-btn">別の住所を登録</button>
+        <button class="addr-toggle-btn active" onclick="toggleAddr(this,'mail-addr')">本人住所と同じ</button>
+        <button class="addr-toggle-btn"        onclick="toggleAddr(this,'mail-addr')">別の住所を登録</button>
       </div>
-      <div class="addr-same-label">
+      <div id="mail-addr-same" class="addr-same-label">
         <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
         本人住所がそのまま登録されます
+      </div>
+      <div id="mail-addr-input" style="display:none">
+        <div class="zip-row">
+          <input type="text" placeholder="郵便番号（数字7桁）" maxlength="7" inputmode="numeric">
+          <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+        </div>
+        <div class="address-auto">← 郵便番号を入力して検索すると自動入力されます</div>
+        <input type="text" placeholder="番地・建物名を入力" style="margin-top:.4rem">
       </div>
     </div>
 
@@ -405,5 +412,22 @@
     <button class="submit-btn"><i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>登録する</button>
   </div>
 
+  <script>
+    // 住所トグルの切り替え処理
+    // prefix: 'fam1-addr' や 'mail-addr' など、対応するIDのプレフィックス
+    function toggleAddr(btn, prefix) {
+      const group = btn.closest('.addr-toggle');
+      const btns  = group.querySelectorAll('.addr-toggle-btn');
+      const isSame = btn.textContent.includes('本人住所と同じ');
+
+      // ボタンのアクティブ状態を切り替え
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 対応する入力欄を表示・非表示
+      document.getElementById(prefix + '-same').style.display  = isSame ? '' : 'none';
+      document.getElementById(prefix + '-input').style.display = isSame ? 'none' : '';
+    }
+  </script>
 </body>
 </html>
