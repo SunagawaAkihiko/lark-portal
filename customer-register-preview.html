@@ -49,20 +49,28 @@
 
     /* ===== セクション見出し ===== */
     .section-heading {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--primary-color);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 0.4rem 0.6rem;
+      padding: 0.5rem 0.7rem;
       background: var(--primary-light);
       border-radius: 6px;
       margin: 1.4rem 0 0.8rem;
+    }
+    .section-heading:first-of-type { margin-top: 0.4rem; }
+    .section-heading-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-color);
       display: flex;
       align-items: center;
       gap: 0.4rem;
     }
-    .section-heading:first-of-type { margin-top: 0.4rem; }
+    /* セクションの注記（※〜）を小さく薄く表示 */
+    .section-heading-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      padding-left: 0.1rem;
+      line-height: 1.4;
+    }
 
     /* ===== フォームグループ ===== */
     .form-group { margin-bottom: 0.9rem; }
@@ -210,16 +218,18 @@
   <div class="form-container">
 
     <!-- ===== 本人基本情報 ===== -->
-    <div class="section-heading"><i class="fa-solid fa-circle-info"></i> 本人基本情報</div>
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-circle-info"></i> 本人基本情報</div>
+    </div>
 
     <div class="form-row">
       <div class="form-group">
         <label>入居日 <span class="required">*</span></label>
-        <input type="date" value="2026-04-19">
+        <input type="date" value="2026-04-19" required>
       </div>
       <div class="form-group">
         <label>事業所 <span class="required">*</span></label>
-        <select>
+        <select required>
           <option value="">選択</option>
           <option>大浦家</option>
           <option>上津役家</option>
@@ -230,33 +240,33 @@
     <div class="form-row">
       <div class="form-group">
         <label>姓 <span class="required">*</span></label>
-        <input type="text" placeholder="例: 髙田">
+        <input type="text" placeholder="例: 髙田" required>
       </div>
       <div class="form-group">
         <label>名 <span class="required">*</span></label>
-        <input type="text" placeholder="例: トミヱ">
+        <input type="text" placeholder="例: トミヱ" required>
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>フリガナ（姓）</label>
-        <input type="text" placeholder="例: タカダ">
+        <label>フリガナ（姓） <span class="required">*</span></label>
+        <input type="text" placeholder="例: タカダ" required>
       </div>
       <div class="form-group">
-        <label>フリガナ（名）</label>
-        <input type="text" placeholder="例: トミエ">
+        <label>フリガナ（名） <span class="required">*</span></label>
+        <input type="text" placeholder="例: トミエ" required>
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>生年月日</label>
-        <input type="date">
+        <label>生年月日 <span class="required">*</span></label>
+        <input type="date" required>
       </div>
       <div class="form-group">
-        <label>介護度</label>
-        <select>
+        <label>介護度 <span class="required">*</span></label>
+        <select required>
           <option value="">選択</option>
           <option>要支援1</option>
           <option>要支援2</option>
@@ -270,22 +280,25 @@
     </div>
 
     <!-- ===== 本人住所 ===== -->
-    <div class="section-heading"><i class="fa-solid fa-house"></i> 本人住所</div>
-
-    <div class="form-group">
-      <label>郵便番号</label>
-      <div class="zip-row">
-        <input type="text" placeholder="例: 8000001" maxlength="7" inputmode="numeric">
-        <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
-      </div>
-      <!-- 郵便番号検索後に都道府県＋市区町村が自動入力される -->
-      <div class="address-auto filled">福岡県北九州市門司区</div>
-      <!-- 番地・建物名を手入力 -->
-      <input type="text" placeholder="番地・建物名を入力">
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-house"></i> 本人住所</div>
     </div>
 
-    <!-- ===== 家族① ===== -->
-    <div class="section-heading"><i class="fa-solid fa-person"></i> 家族①</div>
+    <div class="form-group">
+      <label>郵便番号 <span class="required">*</span></label>
+      <div class="zip-row">
+        <input type="text" placeholder="例: 8000001" maxlength="7" inputmode="numeric" required>
+        <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+      </div>
+      <div class="address-auto filled">福岡県北九州市門司区</div>
+      <input type="text" placeholder="番地・建物名を入力" required>
+    </div>
+
+    <!-- ===== 家族①【第一緊急連絡先】 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-person"></i> 家族①【第一緊急連絡先】</div>
+      <div class="section-heading-note">※特別な事情がない限り必ず登録お願いします。</div>
+    </div>
 
     <div class="form-row">
       <div class="form-group">
@@ -326,12 +339,10 @@
         <button class="addr-toggle-btn active" onclick="toggleAddr(this,'fam1-addr')">本人住所と同じ</button>
         <button class="addr-toggle-btn"        onclick="toggleAddr(this,'fam1-addr')">別の住所を登録</button>
       </div>
-      <!-- 「本人住所と同じ」選択時に表示 -->
       <div id="fam1-addr-same" class="addr-same-label">
         <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
         本人住所がそのまま登録されます
       </div>
-      <!-- 「別の住所を登録」選択時に表示 -->
       <div id="fam1-addr-input" style="display:none">
         <div class="zip-row">
           <input type="text" placeholder="郵便番号（数字7桁）" maxlength="7" inputmode="numeric">
@@ -342,8 +353,11 @@
       </div>
     </div>
 
-    <!-- ===== 家族② ===== -->
-    <div class="section-heading"><i class="fa-solid fa-person"></i> 家族②</div>
+    <!-- ===== 家族②【第二緊急連絡先】 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-person"></i> 家族②【第二緊急連絡先】</div>
+      <div class="section-heading-note">※できる限り登録をお願いします。</div>
+    </div>
 
     <div class="form-row">
       <div class="form-group">
@@ -379,15 +393,17 @@
     </div>
 
     <!-- ===== その他 ===== -->
-    <div class="section-heading"><i class="fa-solid fa-envelope"></i> その他</div>
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-envelope"></i> その他</div>
+    </div>
 
     <div class="form-group">
-      <label>報告アドレス</label>
+      <label>報告アドレス（毎日のご報告とご請求書・領収書の送り先のアドレス）</label>
       <input type="email" placeholder="例: family@example.com">
     </div>
 
     <div class="form-group">
-      <label>【郵便物送付先】住所</label>
+      <label>【郵便物送付先】住所 <span class="required">*</span></label>
       <div class="addr-toggle">
         <button class="addr-toggle-btn active" onclick="toggleAddr(this,'mail-addr')">本人住所と同じ</button>
         <button class="addr-toggle-btn"        onclick="toggleAddr(this,'mail-addr')">別の住所を登録</button>
