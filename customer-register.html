@@ -434,13 +434,13 @@
     <div class="form-group">
       <label>住所 <span class="required">*</span></label>
       <div class="addr-toggle">
-        <button class="addr-toggle-btn active" data-toggle="fam1Addr" data-mode="same"
+        <button class="addr-toggle-btn" data-toggle="fam1Addr" data-mode="same"
                 onclick="toggleAddr(this,'fam1Addr','same')">本人住所と同じ</button>
         <button class="addr-toggle-btn" data-toggle="fam1Addr" data-mode="other"
                 onclick="toggleAddr(this,'fam1Addr','other')">別の住所を登録</button>
       </div>
-      <!-- 「同じ」選択時の表示ラベル -->
-      <div id="fam1Addr-same" class="addr-same-label">
+      <!-- 「同じ」選択時の表示ラベル（初期非表示） -->
+      <div id="fam1Addr-same" class="addr-same-label" style="display:none">
         <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
         本人住所がそのまま登録されます
       </div>
@@ -634,9 +634,10 @@
       fillMonthDay('birthMonth', 'birthDay');
     })();
 
-    // 住所トグルの状態管理（prefixKey => 'same' | 'other'）
+    // 住所トグルの状態管理（prefixKey => 'same' | 'other' | null）
+    // fam1Addrはユーザーに必ず選択させるため初期値をnullにする
     const addrMode = {
-      fam1Addr: 'same',
+      fam1Addr: null,   // 未選択（ボタンを押すまで送信不可）
       mailAddr: 'same',
     };
 
@@ -800,6 +801,13 @@
       if (!document.getElementById('honninPref').value) {
         document.getElementById('honninZip').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return '本人住所の郵便番号を検索してください。';
+      }
+
+      // 家族①住所：未選択の場合はエラー
+      if (!addrMode.fam1Addr) {
+        document.querySelector('[data-toggle="fam1Addr"]')
+          .scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return '家族①の住所を選択してください。';
       }
 
       // 家族①住所：「別の住所を登録」選択時は住所の入力も必須とする
