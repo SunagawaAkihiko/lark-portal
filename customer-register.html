@@ -695,33 +695,39 @@
       try {
         let pref = '';
 
+        const dbg = []; // デバッグ情報を収集する
+
         // ── ①: postcode.teraren.com（CORS対応・fetch直接） ──
         try {
           const r = await fetch('https://postcode.teraren.com/postcodes/' + zipcode + '.json');
           if (r.ok) {
             const d = await r.json();
             pref = (d.prefecture || '') + (d.city || '') + (d.town || '');
+            dbg.push('①teraren: ' + (pref || '空'));
+          } else {
+            dbg.push('①teraren: HTTP' + r.status);
           }
-        } catch { /* ネットワークエラー等は無視して②へ */ }
+        } catch(e) { dbg.push('①teraren失敗: ' + e.message); }
 
         // ── ②: サーバープロキシ（zipcloud経由・最大3回リトライ） ──
-        // Renderフリー枠はスリープするため、失敗時は2秒待ってリトライする
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
             const r = await fetch(API_BASE + '/api/zipcode?zipcode=' + zipcode);
             const d = await r.json();
             const candidate = parseZipcloudResult(d);
-            // teraren より詳しい結果（文字数が多い）なら上書きする
+            dbg.push('②proxy(' + attempt + '): ' + (candidate || JSON.stringify(d).slice(0,60)));
             if (candidate.length > pref.length) pref = candidate;
-            if (pref) break; // 取得できたらリトライ不要
-          } catch { /* サーバー未起動等は無視 */ }
+            if (pref) break;
+          } catch(e) { dbg.push('②proxy(' + attempt + ')失敗: ' + e.message); }
 
           if (attempt < 3 && !pref) {
-            // サーバーが起動するのを2秒待ってリトライする
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 接続中…';
             await new Promise(res => setTimeout(res, 2000));
           }
         }
+
+        // デバッグ情報をアラートで表示する（確認後に削除予定）
+        alert('【デバッグ】\n' + dbg.join('\n') + '\n\n結果: ' + (pref || '取得失敗'));
 
         if (!pref) {
           showToast('住所が取得できませんでした。郵便番号をご確認ください。', 'error');
