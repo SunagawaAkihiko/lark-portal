@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>新規顧客登録 プレビュー</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 5rem;
+    }
+
+    /* ===== ヘッダー ===== */
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; }
+    .back-btn {
+      background: none; border: none; color: white;
+      font-size: 1.2rem; cursor: pointer; padding: 0.2rem;
+    }
+
+    /* ===== フォーム全体 ===== */
+    .form-container { padding: 1rem; max-width: 600px; margin: 0 auto; }
+
+    /* ===== セクション見出し ===== */
+    .section-heading {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.4rem 0.6rem;
+      background: var(--primary-light);
+      border-radius: 6px;
+      margin: 1.4rem 0 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .section-heading:first-of-type { margin-top: 0.4rem; }
+
+    /* ===== フォームグループ ===== */
+    .form-group { margin-bottom: 0.9rem; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      margin-bottom: 0.9rem;
+    }
+    .form-row .form-group { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    label .required {
+      color: var(--primary-color);
+      margin-left: 0.2rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="tel"],
+    input[type="email"],
+    select {
+      width: 100%;
+      padding: 0.7rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--card-bg);
+      color: var(--text-color);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    /* ===== 郵便番号 + 検索ボタン ===== */
+    .zip-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .zip-row input { flex: 1; }
+    .zip-btn {
+      flex-shrink: 0;
+      padding: 0.7rem 1rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ===== 住所補完フィールド ===== */
+    .address-auto {
+      background: white;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      min-height: 2.4rem;
+    }
+    .address-auto.filled { color: var(--text-color); }
+
+    /* ===== 住所同一選択トグル ===== */
+    .addr-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
+    }
+    .addr-toggle-btn {
+      flex: 1;
+      padding: 0.6rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .addr-toggle-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+    .addr-same-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      padding: 0.6rem 0.8rem;
+      background: white;
+      border-radius: 8px;
+      border: 1.5px dashed var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ===== 送信ボタン ===== */
+    .submit-area {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 0.8rem 1rem;
+      background: var(--bg-color);
+      border-top: 1px solid var(--border-color);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <button class="back-btn"><i class="fa-solid fa-arrow-left"></i></button>
+    <h1><i class="fa-solid fa-user-plus" style="margin-right:.4rem"></i>新規顧客登録</h1>
+  </header>
+
+  <div class="form-container">
+
+    <!-- ===== 基本情報 ===== -->
+    <div class="section-heading"><i class="fa-solid fa-circle-info"></i> 基本情報</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>入居日 <span class="required">*</span></label>
+        <input type="date" value="2026-04-19">
+      </div>
+      <div class="form-group">
+        <label>事業所 <span class="required">*</span></label>
+        <select>
+          <option value="">選択</option>
+          <option>大浦家</option>
+          <option>上津役家</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓 <span class="required">*</span></label>
+        <input type="text" placeholder="例: 髙田">
+      </div>
+      <div class="form-group">
+        <label>名 <span class="required">*</span></label>
+        <input type="text" placeholder="例: トミヱ">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓）</label>
+        <input type="text" placeholder="例: タカダ">
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名）</label>
+        <input type="text" placeholder="例: トミエ">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>生年月日</label>
+        <input type="date">
+      </div>
+      <div class="form-group">
+        <label>介護度</label>
+        <select>
+          <option value="">選択</option>
+          <option>要支援1</option>
+          <option>要支援2</option>
+          <option>要介護1</option>
+          <option>要介護2</option>
+          <option>要介護3</option>
+          <option>要介護4</option>
+          <option>要介護5</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== 本人住所 ===== -->
+    <div class="section-heading"><i class="fa-solid fa-house"></i> 本人住所</div>
+
+    <div class="form-group">
+      <label>郵便番号</label>
+      <div class="zip-row">
+        <input type="text" placeholder="例: 8000001" maxlength="7" inputmode="numeric">
+        <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+      </div>
+      <!-- 郵便番号検索後に都道府県＋市区町村が自動入力される -->
+      <div class="address-auto filled">福岡県北九州市門司区</div>
+      <!-- 番地・建物名を手入力 -->
+      <input type="text" placeholder="番地・建物名を入力">
+    </div>
+
+    <!-- ===== 家族① ===== -->
+    <div class="section-heading"><i class="fa-solid fa-person"></i> 家族①</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓</label>
+        <input type="text" placeholder="例: 髙田">
+      </div>
+      <div class="form-group">
+        <label>名</label>
+        <input type="text" placeholder="例: 一郎">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓）</label>
+        <input type="text" placeholder="例: タカダ">
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名）</label>
+        <input type="text" placeholder="例: イチロウ">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>続柄</label>
+        <input type="text" placeholder="例: 長男">
+      </div>
+      <div class="form-group">
+        <label>電話番号</label>
+        <input type="tel" placeholder="例: 09012345678">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>住所</label>
+      <!-- 本人住所と同じ／別の住所を選択 -->
+      <div class="addr-toggle">
+        <button class="addr-toggle-btn active">本人住所と同じ</button>
+        <button class="addr-toggle-btn">別の住所を登録</button>
+      </div>
+      <!-- 「本人住所と同じ」選択時 -->
+      <div class="addr-same-label">
+        <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
+        本人住所がそのまま登録されます
+      </div>
+      <!-- 「別の住所を登録」選択時（非表示状態のプレビュー） -->
+      <!--
+      <div class="zip-row">
+        <input type="text" placeholder="郵便番号" maxlength="7" inputmode="numeric">
+        <button class="zip-btn"><i class="fa-solid fa-magnifying-glass"></i> 検索</button>
+      </div>
+      <div class="address-auto">都道府県・市区町村（自動）</div>
+      <input type="text" placeholder="番地・建物名を入力">
+      -->
+    </div>
+
+    <!-- ===== 家族② ===== -->
+    <div class="section-heading"><i class="fa-solid fa-person"></i> 家族②</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓</label>
+        <input type="text" placeholder="例: 髙田">
+      </div>
+      <div class="form-group">
+        <label>名</label>
+        <input type="text" placeholder="例: 花子">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓）</label>
+        <input type="text" placeholder="例: タカダ">
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名）</label>
+        <input type="text" placeholder="例: ハナコ">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>続柄</label>
+        <input type="text" placeholder="例: 長女">
+      </div>
+      <div class="form-group">
+        <label>電話番号</label>
+        <input type="tel" placeholder="例: 09087654321">
+      </div>
+    </div>
+
+    <!-- ===== その他 ===== -->
+    <div class="section-heading"><i class="fa-solid fa-envelope"></i> その他</div>
+
+    <div class="form-group">
+      <label>報告アドレス</label>
+      <input type="email" placeholder="例: family@example.com">
+    </div>
+
+    <div class="form-group">
+      <label>【郵便物送付先】住所</label>
+      <div class="addr-toggle">
+        <button class="addr-toggle-btn active">本人住所と同じ</button>
+        <button class="addr-toggle-btn">別の住所を登録</button>
+      </div>
+      <div class="addr-same-label">
+        <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
+        本人住所がそのまま登録されます
+      </div>
+    </div>
+
+  </div><!-- /form-container -->
+
+  <div class="submit-area">
+    <button class="submit-btn"><i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>登録する</button>
+  </div>
+
+</body>
+</html>
