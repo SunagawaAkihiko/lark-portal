@@ -658,13 +658,52 @@
 
 
     // ============================================================
-    // 郵便番号から住所を検索する（サーバープロキシ経由）
+    // zipcloud JSONP呼び出し
+    // fetchはCORSポリシーに引っかかるため、scriptタグを使うJSONP方式で
+    // zipcloudを呼び出す。これによりCORSを完全に回避できる。
+    // zipcloudは ?callback=関数名 パラメータでJSONPをサポートしている。
+    // ============================================================
+    function fetchZipJsonp(zipcode) {
+      return new Promise((resolve, reject) => {
+        // グローバルコールバック関数名をユニークにして衝突を防ぐ
+        const callbackName = '_zipCb' + Date.now();
+
+        // 5秒でタイムアウトする
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error('timeout'));
+        }, 5000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[callbackName];
+          const s = document.getElementById('__zipScript');
+          if (s) s.remove();
+        }
+
+        // zipcloudがコールバックとして呼び出すグローバル関数を登録する
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        // scriptタグを動的に作成してJSONPリクエストを発行する
+        const script = document.createElement('script');
+        script.id  = '__zipScript';
+        script.src = `https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}&callback=${callbackName}`;
+        script.onerror = () => {
+          cleanup();
+          reject(new Error('script load error'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // ============================================================
+    // 郵便番号から住所を検索する（JSONP方式）
     // prefix: 'honnin' / 'fam1' / 'mail'
-    // フロントエンドから直接 zipcloud を呼ぶと CORS エラーになる環境があるため
-    // サーバーの /api/zipcode プロキシを使用する
     // ============================================================
     async function searchZip(prefix) {
-      // 郵便番号入力要素（prefixに対応するID）を取得する
       const zipInput = document.getElementById(prefix + 'Zip');
       const zipcode  = zipInput.value.replace(/[^0-9]/g, '');
 
@@ -679,24 +718,8 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 検索中';
 
       try {
-        // ── 郵便番号検索：サーバープロキシ → zipcloud直接 の順で試みる ──
-        // サーバープロキシが失敗した場合（Renderスリープ中など）は
-        // zipcloudに直接アクセスしてフォールバックする
-        let data = null;
-
-        // まずサーバープロキシを試みる
-        try {
-          const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
-          const json = await res.json();
-          // results が含まれている場合のみプロキシ結果を使用する
-          if (json.results) data = json;
-        } catch { /* プロキシが失敗した場合は下のフォールバックへ */ }
-
-        // プロキシが失敗またはresultsなしの場合はzipcloudに直接アクセスする
-        if (!data) {
-          const res = await fetch(`https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}`);
-          data = await res.json();
-        }
+        // JSONPでzipcloudを呼び出す（CORS完全回避）
+        const data = await fetchZipJsonp(zipcode);
 
         if (!data.results || data.results.length === 0) {
           showToast('該当する住所が見つかりませんでした', 'error');
@@ -716,9 +739,8 @@
         document.getElementById(prefix + 'Pref').value = pref;
 
       } catch (e) {
-        showToast('住所検索に失敗しました。時間をおいて再度お試しください。', 'error');
+        showToast('住所検索に失敗しました。通信環境をご確認ください。', 'error');
       } finally {
-        // ボタンを元に戻す
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 検索';
       }
