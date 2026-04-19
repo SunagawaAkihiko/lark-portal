@@ -521,13 +521,13 @@
     <div class="form-group">
       <label>【郵便物送付先】住所 <span class="required">*</span></label>
       <div class="addr-toggle">
-        <button class="addr-toggle-btn active" data-toggle="mailAddr" data-mode="same"
+        <button class="addr-toggle-btn" data-toggle="mailAddr" data-mode="same"
                 onclick="toggleAddr(this,'mailAddr','same')">本人住所と同じ</button>
         <button class="addr-toggle-btn" data-toggle="mailAddr" data-mode="other"
                 onclick="toggleAddr(this,'mailAddr','other')">別の住所を登録</button>
       </div>
-      <!-- 「同じ」選択時の表示ラベル -->
-      <div id="mailAddr-same" class="addr-same-label">
+      <!-- 「同じ」選択時の表示ラベル（初期非表示） -->
+      <div id="mailAddr-same" class="addr-same-label" style="display:none">
         <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
         本人住所がそのまま登録されます
       </div>
@@ -638,7 +638,7 @@
     // fam1Addrはユーザーに必ず選択させるため初期値をnullにする
     const addrMode = {
       fam1Addr: null,   // 未選択（ボタンを押すまで送信不可）
-      mailAddr: 'same',
+      mailAddr: null,   // 未選択（ボタンを押すまで送信不可）
     };
 
 
@@ -818,6 +818,13 @@
           document.getElementById('fam1Zip').scrollIntoView({ behavior: 'smooth', block: 'center' });
           return '家族①の住所を入力してください。';
         }
+      }
+
+      // 郵便物送付先：未選択の場合はエラー
+      if (!addrMode.mailAddr) {
+        document.querySelector('[data-toggle="mailAddr"]')
+          .scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return '郵便物送付先住所を選択してください。';
       }
 
       // 郵便物送付先：「別の住所を登録」選択時は住所の入力も必須とする
