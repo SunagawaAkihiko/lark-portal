@@ -753,8 +753,9 @@
     // ============================================================
     function validateForm() {
       // 必須の単一フィールドIDリスト（生年月日は3セレクト分を別途チェック）
+      // nyukyoDateは3セレクト方式のため、年月日は下の個別チェックで検証する
       const requiredIds = [
-        'nyukyoDate', 'office', 'lastName', 'firstName',
+        'office', 'lastName', 'firstName',
         'lastNameKana', 'firstNameKana', 'careLevel',
         'honninZip', 'honninDetail',
       ];
