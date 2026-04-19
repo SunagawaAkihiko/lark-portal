@@ -611,10 +611,10 @@
     (function initDateSelects() {
       const currentYear = new Date().getFullYear();
 
-      // ── 入居日：2000年〜現在年+2年（降順）──
-      // 直近の入居日を選びやすいよう降順で生成する
+      // ── 入居日：前年〜翌年の3年分（降順）──
+      // 入居日は直近が大半のため、前年・今年・翌年のみ表示する
       const nyukyoYearSel = document.getElementById('nyukyoYear');
-      for (let y = currentYear + 2; y >= 2000; y--) {
+      for (let y = currentYear + 1; y >= currentYear - 1; y--) {
         const opt = document.createElement('option');
         opt.value = y;
         opt.textContent = `${y}年（${warekiStr(y)}）`;
