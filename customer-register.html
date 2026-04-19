@@ -682,51 +682,45 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 検索中';
 
-      let pref = null;
-      let lastError = '';
+      // 両APIの結果を並行して取得し、より詳しい方（文字数が長い方）を採用する。
+      // teraren は町名データが欠けているケースがあるため、
+      // zipcloud（サーバープロキシ）と比較して詳しい方を使う。
+      let prefTeraren   = '';
+      let prefZipcloud  = '';
 
-      // ── 方法①: postcode.teraren.com (CORS対応API) ──
-      // fetchで直接呼べるオープンAPIのため最も確実
-      // prefecture（都道府県）+ city（市区町村）+ town（町名）+ koaza（小字）を結合する
+      // ── API①: postcode.teraren.com (CORS対応・fetch直接) ──
       try {
         const res = await fetch(
           `https://postcode.teraren.com/postcodes/${zipcode}.json`
         );
         if (res.ok) {
           const d = await res.json();
-          // 都道府県＋市区町村＋町名を自動入力する
-          pref = (d.prefecture || '') + (d.city || '') + (d.town || '');
+          prefTeraren = (d.prefecture || '') + (d.city || '') + (d.town || '');
         }
-      } catch (e) {
-        lastError = 'teraren:' + e.message;
-      }
+      } catch { /* 失敗時は空文字のままAPI②へ */ }
 
-      // ── 方法②: サーバープロキシ (zipcloud経由) ──
-      // 方法①が失敗した場合のフォールバック
-      // address3が「以下に掲載がない場合」の場合は除外する
-      if (!pref) {
-        try {
-          const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
-          const d   = await res.json();
-          if (d.results && d.results.length > 0) {
-            const a  = d.results[0];
-            // 都道府県＋市区町村＋町名を自動入力する
-            // 「以下に掲載がない場合」はデータなしを意味するため除外する
-            const a3 = (a.address3 || '').replace('以下に掲載がない場合', '').trim();
-            pref = (a.address1 || '') + (a.address2 || '') + a3;
-          }
-        } catch (e) {
-          lastError += ' / proxy:' + e.message;
+      // ── API②: サーバープロキシ（zipcloud経由） ──
+      try {
+        const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
+        const d   = await res.json();
+        if (d.results && d.results.length > 0) {
+          const a  = d.results[0];
+          // 「以下に掲載がない場合」はデータなしを意味するため除外する
+          const a3 = (a.address3 || '').replace('以下に掲載がない場合', '').trim();
+          prefZipcloud = (a.address1 || '') + (a.address2 || '') + a3;
         }
-      }
+      } catch { /* 失敗時は空文字のまま */ }
+
+      // より詳しい方（文字数が多い方）を採用する
+      const pref = prefZipcloud.length >= prefTeraren.length
+        ? prefZipcloud
+        : prefTeraren;
 
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 検索';
 
       if (!pref) {
-        // どちらの方法でも住所が取得できなかった場合
-        // エラー種別をトーストに含めてデバッグを容易にする
-        showToast(`住所が取得できませんでした（${lastError || '不明'}）`, 'error');
+        showToast('住所が取得できませんでした。郵便番号をご確認ください。', 'error');
         return;
       }
 
