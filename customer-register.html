@@ -275,7 +275,18 @@
     <div class="form-row">
       <div class="form-group">
         <label>入居日 <span class="required">*</span></label>
-        <input type="date" id="nyukyoDate" required>
+        <!-- 年・月・日を3つのセレクトで入力 -->
+        <div style="display:flex; gap:0.4rem; align-items:center">
+          <select id="nyukyoYear" style="flex:2" required>
+            <option value="">年</option>
+          </select>
+          <select id="nyukyoMonth" style="flex:1" required>
+            <option value="">月</option>
+          </select>
+          <select id="nyukyoDay" style="flex:1" required>
+            <option value="">日</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
         <label>事業所 <span class="required">*</span></label>
@@ -559,37 +570,64 @@
 
 
     // ============================================================
-    // 生年月日セレクトの選択肢を初期化する
-    // 利用者が高齢者のため年は1910年〜現在年まで降順で生成する
+    // 和暦変換ヘルパー
+    // 西暦から元号年を「令和X年」形式の文字列で返す
     // ============================================================
-    (function initBirthDateSelects() {
-      // 年（現在年〜1910年の降順）
-      const yearSel = document.getElementById('birthYear');
-      const currentYear = new Date().getFullYear();
-      for (let y = currentYear; y >= 1910; y--) {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = y + '年';
-        yearSel.appendChild(opt);
-      }
+    function warekiStr(year) {
+      if      (year >= 2019) return `令和${year - 2018 === 1 ? '元' : year - 2018}年`;
+      else if (year >= 1989) return `平成${year - 1988 === 1 ? '元' : year - 1988}年`;
+      else if (year >= 1926) return `昭和${year - 1925 === 1 ? '元' : year - 1925}年`;
+      else if (year >= 1912) return `大正${year - 1911 === 1 ? '元' : year - 1911}年`;
+      else                   return `明治${year - 1867 === 1 ? '元' : year - 1867}年`;
+    }
 
-      // 月（1〜12月）
-      const monthSel = document.getElementById('birthMonth');
+    // ============================================================
+    // 月・日セレクトに共通の選択肢を追加するヘルパー
+    // ============================================================
+    function fillMonthDay(monthId, dayId) {
+      const monthSel = document.getElementById(monthId);
       for (let m = 1; m <= 12; m++) {
         const opt = document.createElement('option');
         opt.value = m;
         opt.textContent = m + '月';
         monthSel.appendChild(opt);
       }
-
-      // 日（1〜31日）
-      const daySel = document.getElementById('birthDay');
+      const daySel = document.getElementById(dayId);
       for (let d = 1; d <= 31; d++) {
         const opt = document.createElement('option');
         opt.value = d;
         opt.textContent = d + '日';
         daySel.appendChild(opt);
       }
+    }
+
+    // ============================================================
+    // 各日付セレクトの選択肢を初期化する
+    // ============================================================
+    (function initDateSelects() {
+      const currentYear = new Date().getFullYear();
+
+      // ── 入居日：2000年〜現在年+2年（降順）──
+      // 直近の入居日を選びやすいよう降順で生成する
+      const nyukyoYearSel = document.getElementById('nyukyoYear');
+      for (let y = currentYear + 2; y >= 2000; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = `${y}年（${warekiStr(y)}）`;
+        nyukyoYearSel.appendChild(opt);
+      }
+      fillMonthDay('nyukyoMonth', 'nyukyoDay');
+
+      // ── 生年月日：現在年〜1910年（降順）──
+      // 高齢者対応のため1910年まで遡れるようにする
+      const birthYearSel = document.getElementById('birthYear');
+      for (let y = currentYear; y >= 1910; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = `${y}年（${warekiStr(y)}）`;
+        birthYearSel.appendChild(opt);
+      }
+      fillMonthDay('birthMonth', 'birthDay');
     })();
 
     // 住所トグルの状態管理（prefixKey => 'same' | 'other'）
@@ -641,9 +679,24 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 検索中';
 
       try {
-        // サーバー経由で zipcloud を呼び出す（CORSを回避するため）
-        const res  = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
-        const data = await res.json();
+        // ── 郵便番号検索：サーバープロキシ → zipcloud直接 の順で試みる ──
+        // サーバープロキシが失敗した場合（Renderスリープ中など）は
+        // zipcloudに直接アクセスしてフォールバックする
+        let data = null;
+
+        // まずサーバープロキシを試みる
+        try {
+          const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
+          const json = await res.json();
+          // results が含まれている場合のみプロキシ結果を使用する
+          if (json.results) data = json;
+        } catch { /* プロキシが失敗した場合は下のフォールバックへ */ }
+
+        // プロキシが失敗またはresultsなしの場合はzipcloudに直接アクセスする
+        if (!data) {
+          const res = await fetch(`https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}`);
+          data = await res.json();
+        }
 
         if (!data.results || data.results.length === 0) {
           showToast('該当する住所が見つかりませんでした', 'error');
@@ -694,6 +747,14 @@
         }
       }
 
+      // 入居日（年・月・日すべて選択されているか確認する）
+      if (!document.getElementById('nyukyoYear').value ||
+          !document.getElementById('nyukyoMonth').value ||
+          !document.getElementById('nyukyoDay').value) {
+        document.getElementById('nyukyoYear').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return '入居日を選択してください。';
+      }
+
       // 生年月日（年・月・日すべて選択されているか確認する）
       if (!document.getElementById('birthYear').value ||
           !document.getElementById('birthMonth').value ||
@@ -742,7 +803,13 @@
         // フォームから値を収集してAPIリクエストボディを組み立てる
         const body = {
           // 本人基本情報
-          nyukyoDate:    document.getElementById('nyukyoDate').value,
+          // 入居日は年・月・日セレクトから YYYY-MM-DD 形式に組み立てる
+          nyukyoDate: (() => {
+            const y = document.getElementById('nyukyoYear').value;
+            const m = String(document.getElementById('nyukyoMonth').value).padStart(2, '0');
+            const d = String(document.getElementById('nyukyoDay').value).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          })(),
           office:        document.getElementById('office').value,
           lastName:      document.getElementById('lastName').value.trim(),
           firstName:     document.getElementById('firstName').value.trim(),
