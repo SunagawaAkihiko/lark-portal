@@ -392,44 +392,41 @@
       <div class="section-heading-title">
         <i class="fa-solid fa-person"></i> 家族①【第一緊急連絡先】
       </div>
-      <div class="section-heading-note">
-        ※特別な事情がない限り必ず登録お願いします。
-      </div>
     </div>
 
     <!-- 家族①姓・名 -->
     <div class="form-row">
       <div class="form-group">
-        <label>姓</label>
-        <input type="text" id="fam1LastName" placeholder="例: 田中">
+        <label>姓 <span class="required">*</span></label>
+        <input type="text" id="fam1LastName" placeholder="例: 田中" required>
       </div>
       <div class="form-group">
-        <label>名</label>
-        <input type="text" id="fam1FirstName" placeholder="例: 一郎">
+        <label>名 <span class="required">*</span></label>
+        <input type="text" id="fam1FirstName" placeholder="例: 一郎" required>
       </div>
     </div>
 
     <!-- 家族①フリガナ -->
     <div class="form-row">
       <div class="form-group">
-        <label>フリガナ（姓）</label>
-        <input type="text" id="fam1LastNameKana" placeholder="例: タナカ">
+        <label>フリガナ（姓） <span class="required">*</span></label>
+        <input type="text" id="fam1LastNameKana" placeholder="例: タナカ" required>
       </div>
       <div class="form-group">
-        <label>フリガナ（名）</label>
-        <input type="text" id="fam1FirstNameKana" placeholder="例: イチロウ">
+        <label>フリガナ（名） <span class="required">*</span></label>
+        <input type="text" id="fam1FirstNameKana" placeholder="例: イチロウ" required>
       </div>
     </div>
 
     <!-- 家族①続柄・電話番号 -->
     <div class="form-row">
       <div class="form-group">
-        <label>続柄</label>
-        <input type="text" id="fam1Relationship" placeholder="例: 長男">
+        <label>続柄 <span class="required">*</span></label>
+        <input type="text" id="fam1Relationship" placeholder="例: 長男" required>
       </div>
       <div class="form-group">
-        <label>電話番号（ハイフン不要）</label>
-        <input type="tel" id="fam1Phone" placeholder="例: 09012345678">
+        <label>電話番号（ハイフン不要） <span class="required">*</span></label>
+        <input type="tel" id="fam1Phone" placeholder="例: 09012345678" required>
       </div>
     </div>
 
@@ -469,44 +466,41 @@
       <div class="section-heading-title">
         <i class="fa-solid fa-person"></i> 家族②【第二緊急連絡先】
       </div>
-      <div class="section-heading-note">
-        ※できる限り登録をお願いします。
-      </div>
     </div>
 
     <!-- 家族②姓・名 -->
     <div class="form-row">
       <div class="form-group">
-        <label>姓</label>
-        <input type="text" id="fam2LastName" placeholder="例: 田中">
+        <label>姓 <span class="required">*</span></label>
+        <input type="text" id="fam2LastName" placeholder="例: 田中" required>
       </div>
       <div class="form-group">
-        <label>名</label>
-        <input type="text" id="fam2FirstName" placeholder="例: 花子">
+        <label>名 <span class="required">*</span></label>
+        <input type="text" id="fam2FirstName" placeholder="例: 花子" required>
       </div>
     </div>
 
     <!-- 家族②フリガナ -->
     <div class="form-row">
       <div class="form-group">
-        <label>フリガナ（姓）</label>
-        <input type="text" id="fam2LastNameKana" placeholder="例: タナカ">
+        <label>フリガナ（姓） <span class="required">*</span></label>
+        <input type="text" id="fam2LastNameKana" placeholder="例: タナカ" required>
       </div>
       <div class="form-group">
-        <label>フリガナ（名）</label>
-        <input type="text" id="fam2FirstNameKana" placeholder="例: ハナコ">
+        <label>フリガナ（名） <span class="required">*</span></label>
+        <input type="text" id="fam2FirstNameKana" placeholder="例: ハナコ" required>
       </div>
     </div>
 
     <!-- 家族②続柄・電話番号 -->
     <div class="form-row">
       <div class="form-group">
-        <label>続柄</label>
-        <input type="text" id="fam2Relationship" placeholder="例: 長女">
+        <label>続柄 <span class="required">*</span></label>
+        <input type="text" id="fam2Relationship" placeholder="例: 長女" required>
       </div>
       <div class="form-group">
-        <label>電話番号（ハイフン不要）</label>
-        <input type="tel" id="fam2Phone" placeholder="例: 09087654321">
+        <label>電話番号（ハイフン不要） <span class="required">*</span></label>
+        <input type="tel" id="fam2Phone" placeholder="例: 09087654321" required>
       </div>
     </div>
 
@@ -519,8 +513,8 @@
 
     <!-- 報告アドレス（任意） -->
     <div class="form-group">
-      <label>報告アドレス（毎日のご報告とご請求書・領収書の送付先メールアドレス）</label>
-      <input type="email" id="reportEmail" placeholder="例: family@example.com">
+      <label>報告アドレス（毎日のご報告とご請求書・領収書の送付先メールアドレス） <span class="required">*</span></label>
+      <input type="email" id="reportEmail" placeholder="例: family@example.com" required>
     </div>
 
     <!-- 郵便物送付先住所トグル -->
@@ -764,6 +758,16 @@
         'office', 'lastName', 'firstName',
         'lastNameKana', 'firstNameKana', 'careLevel',
         'honninZip', 'honninDetail',
+        // 家族①（全項目必須）
+        'fam1LastName', 'fam1FirstName',
+        'fam1LastNameKana', 'fam1FirstNameKana',
+        'fam1Relationship', 'fam1Phone',
+        // 家族②（全項目必須）
+        'fam2LastName', 'fam2FirstName',
+        'fam2LastNameKana', 'fam2FirstNameKana',
+        'fam2Relationship', 'fam2Phone',
+        // 報告アドレス（必須）
+        'reportEmail',
       ];
 
       for (const id of requiredIds) {
