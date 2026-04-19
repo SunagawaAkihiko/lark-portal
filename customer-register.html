@@ -315,7 +315,18 @@
     <div class="form-row">
       <div class="form-group">
         <label>生年月日 <span class="required">*</span></label>
-        <input type="date" id="birthDate" required>
+        <!-- 年・月・日を3つのセレクトで入力（type="date"はiOS/Androidで操作しにくいため） -->
+        <div style="display:flex; gap:0.4rem; align-items:center">
+          <select id="birthYear" style="flex:2" required>
+            <option value="">年</option>
+          </select>
+          <select id="birthMonth" style="flex:1" required>
+            <option value="">月</option>
+          </select>
+          <select id="birthDay" style="flex:1" required>
+            <option value="">日</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
         <label>介護度 <span class="required">*</span></label>
@@ -546,6 +557,41 @@
     /** APIサーバーのベースURL（production: Render） */
     const API_BASE = 'https://attendance-app-irf1.onrender.com';
 
+
+    // ============================================================
+    // 生年月日セレクトの選択肢を初期化する
+    // 利用者が高齢者のため年は1910年〜現在年まで降順で生成する
+    // ============================================================
+    (function initBirthDateSelects() {
+      // 年（現在年〜1910年の降順）
+      const yearSel = document.getElementById('birthYear');
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= 1910; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y + '年';
+        yearSel.appendChild(opt);
+      }
+
+      // 月（1〜12月）
+      const monthSel = document.getElementById('birthMonth');
+      for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m + '月';
+        monthSel.appendChild(opt);
+      }
+
+      // 日（1〜31日）
+      const daySel = document.getElementById('birthDay');
+      for (let d = 1; d <= 31; d++) {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d + '日';
+        daySel.appendChild(opt);
+      }
+    })();
+
     // 住所トグルの状態管理（prefixKey => 'same' | 'other'）
     const addrMode = {
       fam1Addr: 'same',
@@ -574,9 +620,10 @@
 
 
     // ============================================================
-    // 郵便番号から住所を検索する（zipcloud API使用）
+    // 郵便番号から住所を検索する（サーバープロキシ経由）
     // prefix: 'honnin' / 'fam1' / 'mail'
-    // zipcloud: https://zipcloud.ibsreg.jp/api/search
+    // フロントエンドから直接 zipcloud を呼ぶと CORS エラーになる環境があるため
+    // サーバーの /api/zipcode プロキシを使用する
     // ============================================================
     async function searchZip(prefix) {
       // 郵便番号入力要素（prefixに対応するID）を取得する
@@ -591,11 +638,11 @@
       // 検索中はボタンを無効化してUX向上
       const btn = zipInput.closest('.zip-row').querySelector('.zip-btn');
       btn.disabled = true;
-      btn.textContent = '検索中...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 検索中';
 
       try {
-        // zipcloud APIはCORSを許可しているためフロントエンドから直接呼び出せる
-        const res  = await fetch(`https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}`);
+        // サーバー経由で zipcloud を呼び出す（CORSを回避するため）
+        const res  = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
         const data = await res.json();
 
         if (!data.results || data.results.length === 0) {
@@ -604,8 +651,8 @@
         }
 
         // 都道府県・市区町村・町域を結合して表示欄に入れる
-        const r     = data.results[0];
-        const pref  = (r.address1 || '') + (r.address2 || '') + (r.address3 || '');
+        const r    = data.results[0];
+        const pref = (r.address1 || '') + (r.address2 || '') + (r.address3 || '');
 
         // 表示欄を更新する
         const display = document.getElementById(prefix + 'PrefDisplay');
@@ -616,7 +663,7 @@
         document.getElementById(prefix + 'Pref').value = pref;
 
       } catch (e) {
-        showToast('住所検索に失敗しました。通信環境をご確認ください。', 'error');
+        showToast('住所検索に失敗しました。時間をおいて再度お試しください。', 'error');
       } finally {
         // ボタンを元に戻す
         btn.disabled = false;
@@ -630,10 +677,10 @@
     // 必須項目が未入力の場合にエラーメッセージを返す
     // ============================================================
     function validateForm() {
-      // 必須の単一フィールドIDリスト
+      // 必須の単一フィールドIDリスト（生年月日は3セレクト分を別途チェック）
       const requiredIds = [
         'nyukyoDate', 'office', 'lastName', 'firstName',
-        'lastNameKana', 'firstNameKana', 'birthDate', 'careLevel',
+        'lastNameKana', 'firstNameKana', 'careLevel',
         'honninZip', 'honninDetail',
       ];
 
@@ -645,6 +692,14 @@
           el && el.focus();
           return '必須項目が未入力です。赤い * 印の項目をすべて入力してください。';
         }
+      }
+
+      // 生年月日（年・月・日すべて選択されているか確認する）
+      if (!document.getElementById('birthYear').value ||
+          !document.getElementById('birthMonth').value ||
+          !document.getElementById('birthDay').value) {
+        document.getElementById('birthYear').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return '生年月日を選択してください。';
       }
 
       // 本人住所：郵便番号から住所が取得できているか確認する
@@ -693,7 +748,13 @@
           firstName:     document.getElementById('firstName').value.trim(),
           lastNameKana:  document.getElementById('lastNameKana').value.trim(),
           firstNameKana: document.getElementById('firstNameKana').value.trim(),
-          birthDate:     document.getElementById('birthDate').value,
+          // 生年月日は年・月・日セレクトから YYYY-MM-DD 形式に組み立てる
+          birthDate: (() => {
+            const y = document.getElementById('birthYear').value;
+            const m = String(document.getElementById('birthMonth').value).padStart(2, '0');
+            const d = String(document.getElementById('birthDay').value).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          })(),
           careLevel:     document.getElementById('careLevel').value,
           // 本人住所（各パーツ）
           honninZip:     document.getElementById('honninZip').value.trim(),
