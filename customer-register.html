@@ -430,9 +430,9 @@
       </div>
     </div>
 
-    <!-- 家族①住所トグル -->
+    <!-- 家族①住所トグル（必須：本人住所と同じ or 別の住所を入力） -->
     <div class="form-group">
-      <label>住所</label>
+      <label>住所 <span class="required">*</span></label>
       <div class="addr-toggle">
         <button class="addr-toggle-btn active" data-toggle="fam1Addr" data-mode="same"
                 onclick="toggleAddr(this,'fam1Addr','same')">本人住所と同じ</button>
@@ -800,6 +800,16 @@
       if (!document.getElementById('honninPref').value) {
         document.getElementById('honninZip').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return '本人住所の郵便番号を検索してください。';
+      }
+
+      // 家族①住所：「別の住所を登録」選択時は住所の入力も必須とする
+      if (addrMode.fam1Addr === 'other') {
+        if (!document.getElementById('fam1Zip').value.trim() ||
+            !document.getElementById('fam1Pref').value ||
+            !document.getElementById('fam1Detail').value.trim()) {
+          document.getElementById('fam1Zip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return '家族①の住所を入力してください。';
+        }
       }
 
       // 郵便物送付先：「別の住所を登録」選択時は住所の入力も必須とする
