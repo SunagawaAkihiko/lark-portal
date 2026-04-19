@@ -885,7 +885,13 @@
         });
         const data = await res.json();
 
-        if (!data.ok) throw new Error(data.error || '登録に失敗しました');
+        if (!data.ok) {
+          // デバッグ用：エラー詳細を画面に表示する（原因特定後に削除する）
+          const detail = data.larkDetail ? JSON.stringify(data.larkDetail) : '';
+          const sent   = data.sentFields  ? '送信フィールド: ' + data.sentFields.join(', ') : '';
+          alert('登録失敗\n' + data.error + '\n\n' + detail + '\n' + sent);
+          throw new Error(data.error || '登録に失敗しました');
+        }
 
         // 登録成功：成功メッセージを表示してポータルに戻る
         showToast('登録が完了しました', 'success');
