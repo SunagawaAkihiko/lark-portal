@@ -682,39 +682,39 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 検索中';
 
-      // 両APIの結果を並行して取得し、より詳しい方（文字数が長い方）を採用する。
-      // teraren は町名データが欠けているケースがあるため、
-      // zipcloud（サーバープロキシ）と比較して詳しい方を使う。
-      let prefTeraren   = '';
-      let prefZipcloud  = '';
+      // ── 3つのAPIを並行実行し、最も詳しい結果（文字数最大）を採用する ──
+      // API①: postcode.teraren.com（CORS対応・直接fetch）
+      // API②: zipcloud直接fetch（CORS許可の場合に有効）
+      // API③: zipcloudサーバープロキシ（Renderが起きている場合に有効）
+      // どれかひとつでも町名まで取得できれば採用する
+      function buildZipcloudAddr(d) {
+        if (!d.results || !d.results.length) return '';
+        const a  = d.results[0];
+        const a3 = (a.address3 || '').replace('以下に掲載がない場合', '').trim();
+        return (a.address1 || '') + (a.address2 || '') + a3;
+      }
 
-      // ── API①: postcode.teraren.com (CORS対応・fetch直接) ──
-      try {
-        const res = await fetch(
-          `https://postcode.teraren.com/postcodes/${zipcode}.json`
-        );
-        if (res.ok) {
-          const d = await res.json();
-          prefTeraren = (d.prefecture || '') + (d.city || '') + (d.town || '');
-        }
-      } catch { /* 失敗時は空文字のままAPI②へ */ }
+      const results = await Promise.allSettled([
+        // API①: teraren
+        fetch(`https://postcode.teraren.com/postcodes/${zipcode}.json`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => d ? (d.prefecture||'') + (d.city||'') + (d.town||'') : ''),
 
-      // ── API②: サーバープロキシ（zipcloud経由） ──
-      try {
-        const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
-        const d   = await res.json();
-        if (d.results && d.results.length > 0) {
-          const a  = d.results[0];
-          // 「以下に掲載がない場合」はデータなしを意味するため除外する
-          const a3 = (a.address3 || '').replace('以下に掲載がない場合', '').trim();
-          prefZipcloud = (a.address1 || '') + (a.address2 || '') + a3;
-        }
-      } catch { /* 失敗時は空文字のまま */ }
+        // API②: zipcloud直接
+        fetch(`https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}`)
+          .then(r => r.json())
+          .then(d => buildZipcloudAddr(d)),
 
-      // より詳しい方（文字数が多い方）を採用する
-      const pref = prefZipcloud.length >= prefTeraren.length
-        ? prefZipcloud
-        : prefTeraren;
+        // API③: zipcloudサーバープロキシ
+        fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`)
+          .then(r => r.json())
+          .then(d => buildZipcloudAddr(d)),
+      ]);
+
+      // 取得できた候補の中で最も文字数が多いもの（最も詳しいもの）を使う
+      const pref = results
+        .map(r => (r.status === 'fulfilled' && r.value) ? r.value : '')
+        .reduce((best, cur) => cur.length > best.length ? cur : best, '');
 
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 検索';
