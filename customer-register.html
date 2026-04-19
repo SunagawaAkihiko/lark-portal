@@ -694,9 +694,8 @@
         );
         if (res.ok) {
           const d = await res.json();
-          pref = [d.prefecture, d.city, d.town, d.koaza]
-            .filter(v => v && v.trim())   // 空・空白を除外する
-            .join('');
+          // 都道府県＋市区町村までを自動入力する（町名以降は手入力）
+          pref = (d.prefecture || '') + (d.city || '');
         }
       } catch (e) {
         lastError = 'teraren:' + e.message;
@@ -711,8 +710,8 @@
           const d   = await res.json();
           if (d.results && d.results.length > 0) {
             const a  = d.results[0];
-            const a3 = (a.address3 || '').includes('以下に掲載がない場合') ? '' : (a.address3 || '');
-            pref = (a.address1 || '') + (a.address2 || '') + a3;
+            // 都道府県＋市区町村までを自動入力する（address3の町名は含めない）
+            pref = (a.address1 || '') + (a.address2 || '');
           }
         } catch (e) {
           lastError += ' / proxy:' + e.message;
