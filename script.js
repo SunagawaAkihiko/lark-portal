@@ -74,6 +74,12 @@ const portalLinks = [
         url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeK1XX36156LOSx"
     },
     {
+        title: "新規顧客登録",
+        description: "新しい利用者の基本情報・家族情報・住所等を登録します",
+        icon: "fa-user-plus",
+        url: "customer-register.html"
+    },
+    {
         title: "利用者情報",
         description: "利用者の基本情報や詳細なデータを閲覧できます",
         icon: "fa-address-card",

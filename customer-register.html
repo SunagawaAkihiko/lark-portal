@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>新規顧客登録</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ===== CSS変数（lark-portal統一デザイン） ===== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      /* 送信ボタン分の下部余白 */
+      padding-bottom: 5rem;
+    }
+
+    /* ===== ページヘッダー ===== */
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; }
+    /* 戻るボタン：前のページへ戻る */
+    .back-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.2rem;
+    }
+
+    /* ===== フォーム全体コンテナ ===== */
+    .form-container {
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== セクション見出し ===== */
+    .section-heading {
+      padding: 0.5rem 0.7rem;
+      background: var(--primary-light);
+      border-radius: 6px;
+      margin: 1.4rem 0 0.8rem;
+    }
+    .section-heading:first-of-type { margin-top: 0.4rem; }
+    .section-heading-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    /* セクション補足注記（小さく薄く） */
+    .section-heading-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      padding-left: 0.1rem;
+      line-height: 1.4;
+    }
+
+    /* ===== フォームグループ・行レイアウト ===== */
+    .form-group { margin-bottom: 0.9rem; }
+    /* 2カラムグリッド（姓/名など横並びにする） */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      margin-bottom: 0.9rem;
+    }
+    .form-row .form-group { margin-bottom: 0; }
+
+    /* ===== ラベル ===== */
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    /* 必須マーク */
+    label .required { color: var(--primary-color); margin-left: 0.2rem; }
+
+    /* ===== 入力フィールド共通スタイル ===== */
+    input[type="text"],
+    input[type="date"],
+    input[type="tel"],
+    input[type="email"],
+    select {
+      width: 100%;
+      padding: 0.7rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--card-bg);
+      color: var(--text-color);
+      /* iOSのデフォルトスタイルを除去して横ぶれを防止する */
+      -webkit-appearance: none;
+      appearance: none;
+      /* dateフィールドが他フィールドより広くなるのを防止する */
+      max-width: 100%;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    /* ===== 郵便番号入力行 ===== */
+    .zip-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .zip-row input { flex: 1; }
+    /* 郵便番号検索ボタン */
+    .zip-btn {
+      flex-shrink: 0;
+      padding: 0.7rem 1rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .zip-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* ===== 住所自動補完表示欄 ===== */
+    .address-auto {
+      background: white;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      min-height: 2.4rem;
+    }
+    /* 住所が取得できた状態 */
+    .address-auto.filled { color: var(--text-color); }
+
+    /* ===== 住所同一選択トグルボタン ===== */
+    .addr-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
+    }
+    .addr-toggle-btn {
+      flex: 1;
+      padding: 0.6rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    /* 選択中のボタン */
+    .addr-toggle-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+    /* 「本人住所と同じ」選択時の表示ラベル */
+    .addr-same-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      padding: 0.6rem 0.8rem;
+      background: white;
+      border-radius: 8px;
+      border: 1.5px dashed var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ===== 送信ボタン（画面下部固定） ===== */
+    .submit-area {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 0.8rem 1rem;
+      background: var(--bg-color);
+      border-top: 1px solid var(--border-color);
+      z-index: 10;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .submit-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* ===== トースト通知（登録結果表示） ===== */
+    .toast {
+      position: fixed;
+      bottom: 5.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 0.7rem 1.4rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== ページヘッダー ===== -->
+  <header class="page-header">
+    <button class="back-btn" onclick="history.back()">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <h1><i class="fa-solid fa-user-plus" style="margin-right:.4rem"></i>新規顧客登録</h1>
+  </header>
+
+  <!-- ===== フォーム本体 ===== -->
+  <div class="form-container">
+
+    <!-- ===== 本人基本情報セクション ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title">
+        <i class="fa-solid fa-circle-info"></i> 本人基本情報
+      </div>
+    </div>
+
+    <!-- 入居日・事業所 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>入居日 <span class="required">*</span></label>
+        <input type="date" id="nyukyoDate" required>
+      </div>
+      <div class="form-group">
+        <label>事業所 <span class="required">*</span></label>
+        <select id="office" required>
+          <option value="">選択</option>
+          <option>大浦家</option>
+          <option>上津役家</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 姓・名 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓 <span class="required">*</span></label>
+        <input type="text" id="lastName" placeholder="例: 髙田" required>
+      </div>
+      <div class="form-group">
+        <label>名 <span class="required">*</span></label>
+        <input type="text" id="firstName" placeholder="例: トミヱ" required>
+      </div>
+    </div>
+
+    <!-- フリガナ（姓・名） -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓） <span class="required">*</span></label>
+        <input type="text" id="lastNameKana" placeholder="例: タカダ" required>
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名） <span class="required">*</span></label>
+        <input type="text" id="firstNameKana" placeholder="例: トミエ" required>
+      </div>
+    </div>
+
+    <!-- 生年月日・介護度 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>生年月日 <span class="required">*</span></label>
+        <input type="date" id="birthDate" required>
+      </div>
+      <div class="form-group">
+        <label>介護度 <span class="required">*</span></label>
+        <select id="careLevel" required>
+          <option value="">選択</option>
+          <option>要支援1</option>
+          <option>要支援2</option>
+          <option>要介護1</option>
+          <option>要介護2</option>
+          <option>要介護3</option>
+          <option>要介護4</option>
+          <option>要介護5</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== 本人住所セクション ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title">
+        <i class="fa-solid fa-house"></i> 本人住所
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>郵便番号（ハイフン不要） <span class="required">*</span></label>
+      <!-- 郵便番号入力 + 検索ボタン行 -->
+      <div class="zip-row">
+        <input type="text" id="honninZip" placeholder="例: 8000001"
+               maxlength="7" inputmode="numeric" required>
+        <button class="zip-btn" onclick="searchZip('honnin')">
+          <i class="fa-solid fa-magnifying-glass"></i> 検索
+        </button>
+      </div>
+      <!-- zipcloud APIで取得した都道府県+市区町村の表示欄 -->
+      <div class="address-auto" id="honninPrefDisplay">
+        ← 郵便番号を入力して検索すると自動入力されます
+      </div>
+      <!-- 隠しフィールド：都道府県+市区町村の実データ -->
+      <input type="hidden" id="honninPref">
+      <!-- 番地・建物名の手入力欄 -->
+      <input type="text" id="honninDetail" placeholder="番地・建物名を入力" required>
+    </div>
+
+    <!-- ===== 家族①【第一緊急連絡先】セクション ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title">
+        <i class="fa-solid fa-person"></i> 家族①【第一緊急連絡先】
+      </div>
+      <div class="section-heading-note">
+        ※特別な事情がない限り必ず登録お願いします。
+      </div>
+    </div>
+
+    <!-- 家族①姓・名 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓</label>
+        <input type="text" id="fam1LastName" placeholder="例: 髙田">
+      </div>
+      <div class="form-group">
+        <label>名</label>
+        <input type="text" id="fam1FirstName" placeholder="例: 一郎">
+      </div>
+    </div>
+
+    <!-- 家族①フリガナ -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓）</label>
+        <input type="text" id="fam1LastNameKana" placeholder="例: タカダ">
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名）</label>
+        <input type="text" id="fam1FirstNameKana" placeholder="例: イチロウ">
+      </div>
+    </div>
+
+    <!-- 家族①続柄・電話番号 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>続柄</label>
+        <input type="text" id="fam1Relationship" placeholder="例: 長男">
+      </div>
+      <div class="form-group">
+        <label>電話番号（ハイフン不要）</label>
+        <input type="tel" id="fam1Phone" placeholder="例: 09012345678">
+      </div>
+    </div>
+
+    <!-- 家族①住所トグル -->
+    <div class="form-group">
+      <label>住所</label>
+      <div class="addr-toggle">
+        <button class="addr-toggle-btn active" data-toggle="fam1Addr" data-mode="same"
+                onclick="toggleAddr(this,'fam1Addr','same')">本人住所と同じ</button>
+        <button class="addr-toggle-btn" data-toggle="fam1Addr" data-mode="other"
+                onclick="toggleAddr(this,'fam1Addr','other')">別の住所を登録</button>
+      </div>
+      <!-- 「同じ」選択時の表示ラベル -->
+      <div id="fam1Addr-same" class="addr-same-label">
+        <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
+        本人住所がそのまま登録されます
+      </div>
+      <!-- 「別の住所」選択時の入力欄 -->
+      <div id="fam1Addr-other" style="display:none">
+        <div class="zip-row">
+          <input type="text" id="fam1Zip" placeholder="郵便番号（ハイフン不要・7桁）"
+                 maxlength="7" inputmode="numeric">
+          <button class="zip-btn" onclick="searchZip('fam1')">
+            <i class="fa-solid fa-magnifying-glass"></i> 検索
+          </button>
+        </div>
+        <div class="address-auto" id="fam1PrefDisplay">
+          ← 郵便番号を入力して検索すると自動入力されます
+        </div>
+        <input type="hidden" id="fam1Pref">
+        <input type="text" id="fam1Detail" placeholder="番地・建物名を入力" style="margin-top:.4rem">
+      </div>
+    </div>
+
+    <!-- ===== 家族②【第二緊急連絡先】セクション ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title">
+        <i class="fa-solid fa-person"></i> 家族②【第二緊急連絡先】
+      </div>
+      <div class="section-heading-note">
+        ※できる限り登録をお願いします。
+      </div>
+    </div>
+
+    <!-- 家族②姓・名 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓</label>
+        <input type="text" id="fam2LastName" placeholder="例: 髙田">
+      </div>
+      <div class="form-group">
+        <label>名</label>
+        <input type="text" id="fam2FirstName" placeholder="例: 花子">
+      </div>
+    </div>
+
+    <!-- 家族②フリガナ -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>フリガナ（姓）</label>
+        <input type="text" id="fam2LastNameKana" placeholder="例: タカダ">
+      </div>
+      <div class="form-group">
+        <label>フリガナ（名）</label>
+        <input type="text" id="fam2FirstNameKana" placeholder="例: ハナコ">
+      </div>
+    </div>
+
+    <!-- 家族②続柄・電話番号 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>続柄</label>
+        <input type="text" id="fam2Relationship" placeholder="例: 長女">
+      </div>
+      <div class="form-group">
+        <label>電話番号（ハイフン不要）</label>
+        <input type="tel" id="fam2Phone" placeholder="例: 09087654321">
+      </div>
+    </div>
+
+    <!-- ===== その他セクション ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title">
+        <i class="fa-solid fa-envelope"></i> その他
+      </div>
+    </div>
+
+    <!-- 報告アドレス（任意） -->
+    <div class="form-group">
+      <label>報告アドレス（毎日のご報告とご請求書・領収書の送付先メールアドレス）</label>
+      <input type="email" id="reportEmail" placeholder="例: family@example.com">
+    </div>
+
+    <!-- 郵便物送付先住所トグル -->
+    <div class="form-group">
+      <label>【郵便物送付先】住所 <span class="required">*</span></label>
+      <div class="addr-toggle">
+        <button class="addr-toggle-btn active" data-toggle="mailAddr" data-mode="same"
+                onclick="toggleAddr(this,'mailAddr','same')">本人住所と同じ</button>
+        <button class="addr-toggle-btn" data-toggle="mailAddr" data-mode="other"
+                onclick="toggleAddr(this,'mailAddr','other')">別の住所を登録</button>
+      </div>
+      <!-- 「同じ」選択時の表示ラベル -->
+      <div id="mailAddr-same" class="addr-same-label">
+        <i class="fa-solid fa-check" style="color:var(--primary-color)"></i>
+        本人住所がそのまま登録されます
+      </div>
+      <!-- 「別の住所」選択時の入力欄 -->
+      <div id="mailAddr-other" style="display:none">
+        <div class="zip-row">
+          <input type="text" id="mailZip" placeholder="郵便番号（ハイフン不要・7桁）"
+                 maxlength="7" inputmode="numeric">
+          <button class="zip-btn" onclick="searchZip('mail')">
+            <i class="fa-solid fa-magnifying-glass"></i> 検索
+          </button>
+        </div>
+        <div class="address-auto" id="mailPrefDisplay">
+          ← 郵便番号を入力して検索すると自動入力されます
+        </div>
+        <input type="hidden" id="mailPref">
+        <input type="text" id="mailDetail" placeholder="番地・建物名を入力" style="margin-top:.4rem">
+      </div>
+    </div>
+
+  </div><!-- /form-container -->
+
+  <!-- ===== 送信ボタン（画面下部固定） ===== -->
+  <div class="submit-area">
+    <button class="submit-btn" id="submitBtn" onclick="submitForm()">
+      <i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>登録する
+    </button>
+  </div>
+
+  <!-- ===== トースト通知 ===== -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ============================================================
+    // 定数
+    // ============================================================
+
+    /** APIサーバーのベースURL（production: Render） */
+    const API_BASE = 'https://attendance-app-irf1.onrender.com';
+
+    // 住所トグルの状態管理（prefixKey => 'same' | 'other'）
+    const addrMode = {
+      fam1Addr: 'same',
+      mailAddr: 'same',
+    };
+
+
+    // ============================================================
+    // 住所トグルの切り替え処理
+    // prefix: 'fam1Addr' または 'mailAddr'
+    // mode: 'same'（本人住所と同じ）または 'other'（別の住所を登録）
+    // ============================================================
+    function toggleAddr(btn, prefix, mode) {
+      // ボタングループ内のアクティブ状態をリセットして選択中ボタンをアクティブにする
+      const group = btn.closest('.addr-toggle');
+      group.querySelectorAll('.addr-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 状態を更新する
+      addrMode[prefix] = mode;
+
+      // 「同じ」ラベルと「別の住所」入力欄を切り替える
+      document.getElementById(prefix + '-same').style.display  = (mode === 'same')  ? '' : 'none';
+      document.getElementById(prefix + '-other').style.display = (mode === 'other') ? '' : 'none';
+    }
+
+
+    // ============================================================
+    // 郵便番号から住所を検索する（zipcloud API使用）
+    // prefix: 'honnin' / 'fam1' / 'mail'
+    // zipcloud: https://zipcloud.ibsreg.jp/api/search
+    // ============================================================
+    async function searchZip(prefix) {
+      // 郵便番号入力要素（prefixに対応するID）を取得する
+      const zipInput = document.getElementById(prefix + 'Zip');
+      const zipcode  = zipInput.value.replace(/[^0-9]/g, '');
+
+      if (zipcode.length !== 7) {
+        showToast('郵便番号は7桁で入力してください', 'error');
+        return;
+      }
+
+      // 検索中はボタンを無効化してUX向上
+      const btn = zipInput.closest('.zip-row').querySelector('.zip-btn');
+      btn.disabled = true;
+      btn.textContent = '検索中...';
+
+      try {
+        // zipcloud APIはCORSを許可しているためフロントエンドから直接呼び出せる
+        const res  = await fetch(`https://zipcloud.ibsreg.jp/api/search?zipcode=${zipcode}`);
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+          showToast('該当する住所が見つかりませんでした', 'error');
+          return;
+        }
+
+        // 都道府県・市区町村・町域を結合して表示欄に入れる
+        const r     = data.results[0];
+        const pref  = (r.address1 || '') + (r.address2 || '') + (r.address3 || '');
+
+        // 表示欄を更新する
+        const display = document.getElementById(prefix + 'PrefDisplay');
+        display.textContent = pref;
+        display.classList.add('filled');
+
+        // 隠しフィールドにも保存する（送信時に使用）
+        document.getElementById(prefix + 'Pref').value = pref;
+
+      } catch (e) {
+        showToast('住所検索に失敗しました。通信環境をご確認ください。', 'error');
+      } finally {
+        // ボタンを元に戻す
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 検索';
+      }
+    }
+
+
+    // ============================================================
+    // フォームバリデーション
+    // 必須項目が未入力の場合にエラーメッセージを返す
+    // ============================================================
+    function validateForm() {
+      // 必須の単一フィールドIDリスト
+      const requiredIds = [
+        'nyukyoDate', 'office', 'lastName', 'firstName',
+        'lastNameKana', 'firstNameKana', 'birthDate', 'careLevel',
+        'honninZip', 'honninDetail',
+      ];
+
+      for (const id of requiredIds) {
+        const el = document.getElementById(id);
+        if (!el || !el.value.trim()) {
+          // エラー対象フィールドにスクロールしてフォーカスを当てる
+          el && el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el && el.focus();
+          return '必須項目が未入力です。赤い * 印の項目をすべて入力してください。';
+        }
+      }
+
+      // 本人住所：郵便番号から住所が取得できているか確認する
+      if (!document.getElementById('honninPref').value) {
+        document.getElementById('honninZip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return '本人住所の郵便番号を検索してください。';
+      }
+
+      // 郵便物送付先：「別の住所を登録」選択時は住所の入力も必須とする
+      if (addrMode.mailAddr === 'other') {
+        if (!document.getElementById('mailZip').value.trim() ||
+            !document.getElementById('mailPref').value ||
+            !document.getElementById('mailDetail').value.trim()) {
+          document.getElementById('mailZip').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return '郵便物送付先住所を入力してください。';
+        }
+      }
+
+      return null; // バリデーション通過
+    }
+
+
+    // ============================================================
+    // フォーム送信処理
+    // バリデーション → APIリクエスト → 完了処理
+    // ============================================================
+    async function submitForm() {
+      // バリデーションチェック
+      const errMsg = validateForm();
+      if (errMsg) {
+        showToast(errMsg, 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 登録中...';
+
+      try {
+        // フォームから値を収集してAPIリクエストボディを組み立てる
+        const body = {
+          // 本人基本情報
+          nyukyoDate:    document.getElementById('nyukyoDate').value,
+          office:        document.getElementById('office').value,
+          lastName:      document.getElementById('lastName').value.trim(),
+          firstName:     document.getElementById('firstName').value.trim(),
+          lastNameKana:  document.getElementById('lastNameKana').value.trim(),
+          firstNameKana: document.getElementById('firstNameKana').value.trim(),
+          birthDate:     document.getElementById('birthDate').value,
+          careLevel:     document.getElementById('careLevel').value,
+          // 本人住所（各パーツ）
+          honninZip:     document.getElementById('honninZip').value.trim(),
+          honninPref:    document.getElementById('honninPref').value,
+          honninDetail:  document.getElementById('honninDetail').value.trim(),
+          // 家族①（任意）
+          fam1LastName:      document.getElementById('fam1LastName').value.trim(),
+          fam1FirstName:     document.getElementById('fam1FirstName').value.trim(),
+          fam1LastNameKana:  document.getElementById('fam1LastNameKana').value.trim(),
+          fam1FirstNameKana: document.getElementById('fam1FirstNameKana').value.trim(),
+          fam1Relationship:  document.getElementById('fam1Relationship').value.trim(),
+          fam1Phone:         document.getElementById('fam1Phone').value.trim(),
+          // 家族①住所トグル状態
+          fam1AddrSame: addrMode.fam1Addr === 'same',
+          fam1Zip:    document.getElementById('fam1Zip')?.value.trim()    || '',
+          fam1Pref:   document.getElementById('fam1Pref')?.value          || '',
+          fam1Detail: document.getElementById('fam1Detail')?.value.trim() || '',
+          // 家族②（任意）
+          fam2LastName:      document.getElementById('fam2LastName').value.trim(),
+          fam2FirstName:     document.getElementById('fam2FirstName').value.trim(),
+          fam2LastNameKana:  document.getElementById('fam2LastNameKana').value.trim(),
+          fam2FirstNameKana: document.getElementById('fam2FirstNameKana').value.trim(),
+          fam2Relationship:  document.getElementById('fam2Relationship').value.trim(),
+          fam2Phone:         document.getElementById('fam2Phone').value.trim(),
+          // その他
+          reportEmail: document.getElementById('reportEmail').value.trim(),
+          // 郵便物送付先住所トグル状態
+          mailAddrSame: addrMode.mailAddr === 'same',
+          mailZip:    document.getElementById('mailZip')?.value.trim()    || '',
+          mailPref:   document.getElementById('mailPref')?.value          || '',
+          mailDetail: document.getElementById('mailDetail')?.value.trim() || '',
+        };
+
+        const res  = await fetch(`${API_BASE}/api/customers/add`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (!data.ok) throw new Error(data.error || '登録に失敗しました');
+
+        // 登録成功：成功メッセージを表示してポータルに戻る
+        showToast('登録が完了しました', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 1800);
+
+      } catch (err) {
+        console.error('[submitForm] エラー:', err);
+        showToast('登録に失敗しました: ' + err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>登録する';
+      }
+    }
+
+
+    // ============================================================
+    // トースト通知の表示
+    // ============================================================
+    function showToast(msg, type = '') {
+      const el = document.getElementById('toast');
+      el.textContent  = msg;
+      el.className    = 'toast show' + (type ? ' ' + type : '');
+      // 3秒後に非表示にする
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+    }
+  </script>
+</body>
+</html>
