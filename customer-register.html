@@ -289,7 +289,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label>事業所 <span class="required">*</span></label>
+        <label>入居施設 <span class="required">*</span></label>
         <select id="office" required>
           <option value="">選択</option>
           <option>大浦家</option>
@@ -687,13 +687,16 @@
 
       // ── 方法①: postcode.teraren.com (CORS対応API) ──
       // fetchで直接呼べるオープンAPIのため最も確実
+      // prefecture（都道府県）+ city（市区町村）+ town（町名）+ koaza（小字）を結合する
       try {
         const res = await fetch(
           `https://postcode.teraren.com/postcodes/${zipcode}.json`
         );
         if (res.ok) {
           const d = await res.json();
-          pref = (d.prefecture || '') + (d.city || '') + (d.town || '');
+          pref = [d.prefecture, d.city, d.town, d.koaza]
+            .filter(v => v && v.trim())   // 空・空白を除外する
+            .join('');
         }
       } catch (e) {
         lastError = 'teraren:' + e.message;
@@ -701,13 +704,15 @@
 
       // ── 方法②: サーバープロキシ (zipcloud経由) ──
       // 方法①が失敗した場合のフォールバック
+      // address3が「以下に掲載がない場合」の場合は除外する
       if (!pref) {
         try {
           const res = await fetch(`${API_BASE}/api/zipcode?zipcode=${zipcode}`);
           const d   = await res.json();
           if (d.results && d.results.length > 0) {
-            const a = d.results[0];
-            pref = (a.address1 || '') + (a.address2 || '') + (a.address3 || '');
+            const a  = d.results[0];
+            const a3 = (a.address3 || '').includes('以下に掲載がない場合') ? '' : (a.address3 || '');
+            pref = (a.address1 || '') + (a.address2 || '') + a3;
           }
         } catch (e) {
           lastError += ' / proxy:' + e.message;
