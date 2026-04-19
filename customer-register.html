@@ -130,6 +130,12 @@
       border-color: var(--primary-color);
     }
 
+    /* ===== 日付セレクト（月・日）の左右パディングを縮小して文字が見切れないようにする ===== */
+    .date-select-sm {
+      padding-left: 0.3rem;
+      padding-right: 0.2rem;
+    }
+
     /* ===== 郵便番号入力行 ===== */
     .zip-row {
       display: flex;
@@ -277,13 +283,13 @@
         <label>入居日 <span class="required">*</span></label>
         <!-- 年・月・日を3つのセレクトで入力 -->
         <div style="display:flex; gap:0.4rem; align-items:center">
-          <select id="nyukyoYear" style="flex:2" required>
+          <select id="nyukyoYear" style="flex:3" required>
             <option value="">年</option>
           </select>
-          <select id="nyukyoMonth" style="flex:1" required>
+          <select id="nyukyoMonth" style="flex:2" class="date-select-sm" required>
             <option value="">月</option>
           </select>
-          <select id="nyukyoDay" style="flex:1" required>
+          <select id="nyukyoDay" style="flex:2" class="date-select-sm" required>
             <option value="">日</option>
           </select>
         </div>
@@ -328,13 +334,13 @@
         <label>生年月日 <span class="required">*</span></label>
         <!-- 年・月・日を3つのセレクトで入力（type="date"はiOS/Androidで操作しにくいため） -->
         <div style="display:flex; gap:0.4rem; align-items:center">
-          <select id="birthYear" style="flex:2" required>
+          <select id="birthYear" style="flex:3" required>
             <option value="">年</option>
           </select>
-          <select id="birthMonth" style="flex:1" required>
+          <select id="birthMonth" style="flex:2" class="date-select-sm" required>
             <option value="">月</option>
           </select>
-          <select id="birthDay" style="flex:1" required>
+          <select id="birthDay" style="flex:2" class="date-select-sm" required>
             <option value="">日</option>
           </select>
         </div>
