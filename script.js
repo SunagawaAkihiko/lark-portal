@@ -77,13 +77,15 @@ const portalLinks = [
         title: "新規顧客登録",
         description: "新しい利用者の基本情報・家族情報・住所等を登録します",
         icon: "fa-user-plus",
-        url: "customer-register.html"
+        url: "customer-register.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
         title: "スタッフ入職登録",
         description: "入職時の基本情報・住所・保有資格などを登録します",
         icon: "fa-user-tie",
-        url: "staff-register.html"
+        url: "staff-register.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
         title: "利用者情報",
@@ -100,13 +102,18 @@ const portalLinks = [
 ];
 
 // Initialize UI
+// ADMIN_MODE が true の場合は管理者専用カード（adminOnly: true）も表示する
+// false の場合はスタッフ向けカードのみ表示する（index.html = スタッフ用）
 function buildDashboard() {
     const grid = document.getElementById('link-grid');
-    
+
     // Clear the grid to avoid duplicates if re-running
     grid.innerHTML = '';
 
-    portalLinks.forEach(link => {
+    // adminOnly フラグのあるカードは管理者モード時のみ表示する
+    const visibleLinks = portalLinks.filter(link => !link.adminOnly || window.ADMIN_MODE === true);
+
+    visibleLinks.forEach(link => {
         // Create card anchor element
         const card = document.createElement('a');
         card.className = 'card';
