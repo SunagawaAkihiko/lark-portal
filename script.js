@@ -80,6 +80,12 @@ const portalLinks = [
         url: "customer-register.html"
     },
     {
+        title: "スタッフ入職登録",
+        description: "入職時の基本情報・住所・保有資格などを登録します",
+        icon: "fa-user-tie",
+        url: "staff-register.html"
+    },
+    {
         title: "利用者情報",
         description: "利用者の基本情報や詳細なデータを閲覧できます",
         icon: "fa-address-card",
