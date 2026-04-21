@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>スタッフ勤務情報設定</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ===== CSS変数（lark-portal統一デザイン） ===== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+      --admin-dark:    #4a3f35;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      /* 送信ボタン分の下部余白 */
+      padding-bottom: 5rem;
+    }
+
+    /* ===== ページヘッダー（管理者モード：ダークブラウン） ===== */
+    .page-header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--admin-dark);
+      color: white;
+      display: flex; align-items: center;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; }
+
+    .form-container { padding: 1rem; max-width: 600px; margin: 0 auto; }
+
+    /* ===== スタッフ選択カード ===== */
+    .staff-select-card {
+      background: var(--admin-dark);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .staff-select-card .card-label {
+      font-size: 0.8rem; font-weight: 700;
+      color: #c9b09a; margin-bottom: 0.4rem;
+    }
+    .staff-select-card select {
+      width: 100%; padding: 0.7rem 0.75rem;
+      border: 1.5px solid #c9b09a; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem;
+      background: #5c5048; color: white;
+      -webkit-appearance: none; appearance: none;
+    }
+    /* ローディング中テキスト */
+    .staff-select-card .loading-note {
+      font-size: 0.78rem; color: #c9b09a; margin-top: 0.4rem;
+    }
+    /* 雇用形態・事業所バッジ：スタッフ選択後に表示 */
+    .info-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      border-radius: 20px; padding: 0.25rem 0.75rem;
+      font-size: 0.82rem; font-weight: 700;
+    }
+    .badge-employment { background: #c9b09a; color: var(--admin-dark); }
+    .badge-office     { background: #a0917f; color: white; }
+
+    /* ===== セクション見出し ===== */
+    .section-heading {
+      padding: 0.5rem 0.7rem;
+      background: var(--primary-light);
+      border-radius: 6px;
+      margin: 1.4rem 0 0.8rem;
+    }
+    .section-heading-title {
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--primary-color);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    /* ===== シフトセクション（ON/OFFスイッチ付き） ===== */
+    .shift-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0.7rem;
+      background: var(--primary-light);
+      border-radius: 6px;
+      margin: 1.4rem 0 0;
+    }
+    .shift-section-title {
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--primary-color);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .shift-toggle {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--text-muted); cursor: pointer; user-select: none;
+    }
+    /* トグルスイッチ本体 */
+    .sw { position: relative; width: 36px; height: 20px; }
+    .sw input { display: none; }
+    .sw-track {
+      position: absolute; inset: 0;
+      background: #d5c8bc; border-radius: 20px; transition: background 0.2s;
+    }
+    .sw-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; background: white;
+      border-radius: 50%; transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .sw input:checked ~ .sw-track { background: var(--primary-color); }
+    .sw input:checked ~ .sw-thumb { left: 19px; }
+
+    .shift-body { margin-top: 0.8rem; }
+    .shift-body.hidden { display: none; }
+
+    /* ===== フォームグループ ===== */
+    .form-group { margin-bottom: 0.9rem; }
+    .form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.9rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.9rem; }
+    .form-row .form-group, .form-row-3 .form-group { margin-bottom: 0; }
+
+    label {
+      display: block; font-size: 0.8rem; font-weight: 700;
+      color: var(--text-muted); margin-bottom: 0.3rem;
+    }
+
+    input[type="text"], input[type="number"], input[type="time"],
+    select, textarea {
+      width: 100%; padding: 0.7rem 0.75rem;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem;
+      background: var(--card-bg); color: var(--text-color);
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+
+    /* ===== 週の所定労働日数ボタン ===== */
+    .days-btns { display: flex; gap: 0.4rem; }
+    .days-btns button {
+      flex: 1; height: 2.6rem;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      background: var(--card-bg); color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .days-btns button.active {
+      background: var(--primary-color); color: white;
+      border-color: var(--primary-color);
+    }
+
+    /* ===== あり/なし トグルグリッド ===== */
+    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .toggle-item {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px; padding: 0.5rem 0.7rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+    }
+    /* 雇用形態・事業所の組み合わせによって非表示になる項目 */
+    .toggle-item.field-hidden { display: none; }
+
+    .toggle-label { font-size: 0.82rem; font-weight: 700; color: var(--text-color); flex: 1; }
+
+    /* あり/なし の2択ピルボタン */
+    .an { display: flex; border: 1.5px solid var(--border-color); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+    .an button {
+      padding: 0.22rem 0.5rem; font-family: inherit;
+      font-size: 0.75rem; font-weight: 700;
+      border: none; cursor: pointer;
+      background: white; color: var(--text-muted); transition: all 0.15s;
+    }
+    .an button:not(:last-child) { border-right: 1.5px solid var(--border-color); }
+    .an button.sel-ari  { background: var(--primary-color); color: white; }
+    .an button.sel-nashi { background: #e0dbd5; color: var(--text-color); }
+
+    textarea { resize: vertical; min-height: 5rem; }
+
+    /* ===== 送信ボタン（画面下部固定） ===== */
+    .submit-area {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 0.8rem 1rem;
+      background: var(--bg-color); border-top: 1px solid var(--border-color); z-index: 10;
+    }
+    .submit-btn {
+      width: 100%; padding: 0.9rem;
+      background: var(--admin-dark); color: white;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+    }
+    .submit-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* ===== トースト通知 ===== */
+    .toast {
+      position: fixed;
+      bottom: 5.5rem; left: 50%;
+      transform: translateX(-50%);
+      background: #333; color: white;
+      padding: 0.7rem 1.4rem;
+      border-radius: 20px; font-size: 0.9rem;
+      white-space: nowrap; z-index: 100;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .toast.show   { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== ページヘッダー ===== -->
+  <header class="page-header">
+    <h1><i class="fa-solid fa-user-gear" style="margin-right:.4rem"></i>スタッフ勤務情報設定</h1>
+  </header>
+
+  <div class="form-container">
+
+    <!-- ===== スタッフ選択カード ===== -->
+    <div class="staff-select-card">
+      <div class="card-label"><i class="fa-solid fa-user"></i> 対象スタッフを選択</div>
+      <!-- スタッフ一覧はページ読み込み時にAPIから取得して動的に生成する -->
+      <select id="staffSelect" onchange="onStaffChange()">
+        <option value="">-- 読み込み中... --</option>
+      </select>
+      <div class="loading-note" id="loadingNote">スタッフ一覧を取得中です...</div>
+      <!-- スタッフ選択後に雇用形態・事業所をバッジ表示 -->
+      <div class="info-badges" id="infoBadges" style="display:none">
+        <span class="badge badge-employment" id="badgeEmployment"></span>
+        <span class="badge badge-office"     id="badgeOffice"></span>
+      </div>
+    </div>
+
+    <!-- ===== 基本勤務設定 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-briefcase"></i> 基本勤務設定</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>メイン事業所</label>
+        <select id="mainOffice" onchange="onOfficeChange()">
+          <option value="">選択</option>
+          <option>大浦家</option>
+          <option>上津役家</option>
+        </select>
+      </div>
+      <!-- 社員は5固定・非表示。パートのみ表示する -->
+      <div class="form-group" id="daysGroup">
+        <label>週の所定労働日数</label>
+        <div class="days-btns" id="daysBtns">
+          <button type="button" onclick="selectDay(this,0)">0</button>
+          <button type="button" onclick="selectDay(this,1)">1</button>
+          <button type="button" onclick="selectDay(this,2)">2</button>
+          <button type="button" onclick="selectDay(this,3)">3</button>
+          <button type="button" onclick="selectDay(this,4)">4</button>
+          <button type="button" onclick="selectDay(this,5)">5</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 日勤シフト（ON/OFFスイッチ） ===== -->
+    <div class="shift-section-header">
+      <div class="shift-section-title"><i class="fa-solid fa-sun"></i> 日勤シフト</div>
+      <label class="shift-toggle">
+        <div class="sw">
+          <input type="checkbox" id="nikkinSw" onchange="toggleShift('nikkin', this.checked)">
+          <div class="sw-track"></div><div class="sw-thumb"></div>
+        </div>
+        設定する
+      </label>
+    </div>
+    <div class="shift-body hidden" id="nikkin-body">
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>予定出社</label>
+          <input type="time" id="nikkinStart" value="09:00">
+        </div>
+        <div class="form-group">
+          <label>休憩（分）</label>
+          <input type="number" id="nikkinRest" value="60" min="0">
+        </div>
+        <div class="form-group">
+          <label>予定退社</label>
+          <input type="time" id="nikkinEnd" value="18:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 夜勤シフト（ON/OFFスイッチ） ===== -->
+    <div class="shift-section-header" style="margin-top:0.6rem">
+      <div class="shift-section-title"><i class="fa-solid fa-moon"></i> 夜勤シフト</div>
+      <label class="shift-toggle">
+        <div class="sw">
+          <input type="checkbox" id="yakkinSw" onchange="toggleShift('yakkin', this.checked)">
+          <div class="sw-track"></div><div class="sw-thumb"></div>
+        </div>
+        設定する
+      </label>
+    </div>
+    <div class="shift-body hidden" id="yakkin-body">
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>予定出社</label>
+          <input type="time" id="yakkinStart" value="18:00">
+        </div>
+        <div class="form-group">
+          <label>休憩（分）</label>
+          <!-- 夜勤休憩のデフォルト値は事業所変更時に自動セットする -->
+          <input type="number" id="yakkinRest" min="0">
+        </div>
+        <div class="form-group">
+          <label>予定退社</label>
+          <input type="time" id="yakkinEnd" value="09:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 給与設定 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-yen-sign"></i> 給与設定</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>基本給・時給（円）</label>
+        <input type="number" id="baseSalary" placeholder="例: 180000" min="0">
+      </div>
+      <!-- 有休換算時間：雇用形態・事業所で自動決定できる場合は非表示、日勤パート・調理パートのみ表示 -->
+      <div class="form-group" id="paidLeaveGroup">
+        <label>有休換算時間（時間）</label>
+        <input type="number" id="paidLeaveHours" placeholder="例: 8" min="0" step="0.5">
+      </div>
+    </div>
+
+    <!-- ===== 手当設定 ===== -->
+    <!--
+      割増・深夜・夜勤（大浦）・夜勤（上津役）・役職（パート）・調整手当（パート）は非表示。
+      値は雇用形態・事業所の組み合わせで getAutoValues() が自動決定し、送信時に含める。
+      処遇↔処遇（扶養）、通勤手当（5,000円）↔通勤手当（1,000円）は排他連動。
+    -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-coins"></i> 手当設定</div>
+    </div>
+
+    <div class="toggle-grid" id="allowanceGrid">
+
+      <!-- 役職（パートは自動なし・非表示） -->
+      <div class="toggle-item" data-field="役職">
+        <span class="toggle-label">役職</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','役職')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','役職')">なし</button>
+        </div>
+      </div>
+
+      <!-- 資格（全雇用形態で表示・手動設定） -->
+      <div class="toggle-item" data-field="資格">
+        <span class="toggle-label">資格</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','資格')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','資格')">なし</button>
+        </div>
+      </div>
+
+      <!-- 年末年始（全雇用形態で表示・デフォルト「あり」） -->
+      <div class="toggle-item" data-field="年末年始">
+        <span class="toggle-label">年末年始</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','年末年始')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','年末年始')">なし</button>
+        </div>
+      </div>
+
+      <!-- 処遇↔処遇（扶養）は排他連動 -->
+      <div class="toggle-item" data-field="処遇">
+        <span class="toggle-label">処遇</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','処遇')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','処遇')">なし</button>
+        </div>
+      </div>
+
+      <div class="toggle-item" data-field="処遇(扶養)">
+        <span class="toggle-label">処遇（扶養）</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','処遇(扶養)')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','処遇(扶養)')">なし</button>
+        </div>
+      </div>
+
+      <!-- 業績手当（上津役家の夜勤パートのみ表示） -->
+      <div class="toggle-item field-hidden" data-field="業績手当">
+        <span class="toggle-label">業績手当</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','業績手当')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','業績手当')">なし</button>
+        </div>
+      </div>
+
+      <!-- 調整手当（パートは自動なし・非表示） -->
+      <div class="toggle-item" data-field="調整手当">
+        <span class="toggle-label">調整手当</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','調整手当')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','調整手当')">なし</button>
+        </div>
+      </div>
+
+      <!-- 通勤手当（5,000円）↔ 通勤手当（1,000円）は排他連動 -->
+      <!-- Larkフィールド名は「通勤手当」「通勤手当2」のまま。表示ラベルのみ変更 -->
+      <div class="toggle-item" data-field="通勤手当">
+        <span class="toggle-label">通勤手当（5,000円）</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','通勤手当')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','通勤手当')">なし</button>
+        </div>
+      </div>
+
+      <div class="toggle-item" data-field="通勤手当2">
+        <span class="toggle-label">通勤手当（1,000円）</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','通勤手当2')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','通勤手当2')">なし</button>
+        </div>
+      </div>
+
+    </div><!-- /toggle-grid#allowanceGrid -->
+
+    <!--
+      【非表示フィールド】割増・深夜・夜勤(大浦)・夜勤(上津役) は画面に出さない。
+      値は submitForm() 内で getAutoValues() から自動取得して送信する。
+    -->
+
+    <!-- ===== 食事 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-utensils"></i> 食事</div>
+    </div>
+    <div class="toggle-grid" id="foodGrid">
+      <div class="toggle-item" data-field="朝食">
+        <span class="toggle-label">朝食</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','朝食')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','朝食')">なし</button>
+        </div>
+      </div>
+      <div class="toggle-item" data-field="昼食">
+        <span class="toggle-label">昼食</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','昼食')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','昼食')">なし</button>
+        </div>
+      </div>
+      <div class="toggle-item" data-field="夕食">
+        <span class="toggle-label">夕食</span>
+        <div class="an">
+          <button type="button" onclick="setAN(this,'あり','夕食')">あり</button>
+          <button type="button" onclick="setAN(this,'なし','夕食')">なし</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 備考 ===== -->
+    <div class="section-heading">
+      <div class="section-heading-title"><i class="fa-solid fa-note-sticky"></i> 備考</div>
+    </div>
+    <div class="form-group">
+      <textarea id="bikou" placeholder="特記事項があれば入力してください"></textarea>
+    </div>
+
+  </div><!-- /form-container -->
+
+  <!-- ===== 送信ボタン（画面下部固定） ===== -->
+  <div class="submit-area">
+    <button class="submit-btn" id="submitBtn" onclick="submitForm()">
+      <i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>保存する
+    </button>
+  </div>
+
+  <!-- ===== トースト通知 ===== -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ============================================================
+    // 定数・状態変数
+    // ============================================================
+
+    /** APIサーバーのベースURL */
+    const API_BASE = 'https://attendance-app-irf1.onrender.com';
+
+    /** 現在選択中のスタッフのLarkレコードID */
+    let currentRecordId = '';
+
+    /** 現在選択中の雇用形態 */
+    let currentType = '';
+
+    /** 現在選択中のメイン事業所（スタッフ選択時にセットされ、メイン事業所変更でも更新） */
+    let currentOffice = '';
+
+
+    // ============================================================
+    // ページ読み込み時：スタッフ一覧をAPIから取得してセレクトを生成する
+    // Renderフリー枠はスリープするため最大3回リトライする
+    // ============================================================
+    (async function loadStaffList() {
+      const sel  = document.getElementById('staffSelect');
+      const note = document.getElementById('loadingNote');
+      let list   = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const r = await fetch(`${API_BASE}/api/staff/list`);
+          const d = await r.json();
+          if (d.ok && Array.isArray(d.list)) { list = d.list; break; }
+        } catch { /* サーバースリープ中は無視して次のリトライへ */ }
+
+        if (attempt < 3) {
+          note.textContent = `サーバーを起動中... (${attempt}/3)`;
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+
+      if (!list) {
+        sel.innerHTML = '<option value="">スタッフ一覧の取得に失敗しました</option>';
+        note.textContent = '再読み込みしてください。';
+        return;
+      }
+
+      // セレクト初期化
+      sel.innerHTML = '<option value="">-- スタッフを選択してください --</option>';
+      note.textContent = '';
+
+      // スタッフ一覧を選択肢として追加する
+      // value は "{recordId}|{employmentType}|{mainOffice}" の形式で3項目を格納する
+      list.forEach(s => {
+        const opt     = document.createElement('option');
+        const office  = s.mainOffice || (s.offices[0] || '');
+        opt.value     = `${s.recordId}|${s.employmentType}|${office}`;
+        opt.textContent = `${s.name}（${s.employmentType}・${office}）`;
+        sel.appendChild(opt);
+      });
+    })();
+
+
+    // ============================================================
+    // スタッフ選択時のメイン処理
+    // セレクト値から recordId・雇用形態・事業所を取り出し、
+    // UI の表示切替・デフォルト値・シフトON/OFFを適用する
+    // ============================================================
+    function onStaffChange() {
+      const sel = document.getElementById('staffSelect');
+      const val = sel.value;
+
+      if (!val) {
+        document.getElementById('infoBadges').style.display = 'none';
+        currentRecordId = '';
+        currentType     = '';
+        currentOffice   = '';
+        return;
+      }
+
+      // value = "{recordId}|{employmentType}|{mainOffice}" の形式でパースする
+      const [recordId, employmentType, mainOffice] = val.split('|');
+      currentRecordId = recordId;
+      currentType     = employmentType;
+      currentOffice   = mainOffice;
+
+      // 雇用形態・事業所バッジを表示する
+      document.getElementById('badgeEmployment').innerHTML =
+        `<i class="fa-solid fa-id-badge"></i> ${employmentType}`;
+      document.getElementById('badgeOffice').innerHTML =
+        `<i class="fa-solid fa-building"></i> ${mainOffice || '未設定'}`;
+      document.getElementById('infoBadges').style.display = 'flex';
+
+      // メイン事業所セレクトを自動セットする
+      document.getElementById('mainOffice').value = mainOffice;
+
+      // フォームに雇用形態・事業所の組み合わせを反映する
+      applyVisibility(employmentType, mainOffice);
+      applyDefaults(employmentType, mainOffice);
+      applyShiftDefault(employmentType, mainOffice);
+    }
+
+
+    // ============================================================
+    // メイン事業所変更時：夜勤休憩デフォルトを更新する
+    // ============================================================
+    function onOfficeChange() {
+      currentOffice = document.getElementById('mainOffice').value;
+      // 夜勤シフトが開いている場合は休憩デフォルトを再セットする
+      if (document.getElementById('yakkinSw').checked) {
+        document.getElementById('yakkinRest').value = currentOffice === '大浦家' ? 120 : 300;
+      }
+    }
+
+
+    // ============================================================
+    // 週の所定労働日数ボタン選択
+    // ============================================================
+    function selectDay(btn, val) {
+      document.querySelectorAll('.days-btns button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+
+    // ============================================================
+    // シフトセクションのON/OFF切り替え
+    // ============================================================
+    function toggleShift(id, on) {
+      document.getElementById(id + '-body').classList.toggle('hidden', !on);
+    }
+
+
+    // ============================================================
+    // あり/なし ボタンの選択状態をセット
+    // 処遇↔処遇（扶養）、通勤手当↔通勤手当2 の排他連動も行う
+    // ============================================================
+    function setAN(btn, val, field) {
+      const btns = btn.closest('.an').querySelectorAll('button');
+      btns.forEach(b => b.classList.remove('sel-ari', 'sel-nashi'));
+      btn.classList.add(val === 'あり' ? 'sel-ari' : 'sel-nashi');
+
+      // 「あり」を選んだ場合のみ排他連動を実行する
+      if (val === 'あり') {
+        if (field === '処遇')       forceNashi('処遇(扶養)');
+        if (field === '処遇(扶養)')  forceNashi('処遇');
+        if (field === '通勤手当')   forceNashi('通勤手当2');
+        if (field === '通勤手当2')  forceNashi('通勤手当');
+      }
+    }
+
+    /** 指定フィールドを強制的に「なし」にする */
+    function forceNashi(field) {
+      const item = document.querySelector(`[data-field="${field}"]`);
+      if (!item) return;
+      const btns = item.querySelectorAll('.an button');
+      btns.forEach(b => b.classList.remove('sel-ari', 'sel-nashi'));
+      btns[1].classList.add('sel-nashi'); // 2番目が「なし」ボタン
+    }
+
+    /** 指定フィールドを強制的に「あり」にする（デフォルト設定用） */
+    function forceAri(field) {
+      const item = document.querySelector(`[data-field="${field}"]`);
+      if (!item) return;
+      const btns = item.querySelectorAll('.an button');
+      btns.forEach(b => b.classList.remove('sel-ari', 'sel-nashi'));
+      btns[0].classList.add('sel-ari');
+    }
+
+
+    // ============================================================
+    // 雇用形態・事業所ごとのフィールド表示/非表示定義
+    // ============================================================
+    function getVisibility(type, office) {
+      const isPart              = ['日勤パート', '夜勤パート', '調理パート'].includes(type);
+      const isYakinPartKozuyake = type === '夜勤パート' && office === '上津役家';
+      return {
+        '役職':     !isPart,              // パートは自動なし・非表示
+        '調整手当': !isPart,              // パートは自動なし・非表示
+        '業績手当': isYakinPartKozuyake,  // 上津役家の夜勤パートのみ表示
+      };
+    }
+
+
+    // ============================================================
+    // 非表示フィールドの自動値を返す（送信時にこの値をLarkへ送る）
+    // ============================================================
+    function getAutoValues(type, office) {
+      const isPart           = ['日勤パート', '夜勤パート', '調理パート'].includes(type);
+      const isShaIn          = ['正社員', '正社員(夜勤専従)', '正社員(日勤夜勤兼務)'].includes(type);
+      const isYakinSenjuOura = type === '正社員(夜勤専従)' && office === '大浦家';
+      const isYakinSenjuKozu = type === '正社員(夜勤専従)' && office === '上津役家';
+      const isYakinPartOura  = type === '夜勤パート'        && office === '大浦家';
+      const isYakinPartKozu  = type === '夜勤パート'        && office === '上津役家';
+
+      // 有休換算時間の自動値（日勤パート・調理パートは手動入力のためnull）
+      let paidLeaveAuto = null;
+      if (type === '正社員' || type === '正社員(日勤夜勤兼務)') paidLeaveAuto = 8;
+      else if (isYakinSenjuOura || isYakinPartOura)              paidLeaveAuto = 13;
+      else if (isYakinSenjuKozu || isYakinPartKozu)              paidLeaveAuto = 10;
+
+      return {
+        '割増':            type === '夜勤パート' ? 'あり' : 'なし',
+        '深夜':            type === '夜勤パート' ? 'あり' : 'なし',
+        '夜勤(大浦)':      isYakinSenjuOura ? 'あり' : 'なし',
+        '夜勤(上津役)':    (!isPart && !isYakinSenjuOura) ? 'あり' : 'なし',
+        '役職':            isPart ? 'なし' : null,    // null = 手動（社員）
+        '調整手当':        isPart ? 'なし' : null,    // null = 手動（社員）
+        '週の所定労働日数': isShaIn ? 5 : null,       // null = 手動（パート）
+        '有休換算時間':     paidLeaveAuto,             // null = 手動（日勤・調理パート）
+      };
+    }
+
+
+    // ============================================================
+    // 雇用形態・事業所ごとの「あり」デフォルトフィールドを返す
+    // ============================================================
+    function getDefaults(type, office) {
+      const ari = [];
+      // 全雇用形態：年末年始はデフォルト「あり」
+      ari.push('年末年始');
+      // 正社員系：処遇をデフォルト「あり」
+      if (['正社員', '正社員(夜勤専従)', '正社員(日勤夜勤兼務)'].includes(type)) ari.push('処遇');
+      // 上津役家の夜勤パート：業績手当をデフォルト「あり」
+      if (type === '夜勤パート' && office === '上津役家') ari.push('業績手当');
+      return ari;
+    }
+
+
+    // ============================================================
+    // 雇用形態ごとのシフト初期表示定義
+    // ============================================================
+    function getShiftDefault(type) {
+      switch (type) {
+        case '正社員(夜勤専従)':    return { nikkin: false, yakkin: true  };
+        case '正社員(日勤夜勤兼務)': return { nikkin: true,  yakkin: true  };
+        case '夜勤パート':           return { nikkin: false, yakkin: true  };
+        default:                      return { nikkin: true,  yakkin: false };
+      }
+    }
+
+
+    // ============================================================
+    // フィールドの表示/非表示を適用する
+    // ============================================================
+    function applyVisibility(type, office) {
+      const vis  = getVisibility(type, office);
+      const auto = getAutoValues(type, office);
+
+      // 手当グリッドの表示切替（vis に含まれるフィールドのみ条件付き）
+      document.querySelectorAll('#allowanceGrid [data-field]').forEach(el => {
+        const field = el.dataset.field;
+        if (field in vis) {
+          el.classList.toggle('field-hidden', !vis[field]);
+        } else {
+          el.classList.remove('field-hidden');
+        }
+      });
+
+      // 週の所定労働日数：社員は5固定・非表示
+      const daysGroup = document.getElementById('daysGroup');
+      if (auto['週の所定労働日数'] !== null) {
+        // 自動値あり → 非表示（ボタンも自動選択しておく）
+        daysGroup.style.display = 'none';
+        document.querySelectorAll('.days-btns button').forEach((b, i) => {
+          b.classList.toggle('active', i === auto['週の所定労働日数']);
+        });
+      } else {
+        daysGroup.style.display = '';
+      }
+
+      // 有休換算時間：自動値がある雇用形態は非表示・値をセット
+      const paidLeaveGroup = document.getElementById('paidLeaveGroup');
+      if (auto['有休換算時間'] !== null) {
+        paidLeaveGroup.style.display = 'none';
+        document.getElementById('paidLeaveHours').value = auto['有休換算時間'];
+      } else {
+        paidLeaveGroup.style.display = '';
+        document.getElementById('paidLeaveHours').value = '';
+      }
+    }
+
+
+    // ============================================================
+    // デフォルト値を適用する
+    // まず全項目をリセット後にデフォルト「あり」をセットする
+    // ============================================================
+    function applyDefaults(type, office) {
+      // 全あり/なしボタンをリセット（未選択状態に戻す）
+      document.querySelectorAll('.toggle-item .an button').forEach(b =>
+        b.classList.remove('sel-ari', 'sel-nashi')
+      );
+      // デフォルト「あり」フィールドを設定する
+      getDefaults(type, office).forEach(f => forceAri(f));
+    }
+
+
+    // ============================================================
+    // シフトON/OFFのデフォルトを適用し、夜勤休憩を事業所に応じてセットする
+    // ============================================================
+    function applyShiftDefault(type, office) {
+      const { nikkin, yakkin } = getShiftDefault(type);
+
+      const nikkinSw = document.getElementById('nikkinSw');
+      const yakkinSw = document.getElementById('yakkinSw');
+      nikkinSw.checked = nikkin;
+      yakkinSw.checked = yakkin;
+      toggleShift('nikkin', nikkin);
+      toggleShift('yakkin', yakkin);
+
+      // 夜勤休憩のデフォルト：大浦家=120分・上津役家=300分
+      document.getElementById('yakkinRest').value = office === '大浦家' ? 120 : 300;
+    }
+
+
+    // ============================================================
+    // トグルグリッドから現在の選択値を収集するヘルパー
+    // 非表示のアイテムは除外し、未選択（sel-*クラスなし）はスキップする
+    // ============================================================
+    function collectToggleGrid(gridId) {
+      const data = {};
+      document.querySelectorAll(`#${gridId} .toggle-item:not(.field-hidden)`).forEach(el => {
+        const field   = el.dataset.field;
+        const ariBtn  = el.querySelector('.an button.sel-ari');
+        const nashiBtn = el.querySelector('.an button.sel-nashi');
+        if      (ariBtn)   data[field] = 'あり';
+        else if (nashiBtn) data[field] = 'なし';
+        // どちらも選択されていない場合はスキップ（未設定として送信しない）
+      });
+      return data;
+    }
+
+
+    // ============================================================
+    // フォーム全体のデータを収集して送信用オブジェクトを返す
+    // ============================================================
+    function collectFormData() {
+      const type      = currentType;
+      const mainOffice = document.getElementById('mainOffice').value || currentOffice;
+      const auto      = getAutoValues(type, mainOffice);
+      const data      = {};
+
+      // メイン事業所
+      if (mainOffice) data['メイン事業所'] = mainOffice;
+
+      // 基本給・時給
+      const salary = document.getElementById('baseSalary').value;
+      if (salary) data['基本給'] = parseFloat(salary);
+
+      // 週の所定労働日数
+      if (auto['週の所定労働日数'] !== null) {
+        // 社員：自動値（5）をセット
+        data['週の所定労働日数'] = auto['週の所定労働日数'];
+      } else {
+        // パート：ボタン選択値
+        const activeDay = document.querySelector('.days-btns button.active');
+        if (activeDay) data['週の所定労働日数'] = parseInt(activeDay.textContent, 10);
+      }
+
+      // 有休換算時間
+      if (auto['有休換算時間'] !== null) {
+        data['有休換算時間'] = auto['有休換算時間'];
+      } else {
+        const paid = document.getElementById('paidLeaveHours').value;
+        if (paid) data['有休換算時間'] = parseFloat(paid);
+      }
+
+      // 日勤シフト（スイッチがONの場合のみ送信）
+      if (document.getElementById('nikkinSw').checked) {
+        data['日勤予定出社'] = document.getElementById('nikkinStart').value;
+        data['日勤予定退社'] = document.getElementById('nikkinEnd').value;
+        const r = document.getElementById('nikkinRest').value;
+        if (r) data['日勤休憩'] = parseFloat(r);
+      }
+
+      // 夜勤シフト（スイッチがONの場合のみ送信）
+      if (document.getElementById('yakkinSw').checked) {
+        data['夜勤予定出社'] = document.getElementById('yakkinStart').value;
+        data['夜勤予定退社'] = document.getElementById('yakkinEnd').value;
+        const r = document.getElementById('yakkinRest').value;
+        if (r) data['夜勤休憩'] = parseFloat(r);
+      }
+
+      // 表示中の手当（選択済みのみ）
+      Object.assign(data, collectToggleGrid('allowanceGrid'));
+
+      // 非表示の手当：autoValuesから自動値をセットする（null = 手動フィールドはスキップ）
+      ['割増', '深夜', '夜勤(大浦)', '夜勤(上津役)', '役職', '調整手当'].forEach(k => {
+        if (auto[k] !== null) data[k] = auto[k];
+      });
+
+      // 食事
+      Object.assign(data, collectToggleGrid('foodGrid'));
+
+      // 備考
+      const bikou = document.getElementById('bikou').value.trim();
+      if (bikou) data['備考'] = bikou;
+
+      return data;
+    }
+
+
+    // ============================================================
+    // フォーム送信処理
+    // バリデーション → APIリクエスト → 完了処理
+    // ============================================================
+    async function submitForm() {
+      if (!currentRecordId) {
+        showToast('スタッフを選択してください', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中...';
+
+      try {
+        const body = collectFormData();
+        console.log('[submitForm] 送信データ:', JSON.stringify(body));
+
+        const res  = await fetch(`${API_BASE}/api/staff/update/${currentRecordId}`, {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          // エラー詳細をalertで表示してフィールド名の不一致を確認できるようにする
+          const detail = data.larkDetail ? JSON.stringify(data.larkDetail, null, 2) : '';
+          const sent   = data.sentFields  ? '送信フィールド: ' + data.sentFields.join(', ')  : '';
+          alert('保存失敗\n' + data.error + '\n\n' + detail + '\n' + sent);
+          throw new Error(data.error || '保存に失敗しました');
+        }
+
+        showToast('保存が完了しました', 'success');
+
+      } catch (err) {
+        console.error('[submitForm] エラー:', err);
+        showToast('保存に失敗しました: ' + err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk" style="margin-right:.4rem"></i>保存する';
+      }
+    }
+
+
+    // ============================================================
+    // トースト通知の表示
+    // ============================================================
+    function showToast(msg, type = '') {
+      const el    = document.getElementById('toast');
+      el.textContent = msg;
+      el.className   = 'toast show' + (type ? ' ' + type : '');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+    }
+  </script>
+</body>
+</html>

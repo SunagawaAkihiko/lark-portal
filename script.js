@@ -88,6 +88,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "スタッフ勤務情報設定",
+        description: "入職スタッフの雇用形態・手当・シフト・給与情報を設定します",
+        icon: "fa-user-gear",
+        url: "staff-admin-edit.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "利用者情報",
         description: "利用者の基本情報や詳細なデータを閲覧できます",
         icon: "fa-address-card",
