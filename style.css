@@ -131,6 +131,34 @@ header p { color: var(--text-muted); margin-top: 1rem; font-weight: 500; }
     align-self: start; /* 上揃えでタイトルに近づける */
 }
 
+/* ===== セクション見出し帯 ===== */
+/* グリッド全幅（2列）にまたがる区切り見出し */
+.section-divider {
+    grid-column: 1 / -1;   /* 2列グリッドを全幅で横断 */
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+}
+
+/* スタッフ共通ツール：コーラル系（ページ全体のテーマカラーに合わせた温かみのある配色） */
+.section-divider--staff {
+    background: #fcece8;
+    color: var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+}
+
+/* 管理者専用ツール：ダークブラウン系（スタッフ帯と明確に区別するための落ち着いた配色） */
+.section-divider--admin {
+    background: #4a3f35;
+    color: #fff;
+    border-left: 4px solid #c9b09a;
+}
+
 footer { text-align: center; margin-top: 4rem; color: var(--text-muted); font-size: 0.9rem; }
 
 /* スマホ用（画面が狭い場合）でも2列を維持し、スマホアプリ風にする設定 */

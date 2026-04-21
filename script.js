@@ -101,38 +101,69 @@ const portalLinks = [
     }
 ];
 
-// Initialize UI
-// ADMIN_MODE が true の場合は管理者専用カード（adminOnly: true）も表示する
-// false の場合はスタッフ向けカードのみ表示する（index.html = スタッフ用）
+// ============================================================
+// セクション見出し帯を生成して返す関数
+// type: 'staff'（スタッフ共通）または 'admin'（管理者専用）
+// ============================================================
+function createSectionDivider(type) {
+    const div = document.createElement('div');
+    if (type === 'staff') {
+        div.className = 'section-divider section-divider--staff';
+        div.innerHTML = '<i class="fa-solid fa-users"></i> スタッフ共通ツール';
+    } else {
+        div.className = 'section-divider section-divider--admin';
+        div.innerHTML = '<i class="fa-solid fa-lock"></i> 管理者専用ツール';
+    }
+    return div;
+}
+
+// ============================================================
+// ダッシュボードUI初期化
+// ADMIN_MODE が true（admin.html）の場合：
+//   「スタッフ共通ツール」見出し → スタッフ向けカード群
+//   「管理者専用ツール」見出し  → 管理者専用カード群
+// ADMIN_MODE が false（index.html）の場合：
+//   スタッフ向けカードのみ表示（見出しなし）
+// ============================================================
 function buildDashboard() {
     const grid = document.getElementById('link-grid');
 
-    // Clear the grid to avoid duplicates if re-running
+    // 重複防止のためグリッドを初期化
     grid.innerHTML = '';
 
-    // adminOnly フラグのあるカードは管理者モード時のみ表示する
-    const visibleLinks = portalLinks.filter(link => !link.adminOnly || window.ADMIN_MODE === true);
+    const staffLinks = portalLinks.filter(link => !link.adminOnly);
+    const adminLinks = portalLinks.filter(link =>  link.adminOnly);
 
-    visibleLinks.forEach(link => {
-        // Create card anchor element
-        const card = document.createElement('a');
-        card.className = 'card';
-        card.href = link.url;
-        card.target = "_blank"; // Open in new tab
-        card.rel = "noopener noreferrer";
-        
-        // Build card HTML content
-        card.innerHTML = `
-            <div class="card-icon">
-                <i class="fa-solid ${link.icon}"></i>
-            </div>
-            <h2 class="card-title">${link.title}</h2>
-            <p class="card-desc">${link.description}</p>
-        `;
-        
-        // Append entry
-        grid.appendChild(card);
-    });
+    if (window.ADMIN_MODE === true) {
+        // 管理者モード：スタッフ帯・管理者帯の両方を表示する
+        grid.appendChild(createSectionDivider('staff'));
+        staffLinks.forEach(link => grid.appendChild(createCard(link)));
+
+        grid.appendChild(createSectionDivider('admin'));
+        adminLinks.forEach(link => grid.appendChild(createCard(link)));
+    } else {
+        // スタッフモード：スタッフ向けカードのみ表示（見出しなし）
+        staffLinks.forEach(link => grid.appendChild(createCard(link)));
+    }
+}
+
+// ============================================================
+// カードのアンカー要素を生成して返す関数
+// ============================================================
+function createCard(link) {
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = link.url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.innerHTML = `
+        <div class="card-icon">
+            <i class="fa-solid ${link.icon}"></i>
+        </div>
+        <h2 class="card-title">${link.title}</h2>
+        <p class="card-desc">${link.description}</p>
+    `;
+    return card;
 }
 
 // Run on DOM loaded
