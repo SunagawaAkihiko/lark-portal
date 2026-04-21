@@ -480,6 +480,48 @@
     // Renderフリー枠はスリープするため、ページ読み込み時にサーバーをウォームアップする
     fetch(`${API_BASE}/api/care/meta`).catch(() => {});
 
+    // ============================================================
+    // Lark OAuth 認証フロー
+    // スタッフがLark内でこのページを開いた場合にopen_idを取得する。
+    // open_idが取得できた場合のみ、送信時にLarkの氏名メンバーフィールドへ書き込む。
+    //
+    // フロー:
+    //   1. URLに?code=がある → サーバーでopen_idに交換 → currentOpenIdに保存
+    //   2. URLに?code=がない → Lark OAuthへリダイレクト（ログイン後このページに戻ってくる）
+    //   3. 交換失敗の場合は続行（openIdなしで登録・管理者が後で手動設定）
+    // ============================================================
+
+    /** Lark OAuthで取得したopen_id（null=未取得） */
+    let currentOpenId = null;
+
+    (async function initOAuth() {
+      const params = new URLSearchParams(window.location.search);
+      const code   = params.get('code');
+
+      if (code) {
+        // Lark OAuthからリダイレクトされてきた場合：codeをopen_idに交換する
+        try {
+          const r = await fetch(`${API_BASE}/api/auth/lark/userinfo?code=${encodeURIComponent(code)}`);
+          const d = await r.json();
+          if (d.ok && d.openId) {
+            currentOpenId = d.openId;
+            console.log('[OAuth] 認証成功 open_id=', currentOpenId, 'name=', d.name);
+          } else {
+            console.warn('[OAuth] openIdの取得に失敗しました（続行します）:', d.error);
+          }
+        } catch (e) {
+          console.warn('[OAuth] codeの交換中にエラーが発生しました（続行します）:', e.message);
+        }
+        // URLからcodeとstateを除去してリロード・ブックマーク時の再送信を防ぐ
+        window.history.replaceState({}, '', window.location.pathname);
+      } else {
+        // codeがない場合：Lark OAuthの認可URLへリダイレクトしてログインを促す
+        // redirect_uriはこのページ自身（コード取得後に戻ってくる）
+        const redirectUri = window.location.origin + window.location.pathname;
+        window.location.href = `${API_BASE}/api/auth/lark/start?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      }
+    })();
+
 
     // ============================================================
     // 和暦変換ヘルパー
@@ -784,6 +826,9 @@
           email:          document.getElementById('email').value.trim(),
           qualifications,
         };
+
+        // OAuth認証でopen_idが取得できていた場合はLark氏名メンバーフィールドへ書き込む
+        if (currentOpenId) body.openId = currentOpenId;
 
         const res  = await fetch(`${API_BASE}/api/staff/add`, {
           method:  'POST',
