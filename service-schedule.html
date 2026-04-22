@@ -979,17 +979,6 @@ async function loadSchedule() {
     if (!data.ok) throw new Error(data.error);
 
     currentRecords = data.records;
-    // デバッグ：取得件数・勤務区分・作業項目の実際の値をコンソールに出力する（確認後削除）
-    console.log(`[schedule] ${currentOffice} レコード件数:`, currentRecords.length);
-    // 勤務区分ごとのレコード数と作業項目の内訳を出力する
-    const allKinmu = [...new Set(currentRecords.map(r => r.勤務区分))];
-    console.log('[schedule] 勤務区分の値一覧:', allKinmu);
-    allKinmu.forEach(k => {
-      const group = currentRecords.filter(r => r.勤務区分 === k);
-      const tasks  = [...new Set(group.map(r => r.作業項目))];
-      console.log(`[schedule] 勤務区分="${k}" → ${group.length}件, 作業項目:`, tasks);
-    });
-    if (currentRecords.length > 0) console.log('[schedule] 先頭レコード:', currentRecords[0]);
     renderTimeline(currentRecords);
   } catch (err) {
     console.error('スケジュール取得エラー:', err);
@@ -1027,8 +1016,8 @@ function renderTimeline(records) {
 
   if (currentOffice === '上津役家') {
     // ハードコードに頼らず、実際のレコードから勤務区分を動的に収集する。
-    // 表示優先順序は定義しつつ、未知の値も末尾に追加して取りこぼしを防ぐ。
-    const KINMU_PREFERRED = ['日勤', '夜勤担当①', '夜勤担当②'];
+    // 夜勤担当①②を先に表示し、日勤（入浴介助のみ）は末尾に表示する。
+    const KINMU_PREFERRED = ['夜勤担当①', '夜勤担当②', '日勤'];
     const KINMU_ICONS     = { '日勤': 'fa-sun', '夜勤担当①': 'fa-moon', '夜勤担当②': 'fa-star-half-stroke' };
     const kinmuSet = new Set(records.map(r => r.勤務区分).filter(Boolean));
     const kinmuList = [
@@ -1056,8 +1045,12 @@ function renderTimeline(records) {
 
       const grid = document.createElement('div');
       grid.className = 'timeline-grid';
+      // そのセクションで実際に使われている作業項目のコラムのみ表示し、
+      // 登録ゼロのコラムは非表示にして画面を整理する
+      const usedTasks = new Set(sectionRecords.map(r => r.作業項目).filter(Boolean));
       for (const colDef of COL_DEFS) {
         const colRecords = sectionRecords.filter(r => r.作業項目 === colDef.key);
+        if (usedTasks.size > 0 && !usedTasks.has(colDef.key)) continue;
         grid.appendChild(buildColumn(colDef, colRecords));
       }
       section.appendChild(grid);
