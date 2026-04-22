@@ -179,6 +179,20 @@
       color: white;
     }
 
+    /* ===== 上津役家：勤務区分セクションヘッダー ===== */
+    .kinmu-section-header {
+      background: var(--admin-dark);
+      color: white;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+    .kinmu-section-header:first-child { margin-top: 0; }
+
     /* ===== 空き時間帯行 ===== */
     .timetable tbody tr.row-gap td {
       background: #f5f0eb;
@@ -384,10 +398,16 @@
     </div>
     <div class="form-body">
 
-      <!-- 衝突警告 -->
+      <!-- 時間帯重複警告（赤） -->
       <div class="conflict-banner" id="conflict-banner">
         <i class="fa-solid fa-triangle-exclamation"></i>
         <span id="conflict-msg"></span>
+      </div>
+
+      <!-- 2時間未満ギャップ警告（オレンジ） -->
+      <div class="conflict-banner" id="gap-banner" style="background:#fff7ed;border-color:#fb923c;color:#c2410c;">
+        <i class="fa-solid fa-clock"></i>
+        <span id="gap-msg"></span>
       </div>
 
       <!-- 氏名 -->
@@ -629,8 +649,8 @@ async function loadSchedule() {
 }
 
 /**
- * レコード配列から時間割テーブルHTMLを構築してDOMに挿入する。
- * 縦軸=提供時間（昇順）、横軸=提供曜日（月〜日）で配置する。
+ * 上津役家: 勤務区分ごとにセクションを分けて描画する。
+ * 大浦家: 全件を1つのテーブルで描画する。
  * @param {Array} records 作業設定レコード配列
  */
 function renderTimetable(records) {
@@ -644,52 +664,67 @@ function renderTimetable(records) {
     return;
   }
 
-  // (startTime, 氏名, 作業項目, サービス略称) をキーにレコードをグループ化する。
-  // 同じ人・サービス・時間帯で曜日だけ異なるレコードを1行にまとめて表示する。
+  wrap.innerHTML = '';
+
+  if (currentOffice === '上津役家') {
+    // 勤務区分ごとにセクションヘッダー＋テーブルを挿入する
+    const KINMU_ICONS = { '日勤': 'fa-sun', '夜勤担当①': 'fa-moon', '夜勤担当②': 'fa-star-half-stroke' };
+    const KINMU_ORDER = ['日勤', '夜勤担当①', '夜勤担当②'];
+    for (const kinmu of KINMU_ORDER) {
+      const sectionRecords = records.filter(r => r.勤務区分 === kinmu);
+      if (sectionRecords.length === 0) continue;
+
+      const header = document.createElement('div');
+      header.className = 'kinmu-section-header';
+      header.innerHTML = `<i class="fa-solid ${KINMU_ICONS[kinmu] || 'fa-clock'}"></i> ${kinmu}`;
+      wrap.appendChild(header);
+      wrap.appendChild(buildTable(sectionRecords));
+    }
+  } else {
+    // 大浦家: 全件を1テーブルで表示する
+    wrap.appendChild(buildTable(records));
+  }
+
+  checkConflicts();
+}
+
+/**
+ * レコード配列をグループ化して時間割テーブル要素を生成して返す。
+ * グループキー = (startTime, 氏名, 作業項目, サービス略称)
+ * 同一グループの曜日は曜日バッジで集約して表示する。
+ * @param {Array} records
+ * @returns {HTMLTableElement}
+ */
+function buildTable(records) {
+  // (startTime, 氏名, 作業項目, サービス略称) をキーにグループ化する
   const groups = new Map();
   for (const r of records) {
     const start = r.startTime || r.提供時間 || '';
     const gKey = `${start}|${r.氏名}|${r.作業項目}|${r.サービス略称}`;
     if (!groups.has(gKey)) {
       groups.set(gKey, {
-        startTime:   r.startTime || null,
-        endTime:     r.endTime   || null,
-        提供時間:    r.提供時間,
-        氏名:        r.氏名,
-        作業項目:    r.作業項目,
+        startTime:    r.startTime || null,
+        endTime:      r.endTime   || null,
+        提供時間:     r.提供時間,
+        氏名:         r.氏名,
+        作業項目:     r.作業項目,
         サービス略称: r.サービス略称,
-        days:        new Set(),
+        days:         new Set(),
       });
     }
     if (r.提供曜日) groups.get(gKey).days.add(r.提供曜日);
   }
 
-  // startTime でソートする
   const sorted = [...groups.values()].sort(
     (a, b) => timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
   );
 
-  // テーブル構築
-  const table = document.createElement('table');
-  table.className = 'timetable';
-
-  // ヘッダー
-  const thead = table.createTHead();
-  const hRow = thead.insertRow();
-  ['時間帯', '氏名 / サービス', '作業項目', '提供曜日'].forEach(label => {
-    const th = document.createElement('th');
-    th.textContent = label;
-    hRow.appendChild(th);
-  });
-
-  // ── 空き時間帯の計算 ──
-  // 全グループのカバー区間（分）をマージし、その隙間を「空き」として取得する
+  // セクション内の空き時間帯を計算する（カバー区間をマージして隙間を取得）
   const intervals = sorted
     .filter(g => g.startTime && g.endTime)
     .map(g => [timeToMinutes(g.startTime), timeToMinutes(g.endTime)]);
   intervals.sort((a, b) => a[0] - b[0]);
 
-  // 重複区間をマージする（隣接・重複する区間を統合）
   const merged = [];
   for (const [s, e] of intervals) {
     if (merged.length === 0 || s > merged[merged.length - 1][1] + 1) {
@@ -699,12 +734,11 @@ function renderTimetable(records) {
     }
   }
 
-  // マージ済み区間の隙間が「空き時間帯」となる
-  // key: gapStart（分）→ { from, to, duration } の形で保持する
+  // 隙間 → gapMap（gapStart分 → {from, to, duration}）
   const gapMap = new Map();
   for (let i = 0; i < merged.length - 1; i++) {
-    const gapStart = merged[i][1] + 1;   // 直前区間の終了+1分
-    const gapEnd   = merged[i + 1][0] - 1; // 次区間の開始-1分
+    const gapStart = merged[i][1] + 1;
+    const gapEnd   = merged[i + 1][0] - 1;
     if (gapEnd >= gapStart) {
       gapMap.set(gapStart, {
         from:     minsToTimeStr(gapStart),
@@ -714,19 +748,29 @@ function renderTimetable(records) {
     }
   }
 
-  // データ行
+  // テーブル要素を構築する
+  const table = document.createElement('table');
+  table.className = 'timetable';
+
+  const thead = table.createTHead();
+  const hRow = thead.insertRow();
+  ['時間帯', '氏名 / サービス', '作業項目', '提供曜日'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    hRow.appendChild(th);
+  });
+
   const tbody = table.createTBody();
-  let prevEndMins = null; // 直前のグループ終了時刻（分）
+  let prevEndMins = null;
 
   for (const g of sorted) {
     const color = TASK_COLORS[g.作業項目] || DEFAULT_COLOR;
-
-    // このグループの開始前に空き時間帯があれば挿入する
     const curStartMins = g.startTime ? timeToMinutes(g.startTime) : null;
-    if (prevEndMins !== null && curStartMins !== null) {
-      const gapStart = prevEndMins + 1;
-      const gap = gapMap.get(gapStart);
-      if (gap && curStartMins > prevEndMins + 1) {
+
+    // 空き時間帯行を挿入する（直前エントリとの間に隙間がある場合）
+    if (prevEndMins !== null && curStartMins !== null && curStartMins > prevEndMins + 1) {
+      const gap = gapMap.get(prevEndMins + 1);
+      if (gap) {
         const trGap = tbody.insertRow();
         trGap.className = 'row-gap';
         const tdGap = document.createElement('td');
@@ -742,7 +786,6 @@ function renderTimetable(records) {
     if (g.endTime) prevEndMins = timeToMinutes(g.endTime);
 
     const tr = tbody.insertRow();
-    // 衝突チェック用に startTime を埋め込む
     tr.dataset.startTime = g.startTime || g.提供時間;
     tr.dataset.endTime   = g.endTime || '';
 
@@ -772,7 +815,7 @@ function renderTimetable(records) {
     tdTask.appendChild(badge);
     tr.appendChild(tdTask);
 
-    // 曜日バッジセル（月〜日を並べ、登録がある曜日だけ色付き）
+    // 曜日バッジセル
     const tdDays = document.createElement('td');
     const dayWrap = document.createElement('div');
     dayWrap.className = 'day-badges';
@@ -787,9 +830,7 @@ function renderTimetable(records) {
     tr.appendChild(tdDays);
   }
 
-  wrap.innerHTML = '';
-  wrap.appendChild(table);
-  checkConflicts();
+  return table;
 }
 
 // ============================================================
@@ -802,23 +843,27 @@ function renderTimetable(records) {
  * 衝突している時間割セルを赤背景にする。
  */
 function checkConflicts() {
-  const selectedTime = document.getElementById('f-time').value;
+  const selectedTime    = document.getElementById('f-time').value;
   const selectedService = document.getElementById('f-service').value;
-  const selectedDays = getSelectedDays();
-  const banner = document.getElementById('conflict-banner');
-  const msg = document.getElementById('conflict-msg');
+  const selectedName    = document.getElementById('f-name').value;
+  const selectedDays    = getSelectedDays();
+  const banner  = document.getElementById('conflict-banner');
+  const gapBanner = document.getElementById('gap-banner');
+  const msg     = document.getElementById('conflict-msg');
+  const gapMsg  = document.getElementById('gap-msg');
 
-  // テーブル行のハイライトをリセットする
+  // ハイライトをリセットする
   document.querySelectorAll('.timetable tbody tr').forEach(tr => {
     tr.classList.remove('row-selected', 'row-conflict');
   });
 
   if (!selectedTime) {
     banner.classList.remove('visible');
+    gapBanner.classList.remove('visible');
     return;
   }
 
-  // フォーム入力から新規エントリの時間範囲を計算する
+  // 新規エントリの時間範囲を計算する（サービス略称から上限分数を取得）
   const upperLimit = durationMap[selectedService] || null;
   let newStart = null, newEnd = null;
   if (upperLimit) {
@@ -826,27 +871,24 @@ function checkConflicts() {
     newStart = newEnd - upperLimit + 1;
   }
 
-  // テーブル行に選択中・衝突のハイライトを適用する
+  // 選択中の時間帯と重なる行をハイライトする
   document.querySelectorAll('.timetable tbody tr').forEach(tr => {
     const rowStart = tr.dataset.startTime ? timeToMinutes(tr.dataset.startTime) : null;
     const rowEnd   = tr.dataset.endTime   ? timeToMinutes(tr.dataset.endTime)   : null;
-
     if (rowStart === null) return;
-
-    // 時間範囲が重なる行を「選択中」としてハイライトする
     const overlaps = (newStart !== null && rowEnd !== null)
       ? (newStart <= rowEnd && newEnd >= rowStart)
       : (tr.dataset.startTime === selectedTime);
-
     if (overlaps) tr.classList.add('row-selected');
   });
 
   if (selectedDays.length === 0) {
     banner.classList.remove('visible');
+    gapBanner.classList.remove('visible');
     return;
   }
 
-  // 既存レコードとの時間範囲オーバーラップ（衝突）を検出する
+  // ── 1. 時間帯重複チェック ──
   const conflicts = currentRecords.filter(r => {
     if (!selectedDays.includes(r.提供曜日)) return false;
     if (newStart !== null && r.startTime && r.endTime) {
@@ -855,24 +897,53 @@ function checkConflicts() {
     return r.提供時間 === selectedTime;
   });
 
-  if (conflicts.length === 0) {
+  if (conflicts.length > 0) {
+    document.querySelectorAll('.timetable tbody tr.row-selected').forEach(tr => {
+      const hasConflict = conflicts.some(r => (r.startTime || r.提供時間) === tr.dataset.startTime);
+      if (hasConflict) tr.classList.add('row-conflict');
+    });
+    const detail = conflicts.map(r => {
+      const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
+      return `${r.提供曜日} ${r.氏名}（${range}）`;
+    }).join('、');
+    msg.textContent = `時間帯が重複する登録があります：${detail}`;
+    banner.classList.add('visible');
+  } else {
     banner.classList.remove('visible');
-    return;
   }
 
-  // 衝突行を赤ハイライト（黄ハイライトより優先）
-  document.querySelectorAll('.timetable tbody tr.row-selected').forEach(tr => {
-    const rowStart = tr.dataset.startTime;
-    const hasConflict = conflicts.some(r => (r.startTime || r.提供時間) === rowStart);
-    if (hasConflict) tr.classList.add('row-conflict');
-  });
+  // ── 2. 同じ氏名のサービス間 2時間未満ギャップチェック ──
+  // 訪問介護では同一利用者への2時間以内の連続提供は1回分とみなされるため警告する
+  if (selectedName && newStart !== null) {
+    const tooClose = currentRecords.filter(r => {
+      if (r.氏名 !== selectedName) return false;
+      if (!selectedDays.includes(r.提供曜日)) return false;
+      if (!r.startTime || !r.endTime) return false;
+      const existStart = timeToMinutes(r.startTime);
+      const existEnd   = timeToMinutes(r.endTime);
+      // 重複は除外（別チェック済み）し、隣接する前後の間隔を確認する
+      const gapBefore = newStart - existEnd;   // 既存終了→新規開始の間隔
+      const gapAfter  = existStart - newEnd;   // 新規終了→既存開始の間隔
+      return (gapBefore > 0 && gapBefore < 120) || (gapAfter > 0 && gapAfter < 120);
+    });
 
-  const detail = conflicts.map(r => {
-    const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
-    return `${r.提供曜日} ${r.氏名}（${range}）`;
-  }).join('、');
-  msg.textContent = `時間帯が重複する登録があります：${detail}`;
-  banner.classList.add('visible');
+    if (tooClose.length > 0) {
+      const detail = tooClose.map(r => {
+        const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
+        const gap = Math.min(
+          Math.abs(newStart - timeToMinutes(r.endTime)),
+          Math.abs(timeToMinutes(r.startTime) - newEnd)
+        );
+        return `${r.提供曜日}（間隔 約${gap}分）${range}`;
+      }).join('、');
+      gapMsg.textContent = `${selectedName} の他サービスとの間隔が2時間未満です：${detail}`;
+      gapBanner.classList.add('visible');
+    } else {
+      gapBanner.classList.remove('visible');
+    }
+  } else {
+    gapBanner.classList.remove('visible');
+  }
 }
 
 // ============================================================
@@ -894,9 +965,19 @@ async function submitForm() {
   const days       = getSelectedDays();
 
   // 必須項目のバリデーション
-  if (!name)        return showToast('氏名を選択してください', 'error');
+  if (!name)             return showToast('氏名を選択してください', 'error');
   if (days.length === 0) return showToast('提供曜日を1つ以上選択してください', 'error');
-  if (!time)        return showToast('提供時間を選択してください', 'error');
+  if (!time)             return showToast('提供時間を選択してください', 'error');
+
+  // 時間帯重複がある場合は登録を阻止する
+  if (document.getElementById('conflict-banner').classList.contains('visible')) {
+    return showToast('時間帯が重複しているため登録できません', 'error');
+  }
+
+  // 2時間未満ギャップがある場合は警告済みであることを確認して続行する
+  if (document.getElementById('gap-banner').classList.contains('visible')) {
+    if (!confirm('同じ利用者の他サービスとの間隔が2時間未満です。\nこのまま登録しますか？')) return;
+  }
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
@@ -951,6 +1032,7 @@ function resetForm() {
   document.querySelectorAll('#day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
   document.querySelector('input[name="kinmu"]').checked = true;
   document.getElementById('conflict-banner').classList.remove('visible');
+  document.getElementById('gap-banner').classList.remove('visible');
   document.querySelectorAll('.timetable tbody tr').forEach(tr => tr.classList.remove('row-selected', 'row-conflict'));
 }
 
