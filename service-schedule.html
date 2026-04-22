@@ -161,6 +161,7 @@
     }
     .cell-entry .entry-name { font-weight: 700; color: #1e293b; font-size: 0.72rem; }
     .cell-entry .entry-task { font-size: 0.65rem; color: var(--entry-accent, #3b82f6); }
+    .cell-entry .entry-time { font-size: 0.62rem; color: var(--text-muted); font-weight: 500; }
 
     /* 衝突セル（既に同時刻に予約あり）を赤表示する */
     .timetable td.cell-conflict { background: #fff1f1; }
@@ -449,6 +450,9 @@ let currentRecords = [];
 /** フィールド選択肢データ（初回ロード時に取得してキャッシュ） */
 let fieldsCache = null;
 
+/** サービス略称 → 時間上限（分）のマップ（サーバーから受信） */
+let durationMap = {};
+
 /** 作業項目ごとの色定義 */
 const TASK_COLORS = {
   'モーニングケア': { bg: '#fef3c7', accent: '#d97706' },
@@ -480,6 +484,9 @@ async function loadFields() {
     const res = await fetch(`${SERVER}/api/service-schedule/fields`);
     fieldsCache = await res.json();
     if (!fieldsCache.ok) throw new Error(fieldsCache.error);
+
+    // サービス略称→上限分数マップをキャッシュする（衝突チェックで使用）
+    durationMap = fieldsCache.durationMap || {};
 
     const st = fieldsCache.static;
 
@@ -530,8 +537,9 @@ async function loadFields() {
     const recEl = document.getElementById('f-record');
     st.記録内容.forEach((r, i) => recEl.appendChild(new Option(`テンプレート${i + 1}`, r)));
 
-    // 提供時間変更時も衝突チェックを行う
+    // 提供時間・サービス略称変更時に衝突チェックを再実行する
     document.getElementById('f-time').addEventListener('change', checkConflicts);
+    document.getElementById('f-service').addEventListener('input', checkConflicts);
 
   } catch (err) {
     console.error('フィールド取得エラー:', err);
@@ -605,14 +613,18 @@ function renderTimetable(records) {
     return;
   }
 
-  // 存在する時間スロットを収集して時刻順にソートする
-  const timeSet = new Set(records.map(r => r.提供時間).filter(Boolean));
-  const times = [...timeSet].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+  // 行キー = startTime（算定項目から計算済み）が取得できればそれを使い、
+  // 取得できなければ 提供時間 を代替として使う
+  // 同じ startTime のレコードを同じ行にまとめる
+  const rowKeySet = new Set(records.map(r => r.startTime || r.提供時間).filter(Boolean));
+  const rowKeys = [...rowKeySet].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
 
-  // 曜日×時間のマップを構築する（key: "曜日|時間"）
+  // 曜日×rowKey のマップを構築する（key: "曜日|rowKey"）
   const cellMap = {};
   for (const r of records) {
-    const key = `${r.提供曜日}|${r.提供時間}`;
+    const rowKey = r.startTime || r.提供時間;
+    if (!rowKey) continue;
+    const key = `${r.提供曜日}|${rowKey}`;
     if (!cellMap[key]) cellMap[key] = [];
     cellMap[key].push(r);
   }
@@ -621,12 +633,12 @@ function renderTimetable(records) {
   const table = document.createElement('table');
   table.className = 'timetable';
 
-  // ヘッダー行
+  // ヘッダー行（時間列 + 曜日列）
   const thead = table.createTHead();
   const hRow = thead.insertRow();
   const thTime = document.createElement('th');
-  thTime.textContent = '時間';
   thTime.className = 'time-col';
+  thTime.textContent = '時間帯';
   hRow.appendChild(thTime);
   for (const day of DAY_ORDER) {
     const th = document.createElement('th');
@@ -634,41 +646,48 @@ function renderTimetable(records) {
     hRow.appendChild(th);
   }
 
-  // データ行
+  // データ行（startTime でソートされた各行）
   const tbody = table.createTBody();
-  for (const time of times) {
+  for (const rowKey of rowKeys) {
     const tr = tbody.insertRow();
-    tr.dataset.time = time;
+    tr.dataset.time = rowKey; // 衝突チェック時のハイライト対象
 
-    // 時間ラベルセル
+    // 時間ラベルセル（startTime〜endTime を表示。計算できなければ rowKey のみ）
     const tdTime = tr.insertCell();
     tdTime.className = 'time-label';
-    tdTime.textContent = time;
+
+    // その行のエントリから代表的な endTime を取得してラベルに使う
+    const sample = Object.values(cellMap).flat().find(r => (r.startTime || r.提供時間) === rowKey);
+    if (sample && sample.startTime && sample.endTime) {
+      tdTime.innerHTML = `<span style="display:block">${sample.startTime}</span><span style="display:block;color:var(--primary-color)">〜${sample.endTime}</span>`;
+    } else {
+      tdTime.textContent = rowKey;
+    }
 
     // 各曜日セル
     for (const day of DAY_ORDER) {
       const td = tr.insertCell();
-      const entries = cellMap[`${day}|${time}`] || [];
-      if (entries.length > 0) {
-        // 複数エントリがある場合は全て表示する
-        for (const e of entries) {
-          const color = TASK_COLORS[e.作業項目] || DEFAULT_COLOR;
-          const entryDiv = document.createElement('div');
-          entryDiv.className = 'cell-entry';
-          entryDiv.style.setProperty('--entry-bg', color.bg);
-          entryDiv.style.setProperty('--entry-accent', color.accent);
-          entryDiv.innerHTML = `
-            <span class="entry-name">${e.氏名}</span>
-            <span class="entry-task">${e.作業項目 || ''}</span>`;
-          td.appendChild(entryDiv);
-        }
+      const entries = cellMap[`${day}|${rowKey}`] || [];
+      for (const e of entries) {
+        const color = TASK_COLORS[e.作業項目] || DEFAULT_COLOR;
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'cell-entry';
+        entryDiv.style.setProperty('--entry-bg', color.bg);
+        entryDiv.style.setProperty('--entry-accent', color.accent);
+        // サービス時間帯をエントリ内にも表示する
+        const timeRange = (e.startTime && e.endTime) ? `${e.startTime}〜${e.endTime}` : e.提供時間;
+        entryDiv.innerHTML = `
+          <span class="entry-name">${e.氏名}</span>
+          <span class="entry-task">${e.作業項目 || ''}</span>
+          <span class="entry-time">${timeRange}</span>`;
+        td.appendChild(entryDiv);
       }
     }
   }
 
   wrap.innerHTML = '';
   wrap.appendChild(table);
-  checkConflicts(); // フォームの選択と衝突チェックを再評価する
+  checkConflicts(); // フォームの選択状態に応じて衝突チェックを再評価する
 }
 
 // ============================================================
@@ -682,33 +701,74 @@ function renderTimetable(records) {
  */
 function checkConflicts() {
   const selectedTime = document.getElementById('f-time').value;
+  const selectedService = document.getElementById('f-service').value;
   const selectedDays = getSelectedDays();
   const banner = document.getElementById('conflict-banner');
   const msg = document.getElementById('conflict-msg');
 
   // 時間割の行ハイライトをリセットする
-  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
-    tr.classList.toggle('row-selected', tr.dataset.time === selectedTime);
-  });
+  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => tr.classList.remove('row-selected'));
 
-  if (!selectedTime || selectedDays.length === 0) {
+  if (!selectedTime) {
     banner.classList.remove('visible');
     return;
   }
 
-  // 衝突レコードを収集する
-  const conflicts = currentRecords.filter(r =>
-    r.提供時間 === selectedTime && selectedDays.includes(r.提供曜日)
-  );
+  // フォームで入力中の新規エントリの時間範囲を計算する
+  // upperLimit が取得できない場合は提供時間の完全一致で衝突チェックを行う
+  const upperLimit = durationMap[selectedService] || null;
+  let newStart = null, newEnd = null;
+  if (upperLimit) {
+    const endMins   = timeToMinutes(selectedTime) + 4;
+    const startMins = endMins - upperLimit + 1;
+    newEnd   = startMins; // 後で使用するため分単位で保持
+    newStart = startMins;
+    newEnd   = endMins;
+  }
+
+  // 時間割テーブルの該当行をハイライトする（startTime が一致する行）
+  if (newStart !== null) {
+    const startStr = minsToTimeStr(newStart);
+    document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
+      if (tr.dataset.time === startStr) tr.classList.add('row-selected');
+    });
+  } else {
+    // upperLimit 不明の場合は提供時間と一致する行をハイライト
+    document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
+      if (tr.dataset.time === selectedTime) tr.classList.add('row-selected');
+    });
+  }
+
+  if (selectedDays.length === 0) {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  // 既存レコードとの時間範囲オーバーラップ（重複）を検出する
+  // 新規エントリの範囲 [newStart, newEnd] が既存の [existStart, existEnd] と重なるかを判定する
+  const conflicts = currentRecords.filter(r => {
+    if (!selectedDays.includes(r.提供曜日)) return false;
+    if (newStart !== null && r.startTime && r.endTime) {
+      // 両方の時間範囲が揃っている場合はオーバーラップ判定をする
+      const existStart = timeToMinutes(r.startTime);
+      const existEnd   = timeToMinutes(r.endTime);
+      return newStart <= existEnd && newEnd >= existStart;
+    }
+    // どちらかの範囲が不明な場合は提供時間の完全一致で判定する
+    return r.提供時間 === selectedTime;
+  });
 
   if (conflicts.length === 0) {
     banner.classList.remove('visible');
     return;
   }
 
-  // 衝突した曜日・名前を表示する
-  const detail = conflicts.map(r => `${r.提供曜日} ${r.氏名}`).join('、');
-  msg.textContent = `同じ時間帯にすでに登録があります：${detail}`;
+  // 衝突している予定の詳細を表示する
+  const detail = conflicts.map(r => {
+    const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
+    return `${r.提供曜日} ${r.氏名}（${range}）`;
+  }).join('、');
+  msg.textContent = `時間帯が重複する登録があります：${detail}`;
   banner.classList.add('visible');
 }
 
@@ -804,13 +864,24 @@ function getSelectedDays() {
 }
 
 /**
- * "H:MM" 形式の時刻文字列を分単位の整数に変換する（ソート用）
+ * "H:MM" 形式の時刻文字列を分単位の整数に変換する（ソート・比較用）
  * @param {string} t "7:00" のような文字列
  * @returns {number}
  */
 function timeToMinutes(t) {
   const [h, m] = (t || '0:00').split(':').map(Number);
   return (h || 0) * 60 + (m || 0);
+}
+
+/**
+ * 分を "H:MM" 形式に変換する（衝突チェックのハイライト対象特定に使用）
+ * @param {number} mins 0時からの分数
+ * @returns {string}
+ */
+function minsToTimeStr(mins) {
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${h}:${String(m).padStart(2, '0')}`;
 }
 
 /**
