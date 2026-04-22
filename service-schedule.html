@@ -1015,11 +1015,23 @@ function renderTimeline(records) {
   container.className = 'timeline-container';
 
   if (currentOffice === '上津役家') {
-    const KINMU_ORDER = ['日勤', '夜勤担当①', '夜勤担当②'];
-    const KINMU_ICONS = { '日勤': 'fa-sun', '夜勤担当①': 'fa-moon', '夜勤担当②': 'fa-star-half-stroke' };
+    // ハードコードに頼らず、実際のレコードから勤務区分を動的に収集する。
+    // 表示優先順序は定義しつつ、未知の値も末尾に追加して取りこぼしを防ぐ。
+    const KINMU_PREFERRED = ['日勤', '夜勤担当①', '夜勤担当②'];
+    const KINMU_ICONS     = { '日勤': 'fa-sun', '夜勤担当①': 'fa-moon', '夜勤担当②': 'fa-star-half-stroke' };
+    const kinmuSet = new Set(records.map(r => r.勤務区分).filter(Boolean));
+    const kinmuList = [
+      ...KINMU_PREFERRED.filter(k => kinmuSet.has(k)),
+      ...[...kinmuSet].filter(k => !KINMU_PREFERRED.includes(k)).sort(),
+    ];
 
-    for (const kinmu of KINMU_ORDER) {
-      const sectionRecords = records.filter(r => r.勤務区分 === kinmu);
+    // 勤務区分が1件も取得できない場合は全件を1セクションで表示する
+    if (kinmuList.length === 0) kinmuList.push('');
+
+    for (const kinmu of kinmuList) {
+      const sectionRecords = kinmu
+        ? records.filter(r => r.勤務区分 === kinmu)
+        : records;
       if (sectionRecords.length === 0) continue;
 
       const section = document.createElement('div');
@@ -1027,7 +1039,8 @@ function renderTimeline(records) {
 
       const title = document.createElement('div');
       title.className = 'kinmu-section-title';
-      title.innerHTML = `<i class="fa-solid ${KINMU_ICONS[kinmu] || 'fa-clock'}"></i> ${kinmu}`;
+      const icon = KINMU_ICONS[kinmu] || 'fa-clock';
+      title.innerHTML = `<i class="fa-solid ${icon}"></i> ${kinmu || '全シフト'}`;
       section.appendChild(title);
 
       const grid = document.createElement('div');
