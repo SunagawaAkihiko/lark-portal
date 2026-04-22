@@ -101,70 +101,83 @@
       display: flex; align-items: center; gap: 0.5rem;
     }
     .timetable-wrap {
-      overflow-x: auto;
       overflow-y: auto;
       max-height: calc(100vh - 220px);
     }
 
-    /* ===== 時間割テーブル ===== */
+    /* ===== 一覧テーブル（シンプル行形式）===== */
     .timetable {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.75rem;
-      min-width: 560px;
+      font-size: 0.82rem;
     }
-    .timetable th {
+    .timetable thead th {
       position: sticky; top: 0; z-index: 10;
       background: var(--admin-dark);
       color: white;
-      padding: 0.4rem 0.3rem;
-      text-align: center;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
       font-weight: 700;
-      font-size: 0.78rem;
-      white-space: nowrap;
-      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8rem;
+      border-bottom: 2px solid rgba(255,255,255,0.15);
     }
-    .timetable th.time-col { width: 52px; min-width: 52px; }
+    .timetable tbody tr {
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.15s;
+    }
+    .timetable tbody tr:hover { background: #fdf0e8; }
+    /* 衝突行（フォーム入力中の時間帯と重複）を赤ハイライト */
+    .timetable tbody tr.row-conflict td { background: #fff1f1 !important; }
+    /* フォームで選択中の時間帯と一致する行を黄ハイライト */
+    .timetable tbody tr.row-selected td { background: #fffbe6 !important; }
     .timetable td {
-      border: 1px solid #f0e8df;
-      padding: 0.2rem 0.25rem;
-      vertical-align: top;
-      min-width: 72px;
-      background: white;
+      padding: 0.5rem 0.75rem;
+      vertical-align: middle;
     }
-    .timetable td.time-label {
-      position: sticky; left: 0; z-index: 5;
-      background: #f9f4ef;
-      text-align: right;
-      color: var(--text-muted);
+
+    /* 時間帯列 */
+    .td-time {
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--text-color);
+      width: 90px;
+    }
+    .td-time .time-range { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+    /* 氏名・サービス列 */
+    .td-name { font-weight: 700; color: #1e293b; }
+    .td-service { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+
+    /* 作業項目バッジ */
+    .task-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
       font-size: 0.72rem;
       font-weight: 700;
-      padding-right: 0.4rem;
+      background: var(--badge-bg, #f1f5f9);
+      color: var(--badge-color, #64748b);
       white-space: nowrap;
-      border-right: 2px solid var(--border-color);
     }
-    /* 選択中の時間行をハイライト表示する */
-    .timetable tr.row-selected td { background: #fffbe6; }
-    .timetable tr.row-selected td.time-label { background: #fff8d6; }
 
-    /* ===== 時間割セルのバッジ ===== */
-    .cell-entry {
-      display: inline-flex;
-      flex-direction: column;
-      background: var(--entry-bg, #e8f4fd);
-      border-left: 3px solid var(--entry-accent, #3b82f6);
-      border-radius: 4px;
-      padding: 0.18rem 0.3rem;
-      margin: 1px;
-      line-height: 1.3;
-      max-width: 100%;
+    /* 曜日バッジ群 */
+    .day-badges { display: flex; gap: 3px; flex-wrap: nowrap; }
+    .day-badge {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      /* 未選択（その曜日に登録なし）はグレー */
+      background: #e9e3dc;
+      color: #b0a090;
     }
-    .cell-entry .entry-name { font-weight: 700; color: #1e293b; font-size: 0.72rem; }
-    .cell-entry .entry-task { font-size: 0.65rem; color: var(--entry-accent, #3b82f6); }
-    .cell-entry .entry-time { font-size: 0.62rem; color: var(--text-muted); font-weight: 500; }
-
-    /* 衝突セル（既に同時刻に予約あり）を赤表示する */
-    .timetable td.cell-conflict { background: #fff1f1; }
+    /* 登録がある曜日は作業項目の色で塗りつぶす */
+    .day-badge.active {
+      background: var(--entry-accent, #64748b);
+      color: white;
+    }
 
     /* ===== 空・ローディング状態 ===== */
     .timetable-empty {
@@ -604,7 +617,6 @@ async function loadSchedule() {
 function renderTimetable(records) {
   const wrap = document.getElementById('timetable-wrap');
 
-  // データが空のとき案内メッセージを表示する
   if (records.length === 0) {
     wrap.innerHTML = `<div class="timetable-empty">
       <i class="fa-solid fa-calendar-xmark" style="font-size:1.8rem;color:var(--border-color)"></i>
@@ -613,81 +625,97 @@ function renderTimetable(records) {
     return;
   }
 
-  // 行キー = startTime（算定項目から計算済み）が取得できればそれを使い、
-  // 取得できなければ 提供時間 を代替として使う
-  // 同じ startTime のレコードを同じ行にまとめる
-  const rowKeySet = new Set(records.map(r => r.startTime || r.提供時間).filter(Boolean));
-  const rowKeys = [...rowKeySet].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
-
-  // 曜日×rowKey のマップを構築する（key: "曜日|rowKey"）
-  const cellMap = {};
+  // (startTime, 氏名, 作業項目, サービス略称) をキーにレコードをグループ化する。
+  // 同じ人・サービス・時間帯で曜日だけ異なるレコードを1行にまとめて表示する。
+  const groups = new Map();
   for (const r of records) {
-    const rowKey = r.startTime || r.提供時間;
-    if (!rowKey) continue;
-    const key = `${r.提供曜日}|${rowKey}`;
-    if (!cellMap[key]) cellMap[key] = [];
-    cellMap[key].push(r);
+    const start = r.startTime || r.提供時間 || '';
+    const gKey = `${start}|${r.氏名}|${r.作業項目}|${r.サービス略称}`;
+    if (!groups.has(gKey)) {
+      groups.set(gKey, {
+        startTime:   r.startTime || null,
+        endTime:     r.endTime   || null,
+        提供時間:    r.提供時間,
+        氏名:        r.氏名,
+        作業項目:    r.作業項目,
+        サービス略称: r.サービス略称,
+        days:        new Set(),
+      });
+    }
+    if (r.提供曜日) groups.get(gKey).days.add(r.提供曜日);
   }
+
+  // startTime でソートする
+  const sorted = [...groups.values()].sort(
+    (a, b) => timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
+  );
 
   // テーブル構築
   const table = document.createElement('table');
   table.className = 'timetable';
 
-  // ヘッダー行（時間列 + 曜日列）
+  // ヘッダー
   const thead = table.createTHead();
   const hRow = thead.insertRow();
-  const thTime = document.createElement('th');
-  thTime.className = 'time-col';
-  thTime.textContent = '時間帯';
-  hRow.appendChild(thTime);
-  for (const day of DAY_ORDER) {
+  ['時間帯', '氏名 / サービス', '作業項目', '提供曜日'].forEach(label => {
     const th = document.createElement('th');
-    th.textContent = DAY_LABELS[day];
+    th.textContent = label;
     hRow.appendChild(th);
-  }
+  });
 
-  // データ行（startTime でソートされた各行）
+  // データ行
   const tbody = table.createTBody();
-  for (const rowKey of rowKeys) {
+  for (const g of sorted) {
+    const color = TASK_COLORS[g.作業項目] || DEFAULT_COLOR;
     const tr = tbody.insertRow();
-    tr.dataset.time = rowKey; // 衝突チェック時のハイライト対象
+    // 衝突チェック用に startTime を埋め込む
+    tr.dataset.startTime = g.startTime || g.提供時間;
+    tr.dataset.endTime   = g.endTime || '';
 
-    // 時間ラベルセル（startTime〜endTime を表示。計算できなければ rowKey のみ）
-    const tdTime = tr.insertCell();
-    tdTime.className = 'time-label';
-
-    // その行のエントリから代表的な endTime を取得してラベルに使う
-    const sample = Object.values(cellMap).flat().find(r => (r.startTime || r.提供時間) === rowKey);
-    if (sample && sample.startTime && sample.endTime) {
-      tdTime.innerHTML = `<span style="display:block">${sample.startTime}</span><span style="display:block;color:var(--primary-color)">〜${sample.endTime}</span>`;
+    // 時間帯セル
+    const tdTime = document.createElement('td');
+    tdTime.className = 'td-time';
+    if (g.startTime && g.endTime) {
+      tdTime.innerHTML = `${g.startTime}<span class="time-range"><br>〜${g.endTime}</span>`;
     } else {
-      tdTime.textContent = rowKey;
+      tdTime.textContent = g.提供時間;
     }
+    tr.appendChild(tdTime);
 
-    // 各曜日セル
+    // 氏名・サービス略称セル
+    const tdName = document.createElement('td');
+    tdName.innerHTML = `<div class="td-name">${g.氏名}</div>
+      <div class="td-service">${g.サービス略称 || '―'}</div>`;
+    tr.appendChild(tdName);
+
+    // 作業項目バッジセル
+    const tdTask = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'task-badge';
+    badge.style.setProperty('--badge-bg', color.bg);
+    badge.style.setProperty('--badge-color', color.accent);
+    badge.textContent = g.作業項目 || '―';
+    tdTask.appendChild(badge);
+    tr.appendChild(tdTask);
+
+    // 曜日バッジセル（月〜日を並べ、登録がある曜日だけ色付き）
+    const tdDays = document.createElement('td');
+    const dayWrap = document.createElement('div');
+    dayWrap.className = 'day-badges';
     for (const day of DAY_ORDER) {
-      const td = tr.insertCell();
-      const entries = cellMap[`${day}|${rowKey}`] || [];
-      for (const e of entries) {
-        const color = TASK_COLORS[e.作業項目] || DEFAULT_COLOR;
-        const entryDiv = document.createElement('div');
-        entryDiv.className = 'cell-entry';
-        entryDiv.style.setProperty('--entry-bg', color.bg);
-        entryDiv.style.setProperty('--entry-accent', color.accent);
-        // サービス時間帯をエントリ内にも表示する
-        const timeRange = (e.startTime && e.endTime) ? `${e.startTime}〜${e.endTime}` : e.提供時間;
-        entryDiv.innerHTML = `
-          <span class="entry-name">${e.氏名}</span>
-          <span class="entry-task">${e.作業項目 || ''}</span>
-          <span class="entry-time">${timeRange}</span>`;
-        td.appendChild(entryDiv);
-      }
+      const db = document.createElement('span');
+      db.className = 'day-badge' + (g.days.has(day) ? ' active' : '');
+      if (g.days.has(day)) db.style.setProperty('--entry-accent', color.accent);
+      db.textContent = DAY_LABELS[day];
+      dayWrap.appendChild(db);
     }
+    tdDays.appendChild(dayWrap);
+    tr.appendChild(tdDays);
   }
 
   wrap.innerHTML = '';
   wrap.appendChild(table);
-  checkConflicts(); // フォームの選択状態に応じて衝突チェックを再評価する
+  checkConflicts();
 }
 
 // ============================================================
@@ -706,55 +734,50 @@ function checkConflicts() {
   const banner = document.getElementById('conflict-banner');
   const msg = document.getElementById('conflict-msg');
 
-  // 時間割の行ハイライトをリセットする
-  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => tr.classList.remove('row-selected'));
+  // テーブル行のハイライトをリセットする
+  document.querySelectorAll('.timetable tbody tr').forEach(tr => {
+    tr.classList.remove('row-selected', 'row-conflict');
+  });
 
   if (!selectedTime) {
     banner.classList.remove('visible');
     return;
   }
 
-  // フォームで入力中の新規エントリの時間範囲を計算する
-  // upperLimit が取得できない場合は提供時間の完全一致で衝突チェックを行う
+  // フォーム入力から新規エントリの時間範囲を計算する
   const upperLimit = durationMap[selectedService] || null;
   let newStart = null, newEnd = null;
   if (upperLimit) {
-    const endMins   = timeToMinutes(selectedTime) + 4;
-    const startMins = endMins - upperLimit + 1;
-    newEnd   = startMins; // 後で使用するため分単位で保持
-    newStart = startMins;
-    newEnd   = endMins;
+    newEnd   = timeToMinutes(selectedTime) + 4;
+    newStart = newEnd - upperLimit + 1;
   }
 
-  // 時間割テーブルの該当行をハイライトする（startTime が一致する行）
-  if (newStart !== null) {
-    const startStr = minsToTimeStr(newStart);
-    document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
-      if (tr.dataset.time === startStr) tr.classList.add('row-selected');
-    });
-  } else {
-    // upperLimit 不明の場合は提供時間と一致する行をハイライト
-    document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
-      if (tr.dataset.time === selectedTime) tr.classList.add('row-selected');
-    });
-  }
+  // テーブル行に選択中・衝突のハイライトを適用する
+  document.querySelectorAll('.timetable tbody tr').forEach(tr => {
+    const rowStart = tr.dataset.startTime ? timeToMinutes(tr.dataset.startTime) : null;
+    const rowEnd   = tr.dataset.endTime   ? timeToMinutes(tr.dataset.endTime)   : null;
+
+    if (rowStart === null) return;
+
+    // 時間範囲が重なる行を「選択中」としてハイライトする
+    const overlaps = (newStart !== null && rowEnd !== null)
+      ? (newStart <= rowEnd && newEnd >= rowStart)
+      : (tr.dataset.startTime === selectedTime);
+
+    if (overlaps) tr.classList.add('row-selected');
+  });
 
   if (selectedDays.length === 0) {
     banner.classList.remove('visible');
     return;
   }
 
-  // 既存レコードとの時間範囲オーバーラップ（重複）を検出する
-  // 新規エントリの範囲 [newStart, newEnd] が既存の [existStart, existEnd] と重なるかを判定する
+  // 既存レコードとの時間範囲オーバーラップ（衝突）を検出する
   const conflicts = currentRecords.filter(r => {
     if (!selectedDays.includes(r.提供曜日)) return false;
     if (newStart !== null && r.startTime && r.endTime) {
-      // 両方の時間範囲が揃っている場合はオーバーラップ判定をする
-      const existStart = timeToMinutes(r.startTime);
-      const existEnd   = timeToMinutes(r.endTime);
-      return newStart <= existEnd && newEnd >= existStart;
+      return newStart <= timeToMinutes(r.endTime) && newEnd >= timeToMinutes(r.startTime);
     }
-    // どちらかの範囲が不明な場合は提供時間の完全一致で判定する
     return r.提供時間 === selectedTime;
   });
 
@@ -763,7 +786,13 @@ function checkConflicts() {
     return;
   }
 
-  // 衝突している予定の詳細を表示する
+  // 衝突行を赤ハイライト（黄ハイライトより優先）
+  document.querySelectorAll('.timetable tbody tr.row-selected').forEach(tr => {
+    const rowStart = tr.dataset.startTime;
+    const hasConflict = conflicts.some(r => (r.startTime || r.提供時間) === rowStart);
+    if (hasConflict) tr.classList.add('row-conflict');
+  });
+
   const detail = conflicts.map(r => {
     const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
     return `${r.提供曜日} ${r.氏名}（${range}）`;
@@ -848,7 +877,7 @@ function resetForm() {
   document.querySelectorAll('#day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
   document.querySelector('input[name="kinmu"]').checked = true;
   document.getElementById('conflict-banner').classList.remove('visible');
-  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => tr.classList.remove('row-selected'));
+  document.querySelectorAll('.timetable tbody tr').forEach(tr => tr.classList.remove('row-selected', 'row-conflict'));
 }
 
 // ============================================================
