@@ -979,6 +979,11 @@ async function loadSchedule() {
     if (!data.ok) throw new Error(data.error);
 
     currentRecords = data.records;
+    // デバッグ：取得件数と勤務区分の種類をコンソールに出力する（確認後削除）
+    console.log(`[schedule] ${currentOffice} レコード件数:`, currentRecords.length);
+    const kinmuValues = [...new Set(currentRecords.map(r => r.勤務区分))];
+    console.log('[schedule] 勤務区分の値一覧:', kinmuValues);
+    if (currentRecords.length > 0) console.log('[schedule] 先頭レコード:', currentRecords[0]);
     renderTimeline(currentRecords);
   } catch (err) {
     console.error('スケジュール取得エラー:', err);
