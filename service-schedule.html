@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>顧客別作業設定</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ===== CSS変数（lark-portal統一デザイン） ===== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+      --admin-dark:    #4a3f35;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* ===== ページヘッダー ===== */
+    .page-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--admin-dark);
+      color: white;
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; }
+    .header-badge {
+      margin-left: auto;
+      background: var(--primary-color);
+      color: white;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    /* ===== 事業所タブ ===== */
+    .office-tabs {
+      display: flex;
+      background: var(--admin-dark);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.55rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+    }
+    .tab-btn.active {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    /* ===== メインレイアウト（PC: 左右2分割、SP: 縦積み） ===== */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 1rem;
+      padding: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ===== 時間割カード ===== */
+    .timetable-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .timetable-card-header {
+      background: var(--card-bg);
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .timetable-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 220px);
+    }
+
+    /* ===== 時間割テーブル ===== */
+    .timetable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      min-width: 560px;
+    }
+    .timetable th {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--admin-dark);
+      color: white;
+      padding: 0.4rem 0.3rem;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .timetable th.time-col { width: 52px; min-width: 52px; }
+    .timetable td {
+      border: 1px solid #f0e8df;
+      padding: 0.2rem 0.25rem;
+      vertical-align: top;
+      min-width: 72px;
+      background: white;
+    }
+    .timetable td.time-label {
+      position: sticky; left: 0; z-index: 5;
+      background: #f9f4ef;
+      text-align: right;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding-right: 0.4rem;
+      white-space: nowrap;
+      border-right: 2px solid var(--border-color);
+    }
+    /* 選択中の時間行をハイライト表示する */
+    .timetable tr.row-selected td { background: #fffbe6; }
+    .timetable tr.row-selected td.time-label { background: #fff8d6; }
+
+    /* ===== 時間割セルのバッジ ===== */
+    .cell-entry {
+      display: inline-flex;
+      flex-direction: column;
+      background: var(--entry-bg, #e8f4fd);
+      border-left: 3px solid var(--entry-accent, #3b82f6);
+      border-radius: 4px;
+      padding: 0.18rem 0.3rem;
+      margin: 1px;
+      line-height: 1.3;
+      max-width: 100%;
+    }
+    .cell-entry .entry-name { font-weight: 700; color: #1e293b; font-size: 0.72rem; }
+    .cell-entry .entry-task { font-size: 0.65rem; color: var(--entry-accent, #3b82f6); }
+
+    /* 衝突セル（既に同時刻に予約あり）を赤表示する */
+    .timetable td.cell-conflict { background: #fff1f1; }
+
+    /* ===== 空・ローディング状態 ===== */
+    .timetable-empty {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 22px; height: 22px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== 登録フォームカード ===== */
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+      position: sticky;
+      top: 100px;
+    }
+    .form-card-header {
+      background: var(--primary-color);
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .form-body { padding: 0.9rem 1rem 1rem; }
+
+    /* ===== フォーム部品 ===== */
+    .field-group { margin-bottom: 0.85rem; }
+    .field-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .field-label .req { color: var(--primary-color); margin-left: 2px; }
+    .form-select, .form-input {
+      width: 100%;
+      padding: 0.5rem 0.7rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      color: var(--text-color);
+      background: white;
+      appearance: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-select:focus, .form-input:focus {
+      border-color: var(--primary-color);
+    }
+
+    /* ===== 曜日チェックボックス ===== */
+    .day-checkboxes {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .day-check-label {
+      display: flex; align-items: center; gap: 0.2rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+    .day-check-label input { accent-color: var(--primary-color); width: 15px; height: 15px; }
+
+    /* ===== 勤務区分ラジオ ===== */
+    .radio-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .radio-label {
+      display: flex; align-items: center; gap: 0.25rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+    .radio-label input { accent-color: var(--primary-color); }
+
+    /* ===== 日付行 ===== */
+    .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+    /* ===== 衝突警告バナー ===== */
+    .conflict-banner {
+      display: none;
+      margin-bottom: 0.75rem;
+      background: #fff1f1;
+      border: 1.5px solid #f87171;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      color: #b91c1c;
+      font-weight: 600;
+    }
+    .conflict-banner.visible { display: block; }
+
+    /* ===== 送信ボタン ===== */
+    .submit-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .submit-btn:hover:not(:disabled) { background: #d05a3c; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== トースト通知 ===== */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      background: #1e293b;
+      color: white;
+      padding: 0.75rem 1.2rem;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #0e8a6e; }
+    .toast.error   { background: #dc2626; }
+  </style>
+</head>
+<body>
+
+<!-- ===== ページヘッダー ===== -->
+<header class="page-header">
+  <i class="fa-solid fa-calendar-check"></i>
+  <h1>顧客別作業設定</h1>
+  <span class="header-badge"><i class="fa-solid fa-lock"></i> 管理者専用</span>
+</header>
+
+<!-- ===== 事業所タブ ===== -->
+<nav class="office-tabs">
+  <button class="tab-btn active" data-office="大浦家" onclick="switchOffice(this)">
+    <i class="fa-solid fa-house"></i> 大浦家
+  </button>
+  <button class="tab-btn" data-office="上津役家" onclick="switchOffice(this)">
+    <i class="fa-solid fa-house-chimney"></i> 上津役家
+  </button>
+</nav>
+
+<!-- ===== メインレイアウト ===== -->
+<div class="main-layout">
+
+  <!-- ─── 左：時間割 ─── -->
+  <section class="timetable-card">
+    <div class="timetable-card-header">
+      <i class="fa-solid fa-table-cells"></i>
+      <span id="timetable-title">大浦家 時間割</span>
+      <button onclick="loadSchedule()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.85rem;" title="再読込">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+    </div>
+    <div class="timetable-wrap" id="timetable-wrap">
+      <div class="timetable-empty">
+        <div class="loading-spinner"></div>
+        <p style="margin-top:0.75rem">読み込み中...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 右：登録フォーム ─── -->
+  <section class="form-card">
+    <div class="form-card-header">
+      <i class="fa-solid fa-plus-circle"></i>
+      新規サービス登録
+    </div>
+    <div class="form-body">
+
+      <!-- 衝突警告 -->
+      <div class="conflict-banner" id="conflict-banner">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="conflict-msg"></span>
+      </div>
+
+      <!-- 氏名 -->
+      <div class="field-group">
+        <label class="field-label">氏名<span class="req">*</span></label>
+        <select class="form-select" id="f-name">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- 作業項目 -->
+      <div class="field-group">
+        <label class="field-label">作業項目</label>
+        <select class="form-select" id="f-task">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- サービス略称（検索可能） -->
+      <div class="field-group">
+        <label class="field-label">サービス略称</label>
+        <input class="form-input" id="f-service" list="service-list" placeholder="入力して絞り込み...">
+        <datalist id="service-list"></datalist>
+      </div>
+
+      <!-- 提供曜日（複数選択） -->
+      <div class="field-group">
+        <label class="field-label">提供曜日<span class="req">*</span></label>
+        <div class="day-checkboxes" id="day-checkboxes"></div>
+      </div>
+
+      <!-- 提供時間 -->
+      <div class="field-group">
+        <label class="field-label">提供時間<span class="req">*</span></label>
+        <select class="form-select" id="f-time">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- 勤務区分 -->
+      <div class="field-group">
+        <label class="field-label">勤務区分</label>
+        <div class="radio-group" id="kinmu-radios"></div>
+      </div>
+
+      <!-- 記録内容 -->
+      <div class="field-group">
+        <label class="field-label">記録内容テンプレート</label>
+        <select class="form-select" id="f-record">
+          <option value="">-- 選択しない --</option>
+        </select>
+      </div>
+
+      <!-- 開始日・終了日 -->
+      <div class="field-group">
+        <label class="field-label">適用期間（任意）</label>
+        <div class="date-row">
+          <input type="date" class="form-input" id="f-start" placeholder="開始日">
+          <input type="date" class="form-input" id="f-end" placeholder="終了日">
+        </div>
+      </div>
+
+      <!-- 登録ボタン -->
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+        <i class="fa-solid fa-floppy-disk"></i>
+        登録する
+      </button>
+    </div>
+  </section>
+
+</div><!-- /.main-layout -->
+
+<!-- ===== トースト通知 ===== -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 定数・グローバル変数
+// ============================================================
+
+/** APIサーバーのベースURL（本番はRenderにデプロイされたattendance-app） */
+const SERVER = (location.hostname === 'localhost' || location.hostname === '')
+  ? 'http://localhost:3000'
+  : 'https://attendance-app-irf1.onrender.com';
+
+/** 現在表示中の事業所 */
+let currentOffice = '大浦家';
+
+/** 現在取得済みの作業設定レコード（時間割描画・衝突検出に使用） */
+let currentRecords = [];
+
+/** フィールド選択肢データ（初回ロード時に取得してキャッシュ） */
+let fieldsCache = null;
+
+/** 作業項目ごとの色定義 */
+const TASK_COLORS = {
+  'モーニングケア': { bg: '#fef3c7', accent: '#d97706' },
+  'イブニングケア': { bg: '#ede9fe', accent: '#7c3aed' },
+  '排泄介助':       { bg: '#d1fae5', accent: '#059669' },
+  '入浴介助':       { bg: '#dbeafe', accent: '#2563eb' },
+  '排泄介助②':     { bg: '#cffafe', accent: '#0891b2' },
+};
+const DEFAULT_COLOR = { bg: '#f1f5f9', accent: '#64748b' };
+
+/** 提供曜日の表示順序と列ヘッダー定義 */
+const DAY_ORDER = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
+const DAY_LABELS = { '月曜': '月', '火曜': '火', '水曜': '水', '木曜': '木', '金曜': '金', '土曜': '土', '日曜': '日' };
+
+// ============================================================
+// 初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadFields();
+  await loadSchedule();
+});
+
+/**
+ * フィールド選択肢をAPIから取得してフォームを初期化する。
+ * サービス略称（524件）はdatalistに展開する。
+ */
+async function loadFields() {
+  try {
+    const res = await fetch(`${SERVER}/api/service-schedule/fields`);
+    fieldsCache = await res.json();
+    if (!fieldsCache.ok) throw new Error(fieldsCache.error);
+
+    const st = fieldsCache.static;
+
+    // 氏名セレクト
+    const nameEl = document.getElementById('f-name');
+    st.氏名.forEach(n => nameEl.appendChild(new Option(n, n)));
+
+    // 作業項目セレクト
+    const taskEl = document.getElementById('f-task');
+    st.作業項目.forEach(t => taskEl.appendChild(new Option(t, t)));
+
+    // サービス略称datalist
+    const dlEl = document.getElementById('service-list');
+    fieldsCache.サービス略称.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      dlEl.appendChild(opt);
+    });
+
+    // 提供曜日チェックボックス
+    const dayBox = document.getElementById('day-checkboxes');
+    st.提供曜日.forEach(d => {
+      const lbl = document.createElement('label');
+      lbl.className = 'day-check-label';
+      lbl.innerHTML = `<input type="checkbox" value="${d}" onchange="checkConflicts()"> ${DAY_LABELS[d] || d}`;
+      dayBox.appendChild(lbl);
+    });
+
+    // 提供時間セレクト（5分刻み 0:00〜23:55）
+    const timeEl = document.getElementById('f-time');
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        const label = `${h}:${String(m).padStart(2, '0')}`;
+        timeEl.appendChild(new Option(label, label));
+      }
+    }
+
+    // 勤務区分ラジオ
+    const kinmuEl = document.getElementById('kinmu-radios');
+    st.勤務区分.forEach((k, i) => {
+      const lbl = document.createElement('label');
+      lbl.className = 'radio-label';
+      lbl.innerHTML = `<input type="radio" name="kinmu" value="${k}" ${i === 0 ? 'checked' : ''}> ${k}`;
+      kinmuEl.appendChild(lbl);
+    });
+
+    // 記録内容セレクト
+    const recEl = document.getElementById('f-record');
+    st.記録内容.forEach((r, i) => recEl.appendChild(new Option(`テンプレート${i + 1}`, r)));
+
+    // 提供時間変更時も衝突チェックを行う
+    document.getElementById('f-time').addEventListener('change', checkConflicts);
+
+  } catch (err) {
+    console.error('フィールド取得エラー:', err);
+    showToast('フィールドの読み込みに失敗しました', 'error');
+  }
+}
+
+// ============================================================
+// 事業所タブ切り替え
+// ============================================================
+
+/**
+ * タブをクリックしたとき事業所を切り替え、時間割を再取得する
+ * @param {HTMLElement} btn クリックされたタブボタン
+ */
+function switchOffice(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentOffice = btn.dataset.office;
+  document.getElementById('timetable-title').textContent = `${currentOffice} 時間割`;
+  // 衝突バナーをリセットする
+  document.getElementById('conflict-banner').classList.remove('visible');
+  loadSchedule();
+}
+
+// ============================================================
+// 時間割データ取得・描画
+// ============================================================
+
+/**
+ * 現在の事業所のスケジュールをAPIから取得し時間割テーブルを描画する
+ */
+async function loadSchedule() {
+  const wrap = document.getElementById('timetable-wrap');
+  wrap.innerHTML = `
+    <div class="timetable-empty">
+      <div class="loading-spinner"></div>
+      <p style="margin-top:0.75rem">読み込み中...</p>
+    </div>`;
+
+  try {
+    const res = await fetch(`${SERVER}/api/service-schedule?office=${encodeURIComponent(currentOffice)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    currentRecords = data.records;
+    renderTimetable(currentRecords);
+  } catch (err) {
+    console.error('スケジュール取得エラー:', err);
+    wrap.innerHTML = `<div class="timetable-empty" style="color:#dc2626">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <p style="margin-top:0.5rem">取得失敗: ${err.message}</p>
+    </div>`;
+  }
+}
+
+/**
+ * レコード配列から時間割テーブルHTMLを構築してDOMに挿入する。
+ * 縦軸=提供時間（昇順）、横軸=提供曜日（月〜日）で配置する。
+ * @param {Array} records 作業設定レコード配列
+ */
+function renderTimetable(records) {
+  const wrap = document.getElementById('timetable-wrap');
+
+  // データが空のとき案内メッセージを表示する
+  if (records.length === 0) {
+    wrap.innerHTML = `<div class="timetable-empty">
+      <i class="fa-solid fa-calendar-xmark" style="font-size:1.8rem;color:var(--border-color)"></i>
+      <p style="margin-top:0.75rem">登録データがありません</p>
+    </div>`;
+    return;
+  }
+
+  // 存在する時間スロットを収集して時刻順にソートする
+  const timeSet = new Set(records.map(r => r.提供時間).filter(Boolean));
+  const times = [...timeSet].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+
+  // 曜日×時間のマップを構築する（key: "曜日|時間"）
+  const cellMap = {};
+  for (const r of records) {
+    const key = `${r.提供曜日}|${r.提供時間}`;
+    if (!cellMap[key]) cellMap[key] = [];
+    cellMap[key].push(r);
+  }
+
+  // テーブル構築
+  const table = document.createElement('table');
+  table.className = 'timetable';
+
+  // ヘッダー行
+  const thead = table.createTHead();
+  const hRow = thead.insertRow();
+  const thTime = document.createElement('th');
+  thTime.textContent = '時間';
+  thTime.className = 'time-col';
+  hRow.appendChild(thTime);
+  for (const day of DAY_ORDER) {
+    const th = document.createElement('th');
+    th.textContent = DAY_LABELS[day];
+    hRow.appendChild(th);
+  }
+
+  // データ行
+  const tbody = table.createTBody();
+  for (const time of times) {
+    const tr = tbody.insertRow();
+    tr.dataset.time = time;
+
+    // 時間ラベルセル
+    const tdTime = tr.insertCell();
+    tdTime.className = 'time-label';
+    tdTime.textContent = time;
+
+    // 各曜日セル
+    for (const day of DAY_ORDER) {
+      const td = tr.insertCell();
+      const entries = cellMap[`${day}|${time}`] || [];
+      if (entries.length > 0) {
+        // 複数エントリがある場合は全て表示する
+        for (const e of entries) {
+          const color = TASK_COLORS[e.作業項目] || DEFAULT_COLOR;
+          const entryDiv = document.createElement('div');
+          entryDiv.className = 'cell-entry';
+          entryDiv.style.setProperty('--entry-bg', color.bg);
+          entryDiv.style.setProperty('--entry-accent', color.accent);
+          entryDiv.innerHTML = `
+            <span class="entry-name">${e.氏名}</span>
+            <span class="entry-task">${e.作業項目 || ''}</span>`;
+          td.appendChild(entryDiv);
+        }
+      }
+    }
+  }
+
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
+  checkConflicts(); // フォームの選択と衝突チェックを再評価する
+}
+
+// ============================================================
+// 衝突検出
+// ============================================================
+
+/**
+ * フォームで選択中の曜日×時間が既存レコードと衝突するか確認し、
+ * 衝突している場合は警告バナーを表示する。
+ * 衝突している時間割セルを赤背景にする。
+ */
+function checkConflicts() {
+  const selectedTime = document.getElementById('f-time').value;
+  const selectedDays = getSelectedDays();
+  const banner = document.getElementById('conflict-banner');
+  const msg = document.getElementById('conflict-msg');
+
+  // 時間割の行ハイライトをリセットする
+  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => {
+    tr.classList.toggle('row-selected', tr.dataset.time === selectedTime);
+  });
+
+  if (!selectedTime || selectedDays.length === 0) {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  // 衝突レコードを収集する
+  const conflicts = currentRecords.filter(r =>
+    r.提供時間 === selectedTime && selectedDays.includes(r.提供曜日)
+  );
+
+  if (conflicts.length === 0) {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  // 衝突した曜日・名前を表示する
+  const detail = conflicts.map(r => `${r.提供曜日} ${r.氏名}`).join('、');
+  msg.textContent = `同じ時間帯にすでに登録があります：${detail}`;
+  banner.classList.add('visible');
+}
+
+// ============================================================
+// フォーム送信
+// ============================================================
+
+/**
+ * フォームの値を検証してAPIにPOSTし、完了後に時間割を再読み込みする
+ */
+async function submitForm() {
+  const name       = document.getElementById('f-name').value;
+  const task       = document.getElementById('f-task').value;
+  const service    = document.getElementById('f-service').value;
+  const time       = document.getElementById('f-time').value;
+  const kinmu      = document.querySelector('input[name="kinmu"]:checked')?.value || '日勤';
+  const record     = document.getElementById('f-record').value;
+  const startDate  = document.getElementById('f-start').value;
+  const endDate    = document.getElementById('f-end').value;
+  const days       = getSelectedDays();
+
+  // 必須項目のバリデーション
+  if (!name)        return showToast('氏名を選択してください', 'error');
+  if (days.length === 0) return showToast('提供曜日を1つ以上選択してください', 'error');
+  if (!time)        return showToast('提供時間を選択してください', 'error');
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px"></div> 登録中...';
+
+  try {
+    const body = {
+      事業所:       currentOffice,
+      氏名:         name,
+      作業項目:     task,
+      サービス略称: service,
+      提供曜日:     days,
+      提供時間:     time,
+      勤務区分:     kinmu,
+      記録内容:     record,
+      開始日:       startDate,
+      終了日:       endDate,
+    };
+
+    const res = await fetch(`${SERVER}/api/service-schedule`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    showToast(`${data.count}件登録しました`, 'success');
+    resetForm();
+    await loadSchedule(); // 時間割を最新状態に更新する
+
+  } catch (err) {
+    console.error('登録エラー:', err);
+    showToast(`登録失敗: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 登録する';
+  }
+}
+
+/**
+ * フォームの入力値をすべてリセットする
+ */
+function resetForm() {
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-task').value = '';
+  document.getElementById('f-service').value = '';
+  document.getElementById('f-time').value = '';
+  document.getElementById('f-start').value = '';
+  document.getElementById('f-end').value = '';
+  document.getElementById('f-record').value = '';
+  document.querySelectorAll('#day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.querySelector('input[name="kinmu"]').checked = true;
+  document.getElementById('conflict-banner').classList.remove('visible');
+  document.querySelectorAll('.timetable tr[data-time]').forEach(tr => tr.classList.remove('row-selected'));
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+
+/**
+ * チェックされている提供曜日の配列を返す
+ * @returns {string[]}
+ */
+function getSelectedDays() {
+  return [...document.querySelectorAll('#day-checkboxes input:checked')].map(cb => cb.value);
+}
+
+/**
+ * "H:MM" 形式の時刻文字列を分単位の整数に変換する（ソート用）
+ * @param {string} t "7:00" のような文字列
+ * @returns {number}
+ */
+function timeToMinutes(t) {
+  const [h, m] = (t || '0:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+/**
+ * 画面下部にトースト通知を表示する
+ * @param {string} msg  表示メッセージ
+ * @param {'success'|'error'|''} type スタイル種別
+ */
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

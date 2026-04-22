@@ -95,6 +95,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "顧客別作業設定",
+        description: "事業所別の時間割を確認しながら顧客のサービス登録・管理を行います",
+        icon: "fa-calendar-check",
+        url: "service-schedule.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "利用者情報",
         description: "利用者の基本情報や詳細なデータを閲覧できます",
         icon: "fa-address-card",
