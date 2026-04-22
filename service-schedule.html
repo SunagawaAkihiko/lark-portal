@@ -763,9 +763,11 @@ async function loadFields() {
     const taskEl = document.getElementById('f-task');
     st.作業項目.forEach(t => taskEl.appendChild(new Option(t, t)));
 
-    // サービス略称datalist
+    // サービス略称はサービスコードテーブルへのルックアップフィールドのため
+    // durationMapのキー（サービスコードテーブルのサービス略称）をdatalistに使用する。
+    // これによりdurationMap/unitMapのキーと必ず一致する。
     const dlEl = document.getElementById('service-list');
-    fieldsCache.サービス略称.forEach(s => {
+    Object.keys(durationMap).sort((a, b) => a.localeCompare(b, 'ja')).forEach(s => {
       const opt = document.createElement('option');
       opt.value = s;
       dlEl.appendChild(opt);
