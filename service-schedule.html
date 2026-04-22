@@ -179,6 +179,25 @@
       color: white;
     }
 
+    /* ===== 空き時間帯行 ===== */
+    .timetable tbody tr.row-gap td {
+      background: #f5f0eb;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 0.3rem 0.75rem;
+      border-bottom: 1px dashed var(--border-color);
+    }
+    .gap-label {
+      display: flex; align-items: center; gap: 0.4rem;
+      color: #b0a090;
+    }
+    .gap-label .gap-duration {
+      font-size: 0.72rem;
+      background: #e9e3dc;
+      border-radius: 10px;
+      padding: 0.1rem 0.45rem;
+    }
+
     /* ===== 空・ローディング状態 ===== */
     .timetable-empty {
       padding: 2rem;
@@ -663,10 +682,65 @@ function renderTimetable(records) {
     hRow.appendChild(th);
   });
 
+  // ── 空き時間帯の計算 ──
+  // 全グループのカバー区間（分）をマージし、その隙間を「空き」として取得する
+  const intervals = sorted
+    .filter(g => g.startTime && g.endTime)
+    .map(g => [timeToMinutes(g.startTime), timeToMinutes(g.endTime)]);
+  intervals.sort((a, b) => a[0] - b[0]);
+
+  // 重複区間をマージする（隣接・重複する区間を統合）
+  const merged = [];
+  for (const [s, e] of intervals) {
+    if (merged.length === 0 || s > merged[merged.length - 1][1] + 1) {
+      merged.push([s, e]);
+    } else {
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
+    }
+  }
+
+  // マージ済み区間の隙間が「空き時間帯」となる
+  // key: gapStart（分）→ { from, to, duration } の形で保持する
+  const gapMap = new Map();
+  for (let i = 0; i < merged.length - 1; i++) {
+    const gapStart = merged[i][1] + 1;   // 直前区間の終了+1分
+    const gapEnd   = merged[i + 1][0] - 1; // 次区間の開始-1分
+    if (gapEnd >= gapStart) {
+      gapMap.set(gapStart, {
+        from:     minsToTimeStr(gapStart),
+        to:       minsToTimeStr(gapEnd),
+        duration: gapEnd - gapStart + 1,
+      });
+    }
+  }
+
   // データ行
   const tbody = table.createTBody();
+  let prevEndMins = null; // 直前のグループ終了時刻（分）
+
   for (const g of sorted) {
     const color = TASK_COLORS[g.作業項目] || DEFAULT_COLOR;
+
+    // このグループの開始前に空き時間帯があれば挿入する
+    const curStartMins = g.startTime ? timeToMinutes(g.startTime) : null;
+    if (prevEndMins !== null && curStartMins !== null) {
+      const gapStart = prevEndMins + 1;
+      const gap = gapMap.get(gapStart);
+      if (gap && curStartMins > prevEndMins + 1) {
+        const trGap = tbody.insertRow();
+        trGap.className = 'row-gap';
+        const tdGap = document.createElement('td');
+        tdGap.colSpan = 4;
+        tdGap.innerHTML = `<span class="gap-label">
+          <i class="fa-solid fa-clock"></i>
+          空き &nbsp; ${gap.from} 〜 ${gap.to}
+          <span class="gap-duration">${gap.duration}分</span>
+        </span>`;
+        trGap.appendChild(tdGap);
+      }
+    }
+    if (g.endTime) prevEndMins = timeToMinutes(g.endTime);
+
     const tr = tbody.insertRow();
     // 衝突チェック用に startTime を埋め込む
     tr.dataset.startTime = g.startTime || g.提供時間;
