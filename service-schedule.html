@@ -981,8 +981,14 @@ async function loadSchedule() {
     currentRecords = data.records;
     // デバッグ：取得件数・勤務区分・作業項目の実際の値をコンソールに出力する（確認後削除）
     console.log(`[schedule] ${currentOffice} レコード件数:`, currentRecords.length);
-    console.log('[schedule] 勤務区分の値一覧:', [...new Set(currentRecords.map(r => r.勤務区分))]);
-    console.log('[schedule] 作業項目の値一覧:', [...new Set(currentRecords.map(r => r.作業項目))]);
+    // 勤務区分ごとのレコード数と作業項目の内訳を出力する
+    const allKinmu = [...new Set(currentRecords.map(r => r.勤務区分))];
+    console.log('[schedule] 勤務区分の値一覧:', allKinmu);
+    allKinmu.forEach(k => {
+      const group = currentRecords.filter(r => r.勤務区分 === k);
+      const tasks  = [...new Set(group.map(r => r.作業項目))];
+      console.log(`[schedule] 勤務区分="${k}" → ${group.length}件, 作業項目:`, tasks);
+    });
     if (currentRecords.length > 0) console.log('[schedule] 先頭レコード:', currentRecords[0]);
     renderTimeline(currentRecords);
   } catch (err) {
