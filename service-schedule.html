@@ -106,14 +106,10 @@
     }
 
     /* ===== タイムラインコラムレイアウト ===== */
-
-    /* スクロール可能なコンテナ */
     .timeline-container {
       overflow-x: auto;
       padding: 0.75rem;
     }
-
-    /* 横並びコラム群 */
     .timeline-grid {
       display: flex;
       gap: 0.6rem;
@@ -121,10 +117,8 @@
       min-width: max-content;
     }
 
-    /* 上津役家：勤務区分セクションヘッダー */
-    .kinmu-section {
-      margin-bottom: 1.2rem;
-    }
+    /* 上津役家：勤務区分セクション */
+    .kinmu-section { margin-bottom: 1.2rem; }
     .kinmu-section-title {
       background: var(--admin-dark);
       color: white;
@@ -132,19 +126,17 @@
       font-size: 0.82rem;
       font-weight: 700;
       border-radius: 6px;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      display: flex; align-items: center; gap: 0.5rem;
       margin-bottom: 0.6rem;
     }
 
-    /* 1サービスコラム（150px固定幅） */
+    /* 1サービスコラム */
     .timeline-col {
       width: 150px;
       flex-shrink: 0;
     }
 
-    /* コラムヘッダー（作業項目名＋件数バッジ） */
+    /* コラムヘッダー */
     .col-header {
       padding: 0.45rem 0.5rem 0.5rem;
       border-radius: 6px 6px 0 0;
@@ -161,17 +153,23 @@
       opacity: 0.85;
       display: block;
     }
-    .col-header-count {
+    .col-header-meta {
+      display: flex;
+      justify-content: center;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+    .col-header-badge {
       display: inline-block;
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       font-weight: 700;
       background: rgba(255,255,255,0.22);
       border-radius: 10px;
-      padding: 0.1rem 0.45rem;
-      margin-top: 0.25rem;
+      padding: 0.1rem 0.4rem;
     }
 
-    /* コラム本体（枠線＋角丸） */
+    /* コラム本体 */
     .col-body {
       border: 2px solid var(--col-accent, #64748b);
       border-top: none;
@@ -185,11 +183,10 @@
       padding: 0.4rem 0.5rem;
       border-bottom: 1px solid #ede8e2;
       transition: background 0.15s;
+      cursor: default;
     }
     .col-entry:last-child { border-bottom: none; }
     .col-entry:hover { background: #fdf8f4; }
-
-    /* 時刻表示（コラムアクセントカラー） */
     .col-entry-time {
       font-size: 0.72rem;
       font-weight: 700;
@@ -197,8 +194,6 @@
       white-space: nowrap;
       letter-spacing: -0.02em;
     }
-
-    /* 氏名（2文字略称、大きめ表示） */
     .col-entry-name {
       font-size: 1.05rem;
       font-weight: 700;
@@ -206,19 +201,20 @@
       margin-top: 0.1rem;
       letter-spacing: 0.05em;
     }
-
-    /* サービス略称（小文字・グレー） */
     .col-entry-service {
       font-size: 0.65rem;
       color: var(--text-muted);
-      margin-top: 0.1rem;
+      margin-top: 0.05rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 100%;
     }
-
-    /* 曜日バッジ群 */
+    .col-entry-units {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--col-accent, #64748b);
+      margin-top: 0.05rem;
+    }
     .col-entry-days {
       display: flex;
       gap: 2px;
@@ -235,13 +231,12 @@
       color: #b0a090;
       flex-shrink: 0;
     }
-    /* アクティブ曜日はコラムカラーで塗る */
     .col-day-badge.active {
       background: var(--col-accent, #64748b);
       color: white;
     }
 
-    /* 空き時間帯（破線区切り） */
+    /* 空き時間帯 */
     .col-gap {
       padding: 0.3rem 0.5rem;
       background: #f5f0eb;
@@ -249,10 +244,13 @@
       font-size: 0.65rem;
       color: var(--text-muted);
       text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.3rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    }
+    /* フォームの入力条件に合う空き枠はグリーンでハイライトする */
+    .col-gap.highlight {
+      background: #dcfce7;
+      border-bottom-color: #86efac;
+      color: #166534;
     }
     .col-gap-duration {
       background: #e2dbd2;
@@ -260,8 +258,9 @@
       padding: 0.05rem 0.35rem;
       font-weight: 700;
     }
-
-    /* コラム「登録なし」プレースホルダー */
+    .col-gap.highlight .col-gap-duration {
+      background: #bbf7d0;
+    }
     .col-empty {
       padding: 0.8rem 0.5rem;
       text-align: center;
@@ -328,28 +327,27 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .form-select:focus, .form-input:focus {
-      border-color: var(--primary-color);
+    .form-select:focus, .form-input:focus { border-color: var(--primary-color); }
+    .field-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      min-height: 1.1em;
     }
+    .field-hint.ok   { color: #166534; font-weight: 700; }
+    .field-hint.warn { color: #c2410c; font-weight: 700; }
 
     /* ===== 曜日チェックボックス ===== */
-    .day-checkboxes {
-      display: flex; flex-wrap: wrap; gap: 0.4rem;
-    }
+    .day-checkboxes { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .day-check-label {
       display: flex; align-items: center; gap: 0.2rem;
-      cursor: pointer;
-      font-size: 0.82rem;
+      cursor: pointer; font-size: 0.82rem;
     }
     .day-check-label input { accent-color: var(--primary-color); width: 15px; height: 15px; }
 
     /* ===== 勤務区分ラジオ ===== */
     .radio-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .radio-label {
-      display: flex; align-items: center; gap: 0.25rem;
-      cursor: pointer;
-      font-size: 0.82rem;
-    }
+    .radio-label { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.82rem; }
     .radio-label input { accent-color: var(--primary-color); }
 
     /* ===== 日付行 ===== */
@@ -386,6 +384,100 @@
     }
     .submit-btn:hover:not(:disabled) { background: #d05a3c; }
     .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== 単位数トラッカー ===== */
+    .unit-tracker {
+      margin-top: 0.9rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .unit-tracker-header {
+      background: var(--card-bg);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .unit-tracker-body { padding: 0.65rem 0.75rem 0.75rem; }
+
+    /* 目標入力行 */
+    .unit-target-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+    .unit-target-row label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .unit-target-row input {
+      flex: 1;
+      padding: 0.35rem 0.6rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text-color);
+      outline: none;
+    }
+    .unit-target-row input:focus { border-color: var(--primary-color); }
+    .unit-target-row span { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* 数値グリッド */
+    .unit-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.4rem;
+      margin-bottom: 0.65rem;
+    }
+    .unit-stat {
+      background: var(--bg-color);
+      border-radius: 7px;
+      padding: 0.4rem 0.45rem;
+      text-align: center;
+    }
+    .unit-stat-label { font-size: 0.62rem; color: var(--text-muted); margin-bottom: 0.15rem; }
+    .unit-stat-value { font-size: 0.95rem; font-weight: 700; color: var(--text-color); }
+    .unit-stat.pending .unit-stat-value { color: var(--primary-color); }
+
+    /* プログレスバー */
+    .unit-progress-wrap { }
+    .unit-progress-track {
+      height: 10px;
+      background: #e9e3dc;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    /* 登録済み分（落ち着いた色） */
+    .unit-progress-fill-current {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: #059669;
+      border-radius: 10px;
+      transition: width 0.4s ease;
+    }
+    /* 追加予定分（オーバーレイ、薄い色） */
+    .unit-progress-fill-pending {
+      position: absolute; top: 0; height: 100%;
+      background: rgba(231,111,81,0.55);
+      border-radius: 10px;
+      transition: left 0.4s ease, width 0.4s ease;
+    }
+    /* 目標線 */
+    .unit-progress-target-line {
+      position: absolute; top: -2px; height: 14px; width: 2px;
+      background: #7c3aed;
+      border-radius: 2px;
+      transition: left 0.4s ease;
+    }
+    .unit-progress-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+      display: flex; justify-content: space-between;
+    }
+    .unit-progress-label .over  { color: #dc2626; font-weight: 700; }
+    .unit-progress-label .under { color: #059669; font-weight: 700; }
+    .unit-progress-label .exact { color: #7c3aed; font-weight: 700; }
 
     /* ===== トースト通知 ===== */
     .toast {
@@ -488,6 +580,8 @@
         <label class="field-label">サービス略称</label>
         <input class="form-input" id="f-service" list="service-list" placeholder="入力して絞り込み...">
         <datalist id="service-list"></datalist>
+        <!-- サービスコードから取得した時間・単位数のプレビュー -->
+        <p class="field-hint" id="service-hint"></p>
       </div>
 
       <!-- 提供曜日（複数選択） -->
@@ -496,12 +590,14 @@
         <div class="day-checkboxes" id="day-checkboxes"></div>
       </div>
 
-      <!-- 提供時間 -->
+      <!-- 提供時間（作業項目＋サービス略称選択後に空き枠のみ表示） -->
       <div class="field-group">
         <label class="field-label">提供時間<span class="req">*</span></label>
         <select class="form-select" id="f-time">
-          <option value="">-- 選択してください --</option>
+          <option value="">作業項目を選択してください</option>
         </select>
+        <!-- 時間ウィンドウと空き枠数ヒント -->
+        <p class="field-hint" id="time-hint"></p>
       </div>
 
       <!-- 勤務区分 -->
@@ -532,6 +628,47 @@
         <i class="fa-solid fa-floppy-disk"></i>
         登録する
       </button>
+
+      <!-- ===== 単位数トラッカー ===== -->
+      <div class="unit-tracker">
+        <div class="unit-tracker-header">
+          <i class="fa-solid fa-chart-simple"></i> 単位数トラッカー
+        </div>
+        <div class="unit-tracker-body">
+          <!-- 目標単位数入力 -->
+          <div class="unit-target-row">
+            <label>目標</label>
+            <input type="number" id="unit-target" placeholder="例: 4500" min="0" step="50"
+              oninput="saveTarget(); updateUnitTracker()">
+            <span>単位/月</span>
+          </div>
+          <!-- 数値サマリー -->
+          <div class="unit-stats">
+            <div class="unit-stat">
+              <div class="unit-stat-label">登録済（週）</div>
+              <div class="unit-stat-value" id="u-weekly">─</div>
+            </div>
+            <div class="unit-stat">
+              <div class="unit-stat-label">月換算</div>
+              <div class="unit-stat-value" id="u-monthly">─</div>
+            </div>
+            <div class="unit-stat pending">
+              <div class="unit-stat-label">追加予定</div>
+              <div class="unit-stat-value" id="u-pending">─</div>
+            </div>
+          </div>
+          <!-- プログレスバー -->
+          <div class="unit-progress-wrap">
+            <div class="unit-progress-track" id="unit-progress-track">
+              <div class="unit-progress-fill-current"  id="u-fill-current"></div>
+              <div class="unit-progress-fill-pending"  id="u-fill-pending"></div>
+              <div class="unit-progress-target-line"   id="u-target-line" style="display:none"></div>
+            </div>
+            <div class="unit-progress-label" id="u-label">目標単位数を入力してください</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -553,22 +690,37 @@ const SERVER = (location.hostname === 'localhost' || location.hostname === '')
 /** 現在表示中の事業所 */
 let currentOffice = '大浦家';
 
-/** 現在取得済みの作業設定レコード（衝突検出に使用） */
+/** 現在取得済みの作業設定レコード（衝突検出・単位数集計に使用） */
 let currentRecords = [];
 
 /** フィールド選択肢データ（初回ロード時に取得してキャッシュ） */
 let fieldsCache = null;
 
-/** サービス略称 → 時間上限（分）のマップ（サーバーから受信） */
+/** サービス略称 → 時間上限（分）のマップ（サービスコードテーブルから） */
 let durationMap = {};
+
+/** サービス略称 → 単位数のマップ（サービスコードテーブルから） */
+let unitMap = {};
 
 /** 提供曜日の表示順序と略称定義 */
 const DAY_ORDER  = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
 const DAY_LABELS = { '月曜': '月', '火曜': '火', '水曜': '水', '木曜': '木', '金曜': '金', '土曜': '土', '日曜': '日' };
 
 /**
+ * 作業項目ごとの提供可能時間ウィンドウ定義（分単位）。
+ * 排泄介助は日をまたぐため 22:00〜24:00（1320〜1440）と 0:00〜4:00（1440〜1680）の2区間に分割する。
+ * windows の end は「含まない」境界値。label は表示用テキスト。
+ */
+const TASK_WINDOWS = {
+  'モーニングケア': { windows: [{ start: 300,  end: 510  }], label: '5:00〜8:30'    },
+  'イブニングケア': { windows: [{ start: 1080, end: 1260 }], label: '18:00〜21:00'  },
+  '排泄介助':       { windows: [{ start: 1320, end: 1440 }, { start: 1440, end: 1680 }], label: '22:00〜翌4:00' },
+  '排泄介助②':     { windows: [{ start: 1320, end: 1440 }, { start: 1440, end: 1680 }], label: '22:00〜翌4:00' },
+  '入浴介助':       { windows: [{ start: 540,  end: 1020 }], label: '9:00〜17:00'   },
+};
+
+/**
  * 作業項目ごとのコラム定義
- * key: 作業項目フィールドの値, label: ヘッダー上段, sub: ヘッダー下段, accent: テーマカラー
  */
 const COL_DEFS = [
   { key: 'モーニングケア', label: '起床',    sub: 'モーニング', accent: '#d97706' },
@@ -582,13 +734,15 @@ const COL_DEFS = [
 // 初期化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // 目標単位数をlocalStorageから復元する
+  const saved = localStorage.getItem('unitTarget');
+  if (saved) document.getElementById('unit-target').value = saved;
   await loadFields();
   await loadSchedule();
 });
 
 /**
- * フィールド選択肢をAPIから取得してフォームを初期化する。
- * サービス略称（524件）はdatalistに展開する。
+ * フィールド選択肢をAPIから取得してフォームを初期化する
  */
 async function loadFields() {
   try {
@@ -596,8 +750,8 @@ async function loadFields() {
     fieldsCache = await res.json();
     if (!fieldsCache.ok) throw new Error(fieldsCache.error);
 
-    // サービス略称→上限分数マップをキャッシュする（衝突チェックで使用）
     durationMap = fieldsCache.durationMap || {};
+    unitMap     = fieldsCache.unitMap     || {};
 
     const st = fieldsCache.static;
 
@@ -617,23 +771,16 @@ async function loadFields() {
       dlEl.appendChild(opt);
     });
 
-    // 提供曜日チェックボックス
+    // 提供曜日チェックボックス（変更時に空き時間・衝突・単位数を再計算する）
     const dayBox = document.getElementById('day-checkboxes');
     st.提供曜日.forEach(d => {
       const lbl = document.createElement('label');
       lbl.className = 'day-check-label';
-      lbl.innerHTML = `<input type="checkbox" value="${d}" onchange="checkConflicts()"> ${DAY_LABELS[d] || d}`;
+      lbl.innerHTML = `<input type="checkbox" value="${d}" onchange="onFormChange()"> ${DAY_LABELS[d] || d}`;
       dayBox.appendChild(lbl);
     });
 
-    // 提供時間セレクト（5分刻み 0:00〜23:55）
-    const timeEl = document.getElementById('f-time');
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 5) {
-        const label = `${h}:${String(m).padStart(2, '0')}`;
-        timeEl.appendChild(new Option(label, label));
-      }
-    }
+    // 提供時間は動的生成のためここでは初期化しない（updateTimeOptions参照）
 
     // 勤務区分ラジオ
     const kinmuEl = document.getElementById('kinmu-radios');
@@ -648,9 +795,11 @@ async function loadFields() {
     const recEl = document.getElementById('f-record');
     st.記録内容.forEach((r, i) => recEl.appendChild(new Option(`テンプレート${i + 1}`, r)));
 
-    // 提供時間・サービス略称変更時に衝突チェックを再実行する
-    document.getElementById('f-time').addEventListener('change', checkConflicts);
-    document.getElementById('f-service').addEventListener('input', checkConflicts);
+    // 各フォーム部品の変更でonFormChangeを呼ぶ
+    document.getElementById('f-task').addEventListener('change',    onFormChange);
+    document.getElementById('f-time').addEventListener('change',    onFormChange);
+    document.getElementById('f-name').addEventListener('change',    onFormChange);
+    document.getElementById('f-service').addEventListener('input',  onFormChange);
 
   } catch (err) {
     console.error('フィールド取得エラー:', err);
@@ -659,13 +808,151 @@ async function loadFields() {
 }
 
 // ============================================================
-// 事業所タブ切り替え
+// フォーム変更ハンドラ（空き時間更新 → 衝突チェック → 単位数更新）
 // ============================================================
 
 /**
- * タブをクリックしたとき事業所を切り替え、時間割を再取得する
- * @param {HTMLElement} btn クリックされたタブボタン
+ * フォームの任意の入力が変化したときに一括で再計算を実行する
  */
+function onFormChange() {
+  updateServiceHint();
+  updateTimeOptions();
+  checkConflicts();
+  updateUnitTracker();
+}
+
+// ============================================================
+// サービス略称ヒント（時間・単位数プレビュー）
+// ============================================================
+
+/**
+ * 選択中のサービス略称からdurationMap・unitMapを参照して
+ * 「XX分間・XX単位」のプレビューをフィールド下部に表示する
+ */
+function updateServiceHint() {
+  const service = document.getElementById('f-service').value.trim();
+  const hint    = document.getElementById('service-hint');
+  if (!service) { hint.textContent = ''; hint.className = 'field-hint'; return; }
+
+  const dur   = durationMap[service];
+  const units = unitMap[service];
+  if (dur || units) {
+    const parts = [];
+    if (dur)   parts.push(`⏱ ${dur}分間`);
+    if (units) parts.push(`💠 ${units}単位`);
+    hint.textContent = parts.join('　');
+    hint.className = 'field-hint ok';
+  } else {
+    hint.textContent = 'サービスコードテーブルに該当なし';
+    hint.className = 'field-hint warn';
+  }
+}
+
+// ============================================================
+// 空き時間更新（作業項目＋サービス略称＋提供曜日から動的に生成）
+// ============================================================
+
+/**
+ * 選択中の作業項目の時間ウィンドウ内で、
+ * サービス略称の所要時間（duration）が連続して空いている提供時間のみドロップダウンに表示する。
+ * - サービス略称未選択の場合はウィンドウ内の全時刻を表示する
+ * - 提供曜日未選択の場合は全曜日の占有を合算して判定する（いずれの曜日でも入れる枠）
+ */
+function updateTimeOptions() {
+  const task    = document.getElementById('f-task').value;
+  const service = document.getElementById('f-service').value.trim();
+  const days    = getSelectedDays();
+  const timeEl  = document.getElementById('f-time');
+  const hint    = document.getElementById('time-hint');
+  const prevVal = timeEl.value;
+
+  timeEl.innerHTML = '<option value="">-- 選択してください --</option>';
+
+  const taskDef = TASK_WINDOWS[task];
+  if (!taskDef) {
+    // 作業項目未選択：全時刻を表示する
+    hint.textContent = '';
+    timeEl.options[0].text = '作業項目を先に選択してください';
+    return;
+  }
+  timeEl.options[0].text = '-- 選択してください --';
+
+  const { windows, label: winLabel } = taskDef;
+
+  // 同作業項目・選択曜日（未選択なら全曜日）の占有区間を収集する
+  const targetDays = days.length > 0 ? days : DAY_ORDER;
+  const occupiedRanges = currentRecords
+    .filter(r => r.作業項目 === task && targetDays.includes(r.提供曜日) && r.startTime && r.endTime)
+    .map(r => [timeToMinutes(r.startTime), timeToMinutes(r.endTime)]);
+
+  // 選択サービス略称の所要時間（提供時間T → 開始=T+4-duration+1、終了=T+4）
+  const upperLimit = durationMap[service] || null;
+
+  let available = 0;
+  let total     = 0;
+
+  for (const win of windows) {
+    for (let mins = win.start; mins < win.end; mins += 5) {
+      const normalMins = mins % 1440; // 24時間に正規化
+      total++;
+
+      let isOccupied = false;
+      if (upperLimit) {
+        // サービス略称選択済：時間範囲で重複チェックする
+        const newEnd   = normalMins + 4;
+        const newStart = newEnd - upperLimit + 1;
+        isOccupied = occupiedRanges.some(([s, e]) => newStart <= e && newEnd >= s);
+      } else {
+        // 略称未選択：開始時刻点が占有区間内に入るかだけ確認する
+        isOccupied = occupiedRanges.some(([s, e]) => normalMins >= s && normalMins <= e);
+      }
+
+      if (!isOccupied) {
+        timeEl.appendChild(new Option(minsToTimeStr(normalMins), minsToTimeStr(normalMins)));
+        available++;
+      }
+    }
+  }
+
+  // ヒントに時間ウィンドウと空き枠数を表示する
+  const pct = total > 0 ? Math.round((available / total) * 100) : 0;
+  hint.textContent = `時間帯：${winLabel}　空き ${available} / ${total} 枠（${pct}%）`;
+  hint.className = available > 0 ? 'field-hint ok' : 'field-hint warn';
+
+  // 以前の選択値が空き枠に含まれていれば復元する
+  if (prevVal && [...timeEl.options].some(o => o.value === prevVal)) {
+    timeEl.value = prevVal;
+  }
+
+  // 時間割の空きギャップセルをハイライトする
+  highlightAvailableGaps(task, upperLimit, days);
+}
+
+/**
+ * 時間割コラムの空き時間帯セルのうち、選択中のサービスが入る枠を緑でハイライトする
+ * @param {string} task      選択中の作業項目
+ * @param {number|null} upperLimit サービスの所要時間（分）
+ * @param {string[]} days    選択中の曜日配列
+ */
+function highlightAvailableGaps(task, upperLimit, days) {
+  // 全ギャップセルのハイライトをリセットする
+  document.querySelectorAll('.col-gap').forEach(el => el.classList.remove('highlight'));
+  if (!task || !upperLimit) return;
+
+  document.querySelectorAll('.col-gap[data-gap-task]').forEach(el => {
+    if (el.dataset.gapTask !== task) return;
+    const gapStart = parseInt(el.dataset.gapStart, 10);
+    const gapEnd   = parseInt(el.dataset.gapEnd,   10);
+    // 空き枠の長さが所要時間以上あればハイライトする
+    if ((gapEnd - gapStart + 1) >= upperLimit) {
+      el.classList.add('highlight');
+    }
+  });
+}
+
+// ============================================================
+// 事業所タブ切り替え
+// ============================================================
 function switchOffice(btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -678,10 +965,6 @@ function switchOffice(btn) {
 // ============================================================
 // 時間割データ取得
 // ============================================================
-
-/**
- * 現在の事業所のスケジュールをAPIから取得し時間割を描画する
- */
 async function loadSchedule() {
   const wrap = document.getElementById('timetable-wrap');
   wrap.innerHTML = `
@@ -714,7 +997,6 @@ async function loadSchedule() {
  * レコード配列をコラム形式のタイムラインとして描画する。
  * 大浦家：作業項目ごとに1コラム（横並び）。
  * 上津役家：勤務区分ごとにセクションを分けてそれぞれコラム横並び。
- * @param {Array} records 作業設定レコード配列
  */
 function renderTimeline(records) {
   const wrap = document.getElementById('timetable-wrap');
@@ -724,6 +1006,7 @@ function renderTimeline(records) {
       <i class="fa-solid fa-calendar-xmark" style="font-size:1.8rem;color:var(--border-color)"></i>
       <p style="margin-top:0.75rem">登録データがありません</p>
     </div>`;
+    updateUnitTracker();
     return;
   }
 
@@ -732,7 +1015,6 @@ function renderTimeline(records) {
   container.className = 'timeline-container';
 
   if (currentOffice === '上津役家') {
-    // 勤務区分ごとにセクションヘッダー＋コラムグリッドを挿入する
     const KINMU_ORDER = ['日勤', '夜勤担当①', '夜勤担当②'];
     const KINMU_ICONS = { '日勤': 'fa-sun', '夜勤担当①': 'fa-moon', '夜勤担当②': 'fa-star-half-stroke' };
 
@@ -754,12 +1036,10 @@ function renderTimeline(records) {
         const colRecords = sectionRecords.filter(r => r.作業項目 === colDef.key);
         grid.appendChild(buildColumn(colDef, colRecords));
       }
-
       section.appendChild(grid);
       container.appendChild(section);
     }
   } else {
-    // 大浦家：全件を作業項目別コラムで表示する
     const grid = document.createElement('div');
     grid.className = 'timeline-grid';
     for (const colDef of COL_DEFS) {
@@ -771,14 +1051,13 @@ function renderTimeline(records) {
 
   wrap.appendChild(container);
   checkConflicts();
+  updateUnitTracker();
 }
 
 /**
  * 1作業項目分のコラムDOM要素を生成して返す。
- * グループキー = (startTime, 氏名, サービス略称) → 曜日を集約して1エントリにする。
- * @param {{ key: string, label: string, sub: string, accent: string }} colDef コラム定義
- * @param {Array} records このコラムに属するレコード
- * @returns {HTMLElement}
+ * エントリー間の空き時間帯には data-gap-* 属性を付与して
+ * highlightAvailableGaps からハイライト対象として参照できるようにする。
  */
 function buildColumn(colDef, records) {
   // (startTime, 氏名, サービス略称) をキーにグループ化して曜日を集約する
@@ -799,12 +1078,16 @@ function buildColumn(colDef, records) {
     if (r.提供曜日) groups.get(gKey).days.add(r.提供曜日);
   }
 
-  // 開始時刻の昇順でソートする
   const sorted = [...groups.values()].sort(
     (a, b) => timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
   );
 
-  // ===== コラム要素を構築する =====
+  // コラム全体の週あたり単位数合計を計算する（ヘッダーに表示する）
+  const colWeeklyUnits = records.reduce((sum, r) => {
+    return sum + (unitMap[r.サービス略称] || 0);
+  }, 0);
+
+  // コラム要素を構築する
   const col = document.createElement('div');
   col.className = 'timeline-col';
   col.style.setProperty('--col-accent', colDef.accent);
@@ -812,12 +1095,15 @@ function buildColumn(colDef, records) {
   // ── ヘッダー ──
   const hdr = document.createElement('div');
   hdr.className = 'col-header';
-  // 空きあり = エントリー間に時間的な隙間がある、またはコラムが空の場合
-  const hasAvailability = sorted.length === 0 || hasTimeGap(sorted);
+  const hasGap = hasTimeGap(sorted);
   hdr.innerHTML = `
     ${colDef.label}
     ${colDef.sub ? `<span class="col-header-sub">${colDef.sub}</span>` : ''}
-    <span class="col-header-count">${sorted.length}件 ${hasAvailability ? '・空きあり' : '・空きなし'}</span>
+    <div class="col-header-meta">
+      <span class="col-header-badge">${sorted.length}件</span>
+      <span class="col-header-badge">${colWeeklyUnits > 0 ? colWeeklyUnits + '単位/週' : '─'}</span>
+      <span class="col-header-badge">${hasGap ? '空きあり' : '空きなし'}</span>
+    </div>
   `;
   col.appendChild(hdr);
 
@@ -826,7 +1112,6 @@ function buildColumn(colDef, records) {
   body.className = 'col-body';
 
   if (sorted.length === 0) {
-    // 登録なしプレースホルダー
     const empty = document.createElement('div');
     empty.className = 'col-empty';
     empty.innerHTML = '<i class="fa-solid fa-minus" style="opacity:0.4"></i><br>登録なし';
@@ -837,11 +1122,17 @@ function buildColumn(colDef, records) {
     for (const g of sorted) {
       const curStartMins = g.startTime ? timeToMinutes(g.startTime) : null;
 
-      // 前エントリの終了と現エントリの開始の間に空きがあれば空き行を挿入する
+      // 空き時間帯行（data-gap-* 属性でハイライト対象として識別する）
       if (prevEndMins !== null && curStartMins !== null && curStartMins > prevEndMins + 1) {
-        const gapMins = curStartMins - prevEndMins - 1;
-        const gapEl   = document.createElement('div');
+        const gapStart = prevEndMins + 1;
+        const gapEnd   = curStartMins - 1;
+        const gapMins  = gapEnd - gapStart + 1;
+        const gapEl    = document.createElement('div');
         gapEl.className = 'col-gap';
+        // ハイライト判定のために作業項目・区間情報をdata属性に保持する
+        gapEl.dataset.gapTask  = colDef.key;
+        gapEl.dataset.gapStart = gapStart;
+        gapEl.dataset.gapEnd   = gapEnd;
         gapEl.innerHTML = `
           <i class="fa-solid fa-clock" style="opacity:0.5"></i>
           空き <span class="col-gap-duration">${gapMins}分</span>
@@ -854,11 +1145,8 @@ function buildColumn(colDef, records) {
       // ── エントリーセル ──
       const entry = document.createElement('div');
       entry.className = 'col-entry';
-      // 衝突チェックで参照できるようにdata属性を付与する
-      entry.dataset.startTime = g.startTime || g.提供時間 || '';
-      entry.dataset.endTime   = g.endTime   || '';
 
-      // 時刻行（開始〜終了）
+      // 時刻行
       const timeEl = document.createElement('div');
       timeEl.className = 'col-entry-time';
       timeEl.textContent = (g.startTime && g.endTime)
@@ -866,14 +1154,14 @@ function buildColumn(colDef, records) {
         : (g.提供時間 || '');
       entry.appendChild(timeEl);
 
-      // 氏名（先頭2文字を大きく表示、full nameはtooltipで参照できる）
+      // 氏名（先頭2文字、フルネームはtooltipで参照）
       const nameEl = document.createElement('div');
       nameEl.className = 'col-entry-name';
       nameEl.title     = g.氏名 || '';
       nameEl.textContent = (g.氏名 || '').slice(0, 2);
       entry.appendChild(nameEl);
 
-      // サービス略称（省略表示）
+      // サービス略称
       if (g.サービス略称) {
         const svcEl = document.createElement('div');
         svcEl.className = 'col-entry-service';
@@ -882,7 +1170,16 @@ function buildColumn(colDef, records) {
         entry.appendChild(svcEl);
       }
 
-      // 曜日バッジ（7曜日を一列に並べ、登録がある曜日を塗りつぶす）
+      // 単位数（unitMapに存在する場合のみ表示する）
+      const units = unitMap[g.サービス略称];
+      if (units) {
+        const unitsEl = document.createElement('div');
+        unitsEl.className = 'col-entry-units';
+        unitsEl.textContent = `${units}単位`;
+        entry.appendChild(unitsEl);
+      }
+
+      // 曜日バッジ
       const daysEl = document.createElement('div');
       daysEl.className = 'col-entry-days';
       for (const day of DAY_ORDER) {
@@ -902,19 +1199,14 @@ function buildColumn(colDef, records) {
 }
 
 /**
- * ソート済みグループ配列の中に時間的な隙間があるか判定する。
- * 隙間があれば「空きあり」としてヘッダーに表示する。
- * @param {Array} sorted sortedGroupsの配列
- * @returns {boolean}
+ * ソート済みグループ配列の中に時間的な隙間があるか判定する
  */
 function hasTimeGap(sorted) {
   const intervals = sorted
     .filter(g => g.startTime && g.endTime)
     .map(g => [timeToMinutes(g.startTime), timeToMinutes(g.endTime)]);
-  if (intervals.length === 0) return true; // 時刻不明なら空き扱い
-
+  if (intervals.length === 0) return true;
   intervals.sort((a, b) => a[0] - b[0]);
-  // 隣接する区間の間に隙間があれば空きあり
   for (let i = 0; i < intervals.length - 1; i++) {
     if (intervals[i + 1][0] > intervals[i][1] + 1) return true;
   }
@@ -924,20 +1216,13 @@ function hasTimeGap(sorted) {
 // ============================================================
 // 衝突検出
 // ============================================================
-
-/**
- * フォームで選択中の曜日×時間が既存レコードと衝突するか確認し、
- * 衝突している場合は警告バナーを表示する。
- */
 function checkConflicts() {
   const selectedTime    = document.getElementById('f-time').value;
-  const selectedService = document.getElementById('f-service').value;
+  const selectedService = document.getElementById('f-service').value.trim();
   const selectedName    = document.getElementById('f-name').value;
   const selectedDays    = getSelectedDays();
   const banner    = document.getElementById('conflict-banner');
   const gapBanner = document.getElementById('gap-banner');
-  const msg       = document.getElementById('conflict-msg');
-  const gapMsg    = document.getElementById('gap-msg');
 
   if (!selectedTime) {
     banner.classList.remove('visible');
@@ -945,7 +1230,6 @@ function checkConflicts() {
     return;
   }
 
-  // 新規エントリの時間範囲を計算する（サービス略称から上限分数を取得）
   const upperLimit = durationMap[selectedService] || null;
   let newStart = null, newEnd = null;
   if (upperLimit) {
@@ -973,24 +1257,22 @@ function checkConflicts() {
       const range = (r.startTime && r.endTime) ? `${r.startTime}〜${r.endTime}` : r.提供時間;
       return `${r.提供曜日} ${r.氏名}（${range}）`;
     }).join('、');
-    msg.textContent = `時間帯が重複する登録があります：${detail}`;
+    document.getElementById('conflict-msg').textContent = `時間帯が重複する登録があります：${detail}`;
     banner.classList.add('visible');
   } else {
     banner.classList.remove('visible');
   }
 
-  // ── 2. 同じ氏名のサービス間 2時間未満ギャップチェック ──
+  // ── 2. 同一氏名サービス間 2時間未満ギャップチェック ──
   // 訪問介護では同一利用者への2時間以内の連続提供は1回分とみなされるため警告する
   if (selectedName && newStart !== null) {
     const tooClose = currentRecords.filter(r => {
-      if (r.氏名 !== selectedName) return false;
-      if (!selectedDays.includes(r.提供曜日)) return false;
+      if (r.氏名 !== selectedName || !selectedDays.includes(r.提供曜日)) return false;
       if (!r.startTime || !r.endTime) return false;
-      const existStart  = timeToMinutes(r.startTime);
-      const existEnd    = timeToMinutes(r.endTime);
-      // 重複は除外（別チェック済み）し、隣接する前後の間隔を確認する
-      const gapBefore = newStart - existEnd;   // 既存終了→新規開始の間隔
-      const gapAfter  = existStart - newEnd;   // 新規終了→既存開始の間隔
+      const existStart = timeToMinutes(r.startTime);
+      const existEnd   = timeToMinutes(r.endTime);
+      const gapBefore  = newStart - existEnd;
+      const gapAfter   = existStart - newEnd;
       return (gapBefore > 0 && gapBefore < 120) || (gapAfter > 0 && gapAfter < 120);
     });
 
@@ -1003,7 +1285,8 @@ function checkConflicts() {
         );
         return `${r.提供曜日}（間隔 約${gap}分）${range}`;
       }).join('、');
-      gapMsg.textContent = `${selectedName} の他サービスとの間隔が2時間未満です：${detail}`;
+      document.getElementById('gap-msg').textContent =
+        `${selectedName} の他サービスとの間隔が2時間未満です：${detail}`;
       gapBanner.classList.add('visible');
     } else {
       gapBanner.classList.remove('visible');
@@ -1014,12 +1297,87 @@ function checkConflicts() {
 }
 
 // ============================================================
-// フォーム送信
+// 単位数トラッカー更新
 // ============================================================
 
 /**
- * フォームの値を検証してAPIにPOSTし、完了後に時間割を再読み込みする
+ * 登録済みレコードの単位数合計と、フォームで入力中の追加予定単位数を集計し
+ * プログレスバーと数値を更新する。
+ * - weeklyUnits   : currentRecords の全レコード分（曜日別に1件ずつ）の合計
+ * - monthlyUnits  : weeklyUnits × 4.3（月換算）
+ * - pendingUnits  : 選択サービス略称の単位数 × 選択曜日数
  */
+function updateUnitTracker() {
+  // 登録済み週単位数（各レコード1件 = 1曜日1回分）
+  const weeklyUnits = currentRecords.reduce((sum, r) => sum + (unitMap[r.サービス略称] || 0), 0);
+  const monthlyUnits = Math.round(weeklyUnits * 4.3);
+
+  // 追加予定単位数（選択中のサービス略称×曜日数）
+  const service      = document.getElementById('f-service').value.trim();
+  const days         = getSelectedDays();
+  const svcUnits     = unitMap[service] || 0;
+  const pendingUnits = svcUnits * days.length;
+  const pendingMonthly = Math.round(pendingUnits * 4.3);
+
+  // 目標値（localStorageに保存済み）
+  const target = parseInt(document.getElementById('unit-target').value, 10) || 0;
+
+  // 数値表示を更新する
+  document.getElementById('u-weekly').textContent  = weeklyUnits  > 0 ? `${weeklyUnits}` : '─';
+  document.getElementById('u-monthly').textContent = monthlyUnits > 0 ? `${monthlyUnits}` : '─';
+  document.getElementById('u-pending').textContent = pendingUnits > 0 ? `+${pendingMonthly}` : '─';
+
+  // プログレスバーを更新する
+  const fillCurrent = document.getElementById('u-fill-current');
+  const fillPending = document.getElementById('u-fill-pending');
+  const targetLine  = document.getElementById('u-target-line');
+  const label       = document.getElementById('u-label');
+
+  if (target <= 0) {
+    fillCurrent.style.width = '0';
+    fillPending.style.width = '0';
+    targetLine.style.display = 'none';
+    label.innerHTML = '目標単位数を入力してください';
+    return;
+  }
+
+  // バーの基準は目標値の1.2倍（超過してもバーが消えないように余白を持たせる）
+  const maxVal  = target * 1.2;
+  const curPct  = Math.min((monthlyUnits / maxVal) * 100, 100);
+  const addPct  = Math.min(((monthlyUnits + pendingMonthly) / maxVal) * 100, 100) - curPct;
+  const tgtPct  = Math.min((target / maxVal) * 100, 100);
+
+  fillCurrent.style.width = `${curPct}%`;
+  fillPending.style.left  = `${curPct}%`;
+  fillPending.style.width = `${Math.max(addPct, 0)}%`;
+  targetLine.style.display = 'block';
+  targetLine.style.left = `${tgtPct}%`;
+
+  // 目標に対する過不足を表示する
+  const totalMonthly = monthlyUnits + pendingMonthly;
+  const diff = totalMonthly - target;
+  if (Math.abs(diff) <= target * 0.05) {
+    // 目標の±5%以内はちょうどよい
+    label.innerHTML = `月${totalMonthly}単位 <span class="exact">目標達成 🎯</span>`;
+  } else if (diff > 0) {
+    label.innerHTML = `月${totalMonthly}単位 <span class="over">+${diff}単位 超過</span>`;
+  } else {
+    label.innerHTML = `月${totalMonthly}単位 <span class="under">${diff}単位 不足</span>`;
+  }
+}
+
+/**
+ * 目標単位数をlocalStorageに保存して次回起動時に復元できるようにする
+ */
+function saveTarget() {
+  const val = document.getElementById('unit-target').value;
+  if (val) localStorage.setItem('unitTarget', val);
+  else     localStorage.removeItem('unitTarget');
+}
+
+// ============================================================
+// フォーム送信
+// ============================================================
 async function submitForm() {
   const name      = document.getElementById('f-name').value;
   const task      = document.getElementById('f-task').value;
@@ -1031,17 +1389,13 @@ async function submitForm() {
   const endDate   = document.getElementById('f-end').value;
   const days      = getSelectedDays();
 
-  // 必須項目のバリデーション
   if (!name)             return showToast('氏名を選択してください', 'error');
   if (days.length === 0) return showToast('提供曜日を1つ以上選択してください', 'error');
   if (!time)             return showToast('提供時間を選択してください', 'error');
 
-  // 時間帯重複がある場合は登録を阻止する
   if (document.getElementById('conflict-banner').classList.contains('visible')) {
     return showToast('時間帯が重複しているため登録できません', 'error');
   }
-
-  // 2時間未満ギャップがある場合は確認ダイアログを表示して続行を選択させる
   if (document.getElementById('gap-banner').classList.contains('visible')) {
     if (!confirm('同じ利用者の他サービスとの間隔が2時間未満です。\nこのまま登録しますか？')) return;
   }
@@ -1051,31 +1405,21 @@ async function submitForm() {
   btn.innerHTML = '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px"></div> 登録中...';
 
   try {
-    const body = {
-      事業所:       currentOffice,
-      氏名:         name,
-      作業項目:     task,
-      サービス略称: service,
-      提供曜日:     days,
-      提供時間:     time,
-      勤務区分:     kinmu,
-      記録内容:     record,
-      開始日:       startDate,
-      終了日:       endDate,
-    };
-
     const res = await fetch(`${SERVER}/api/service-schedule`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
+      body: JSON.stringify({
+        事業所: currentOffice, 氏名: name, 作業項目: task,
+        サービス略称: service, 提供曜日: days, 提供時間: time,
+        勤務区分: kinmu, 記録内容: record, 開始日: startDate, 終了日: endDate,
+      }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
     showToast(`${data.count}件登録しました`, 'success');
     resetForm();
-    await loadSchedule(); // 時間割を最新状態に更新する
-
+    await loadSchedule();
   } catch (err) {
     console.error('登録エラー:', err);
     showToast(`登録失敗: ${err.message}`, 'error');
@@ -1085,9 +1429,6 @@ async function submitForm() {
   }
 }
 
-/**
- * フォームの入力値をすべてリセットする
- */
 function resetForm() {
   document.getElementById('f-name').value    = '';
   document.getElementById('f-task').value    = '';
@@ -1100,46 +1441,30 @@ function resetForm() {
   document.querySelector('input[name="kinmu"]').checked = true;
   document.getElementById('conflict-banner').classList.remove('visible');
   document.getElementById('gap-banner').classList.remove('visible');
+  document.getElementById('service-hint').textContent = '';
+  document.getElementById('time-hint').textContent    = '';
+  document.querySelectorAll('.col-gap.highlight').forEach(el => el.classList.remove('highlight'));
+  updateUnitTracker();
 }
 
 // ============================================================
 // ユーティリティ
 // ============================================================
-
-/**
- * チェックされている提供曜日の配列を返す
- * @returns {string[]}
- */
 function getSelectedDays() {
   return [...document.querySelectorAll('#day-checkboxes input:checked')].map(cb => cb.value);
 }
 
-/**
- * "H:MM" 形式の時刻文字列を分単位の整数に変換する（ソート・比較用）
- * @param {string} t "7:00" のような文字列
- * @returns {number}
- */
 function timeToMinutes(t) {
   const [h, m] = (t || '0:00').split(':').map(Number);
   return (h || 0) * 60 + (m || 0);
 }
 
-/**
- * 分を "H:MM" 形式に変換する
- * @param {number} mins 0時からの分数
- * @returns {string}
- */
 function minsToTimeStr(mins) {
   const h = Math.floor(mins / 60) % 24;
   const m = mins % 60;
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-/**
- * 画面下部にトースト通知を表示する
- * @param {string} msg  表示メッセージ
- * @param {'success'|'error'|''} type スタイル種別
- */
 function showToast(msg, type = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
