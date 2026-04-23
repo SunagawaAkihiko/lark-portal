@@ -1484,6 +1484,7 @@ function updateSlotPicker() {
 
   const upperLimit = durationMap[service];
   const taskDef    = TASK_WINDOWS[task];
+  console.log('[slot-picker] name=', name, 'task=', task, 'service=', service, 'upperLimit=', upperLimit, 'taskDef=', taskDef, 'durationMap keys=', Object.keys(durationMap));
   if (!upperLimit || !taskDef) {
     step2.style.display = 'none';
     return;
@@ -1519,39 +1520,24 @@ function updateSlotPicker() {
     return [];
   }).sort((a, b) => a[0] - b[0]);
 
-  // TASK_WINDOWS の各ウィンドウ内で空き区間を計算し step 単位に分割してスロット生成
+  // 5分刻みで開始時刻を走査し、占有区間と重複しないスロットのみ表示する。
+  // cursor += step のグリッドスナップ方式だと開始時刻がずれるため、
+  // 全候補を 5 分刻みで列挙して重複チェックする方式に変更する。
+  const SLOT_INCREMENT = 5;
   const slots = [];
+  console.log('[slot-picker] step=', step, 'occupied=', occupied, 'taskDef=', taskDef);
   for (const win of taskDef.windows) {
-    let cursor = win.start;
-    for (const [s, e] of occupied) {
-      if (s > win.end) break;
-      if (e < win.start) continue;
-      // cursor から占有開始点(s)の手前までスロットを埋める
-      // slotEnd(= cursor + step) が s 以下なら衝突しない
-      while (cursor + step <= s) {
-        // 追加の保護: storedValue が既存レコードと完全一致するスロットは除外する
-        const storedStr = minsToTimeStr((cursor + step - 4 + 1440) % 1440);
-        if (!occupiedStoredSet.has(storedStr)) {
-          slots.push({ startMins: cursor, endMins: cursor + step });
-        }
-        cursor += step;
+    for (let startMins = win.start; startMins + step <= win.end; startMins += SLOT_INCREMENT) {
+      const endMins = startMins + step;
+      // 占有区間との重複チェック（開始 < 占有終端 かつ 終了 > 占有開始 なら重複）
+      const isOccupied = occupied.some(([s, e]) => startMins < e && endMins > s);
+      const storedStr = minsToTimeStr((endMins - 4 + 1440) % 1440);
+      if (!isOccupied && !occupiedStoredSet.has(storedStr)) {
+        slots.push({ startMins, endMins });
       }
-      // 占有区間の終端以降で、ウィンドウ基点から step 倍数の最小位置にカーソルを進める。
-      // ceil((e - win.start) / step) で e を含む区間の次のグリッド番号を求める。
-      if (cursor <= e) {
-        const stepsNeeded = Math.ceil((e - win.start) / step);
-        cursor = win.start + stepsNeeded * step;
-      }
-    }
-    // ウィンドウ末尾まで残りのスロットを生成する
-    while (cursor + step <= win.end) {
-      const storedStr = minsToTimeStr((cursor + step - 4 + 1440) % 1440);
-      if (!occupiedStoredSet.has(storedStr)) {
-        slots.push({ startMins: cursor, endMins: cursor + step });
-      }
-      cursor += step;
     }
   }
+  console.log('[slot-picker] 生成スロット数=', slots.length, slots.map(s => minsToTimeStr(s.startMins) + '~' + minsToTimeStr(s.endMins)));
 
   // スロットカードをグリッドに描画する
   const grid = document.getElementById('slot-picker-grid');
