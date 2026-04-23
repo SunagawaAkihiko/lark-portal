@@ -612,6 +612,12 @@
     <div class="form-card-header">
       <i class="fa-solid fa-plus-circle"></i>
       新規サービス登録
+      <!-- サービスコードマスタを手動リフレッシュするボタン -->
+      <button id="refresh-codes-btn" onclick="refreshServiceCodes()"
+        title="サービスマスタをLarkから再取得"
+        style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.82rem;display:flex;align-items:center;gap:0.3rem;">
+        <i class="fa-solid fa-arrows-rotate"></i> マスタ更新
+      </button>
     </div>
     <div class="form-body">
 
@@ -796,6 +802,52 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadFields();
   await loadSchedule();
 });
+
+/**
+ * サービスコードマスタをサーバー側で即時再取得し、
+ * フォームのdatalist・durationMap・unitMapを最新状態に更新する
+ */
+async function refreshServiceCodes() {
+  const btn = document.getElementById('refresh-codes-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 更新中...';
+  try {
+    const res  = await fetch(`${SERVER}/api/service-schedule/refresh-codes`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    // サーバーのキャッシュ更新後にフィールド情報を再取得してフォームに反映する
+    await reloadServiceCodeFields();
+    showToast(`マスタ更新完了（${data.count}件）`, 'success');
+  } catch (err) {
+    showToast(`更新失敗: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> マスタ更新';
+  }
+}
+
+/**
+ * サービスコード関連のフォーム部品（略称セレクト・durationMap・unitMap）を再構築する。
+ * loadFields()の完全再実行は副作用が大きいため、コード関連部分のみ再ロードする。
+ */
+async function reloadServiceCodeFields() {
+  const res = await fetch(`${SERVER}/api/service-schedule/fields`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error);
+
+  durationMap = data.durationMap || {};
+  unitMap     = data.unitMap     || {};
+
+  // サービス略称セレクトを再構築する（既存選択値を保持する）
+  const svcEl  = document.getElementById('f-service');
+  const prevVal = svcEl.value;
+  while (svcEl.options.length > 1) svcEl.remove(1); // 「選択してください」以外を削除
+  const svcList = (data.serviceCodeNames?.length > 0)
+    ? data.serviceCodeNames.slice().sort((a, b) => a.localeCompare(b, 'ja'))
+    : Object.keys(durationMap).sort((a, b) => a.localeCompare(b, 'ja'));
+  svcList.forEach(s => svcEl.appendChild(new Option(s, s)));
+  if (prevVal) svcEl.value = prevVal;
+}
 
 /**
  * フィールド選択肢をAPIから取得してフォームを初期化する
