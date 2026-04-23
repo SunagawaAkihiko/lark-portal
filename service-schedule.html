@@ -1484,7 +1484,6 @@ function updateSlotPicker() {
 
   const upperLimit = durationMap[service];
   const taskDef    = TASK_WINDOWS[task];
-  console.log('[slot-picker] name=', name, 'task=', task, 'service=', service, 'upperLimit=', upperLimit, 'taskDef=', taskDef, 'durationMap keys=', Object.keys(durationMap));
   if (!upperLimit || !taskDef) {
     step2.style.display = 'none';
     return;
@@ -1492,6 +1491,34 @@ function updateSlotPicker() {
 
   // スロット1枠あたりの長さ（分）= upperLimit - 1
   const step = upperLimit - 1;
+
+  // サービス略称の末尾によって提供可能な時間帯を絞り込む。
+  // 「夜」：6:00-8:00 および 18:00-22:00 のみ許可
+  // 「深」：22:00-翌6:00 のみ許可（深夜帯、日付をまたぐため1440超の値で表現）
+  // それ以外：TASK_WINDOWS の定義をそのまま使用
+  const SUFFIX_WINDOWS = {
+    '夜': [{ start: 360, end: 480 }, { start: 1080, end: 1320 }],
+    '深': [{ start: 1320, end: 1440 }, { start: 1440, end: 1800 }],
+  };
+  const suffix = service.slice(-1);
+  const suffixWins = SUFFIX_WINDOWS[suffix] ?? null;
+
+  // TASK_WINDOWS と suffix 制限の積集合を求めて有効ウィンドウを決定する
+  let effectiveWindows;
+  if (suffixWins) {
+    effectiveWindows = [];
+    for (const tw of taskDef.windows) {
+      for (const sw of suffixWins) {
+        const s = Math.max(tw.start, sw.start);
+        const e = Math.min(tw.end,   sw.end);
+        if (s < e) effectiveWindows.push({ start: s, end: e });
+      }
+    }
+    // 積集合が空の場合は suffix 制限をそのまま有効ウィンドウとして使う
+    if (effectiveWindows.length === 0) effectiveWindows = suffixWins;
+  } else {
+    effectiveWindows = taskDef.windows;
+  }
 
   // 事業所全体の登録済みサービス（氏名・作業項目問わず）から占有時間区間を収集する。
   // 上津役家は選択中の勤務区分のみ対象（シフトごとに担当が異なるため）。
@@ -1521,12 +1548,10 @@ function updateSlotPicker() {
   }).sort((a, b) => a[0] - b[0]);
 
   // 5分刻みで開始時刻を走査し、占有区間と重複しないスロットのみ表示する。
-  // cursor += step のグリッドスナップ方式だと開始時刻がずれるため、
-  // 全候補を 5 分刻みで列挙して重複チェックする方式に変更する。
+  // effectiveWindows（TASK_WINDOWS と suffix 制限の積集合）内のみを対象とする。
   const SLOT_INCREMENT = 5;
   const slots = [];
-  console.log('[slot-picker] step=', step, 'occupied=', occupied, 'taskDef=', taskDef);
-  for (const win of taskDef.windows) {
+  for (const win of effectiveWindows) {
     for (let startMins = win.start; startMins + step <= win.end; startMins += SLOT_INCREMENT) {
       const endMins = startMins + step;
       // 占有区間との重複チェック（開始 < 占有終端 かつ 終了 > 占有開始 なら重複）
