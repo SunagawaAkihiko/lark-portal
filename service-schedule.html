@@ -1498,7 +1498,7 @@ function updateSlotPicker() {
   // suffix無し：8:00-18:00 のみ許可（夜・深の時間帯を除いた日中帯）
   const SUFFIX_WINDOWS = {
     '夜': [{ start: 360, end: 480 }, { start: 1080, end: 1320 }],
-    '深': [{ start: 1320, end: 1440 }, { start: 1440, end: 1800 }],
+    '深': [{ start: 1320, end: 1440 }, { start: 1440, end: 1800 }, { start: 0, end: 360 }],
     '':   [{ start: 480, end: 1080 }],
   };
   const suffix = ['夜', '深'].includes(service.slice(-1)) ? service.slice(-1) : '';
