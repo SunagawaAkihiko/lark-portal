@@ -439,45 +439,113 @@
     .unit-stat-value { font-size: 0.95rem; font-weight: 700; color: var(--text-color); }
     .unit-stat.pending .unit-stat-value { color: var(--primary-color); }
 
-    /* プログレスバー */
-    .unit-progress-wrap { }
-    .unit-progress-track {
+    /* ===== カートセクション ===== */
+    .cart-section {
+      margin-top: 1rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .cart-header {
+      background: var(--card-bg);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .cart-limit-row {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; font-weight: 400; color: var(--text-muted);
+    }
+    .cart-limit-row input {
+      width: 72px;
+      padding: 0.2rem 0.45rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      color: var(--text-color);
+      outline: none;
+    }
+    .cart-limit-row input:focus { border-color: var(--primary-color); }
+    .cart-body { padding: 0.5rem 0.75rem 0.75rem; }
+    .cart-empty {
+      padding: 0.75rem 0;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .cart-item {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item-info { flex: 1; min-width: 0; }
+    .cart-item-service {
+      font-size: 0.82rem; font-weight: 700;
+      color: var(--text-color);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cart-item-detail { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .cart-item-units {
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--primary-color);
+      white-space: nowrap;
+    }
+    .cart-item-del {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 0.85rem;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .cart-item-del:hover { color: #dc2626; }
+    /* カートプログレスバー */
+    .cart-progress-wrap { padding: 0.55rem 0 0.3rem; }
+    .cart-progress-track {
       height: 10px;
       background: #e9e3dc;
       border-radius: 10px;
       overflow: hidden;
       position: relative;
     }
-    /* 登録済み分（落ち着いた色） */
-    .unit-progress-fill-current {
+    .cart-progress-fill {
       position: absolute; left: 0; top: 0; height: 100%;
+      border-radius: 10px;
+      transition: width 0.4s ease, background 0.3s ease;
       background: #059669;
-      border-radius: 10px;
-      transition: width 0.4s ease;
     }
-    /* 追加予定分（オーバーレイ、薄い色） */
-    .unit-progress-fill-pending {
-      position: absolute; top: 0; height: 100%;
-      background: rgba(231,111,81,0.55);
-      border-radius: 10px;
-      transition: left 0.4s ease, width 0.4s ease;
-    }
-    /* 目標線 */
-    .unit-progress-target-line {
-      position: absolute; top: -2px; height: 14px; width: 2px;
-      background: #7c3aed;
-      border-radius: 2px;
-      transition: left 0.4s ease;
-    }
-    .unit-progress-label {
+    .cart-progress-fill.over { background: #dc2626; }
+    .cart-progress-label {
       font-size: 0.7rem;
       color: var(--text-muted);
       margin-top: 0.3rem;
       display: flex; justify-content: space-between;
     }
-    .unit-progress-label .over  { color: #dc2626; font-weight: 700; }
-    .unit-progress-label .under { color: #059669; font-weight: 700; }
-    .unit-progress-label .exact { color: #7c3aed; font-weight: 700; }
+    .cart-progress-label .over { color: #dc2626; font-weight: 700; }
+    .cart-progress-label .ok   { color: #059669; font-weight: 700; }
+    /* まとめて登録ボタン */
+    .submit-all-btn {
+      width: 100%;
+      padding: 0.65rem;
+      margin-top: 0.65rem;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .submit-all-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    .submit-all-btn:not(:disabled):hover { opacity: 0.88; }
 
     /* ===== トースト通知 ===== */
     .toast {
@@ -624,49 +692,36 @@
         </div>
       </div>
 
-      <!-- 登録ボタン -->
-      <button class="submit-btn" id="submit-btn" onclick="submitForm()">
-        <i class="fa-solid fa-floppy-disk"></i>
-        登録する
+      <!-- カートに追加ボタン -->
+      <button class="submit-btn" id="add-btn" onclick="addToCart()">
+        <i class="fa-solid fa-cart-plus"></i>
+        カートに追加
       </button>
 
-      <!-- ===== 単位数トラッカー ===== -->
-      <div class="unit-tracker">
-        <div class="unit-tracker-header">
-          <i class="fa-solid fa-chart-simple"></i> 単位数トラッカー
+      <!-- ===== 登録予定リスト（カート） ===== -->
+      <div class="cart-section">
+        <div class="cart-header">
+          <span><i class="fa-solid fa-list-check"></i> 登録予定リスト</span>
+          <div class="cart-limit-row">
+            上限
+            <input type="number" id="unit-limit" placeholder="単位/週" min="0" step="10" oninput="updateCartDisplay()">
+            単位/週
+          </div>
         </div>
-        <div class="unit-tracker-body">
-          <!-- 目標単位数入力 -->
-          <div class="unit-target-row">
-            <label>目標</label>
-            <input type="number" id="unit-target" placeholder="例: 4500" min="0" step="50"
-              oninput="saveTarget(); updateUnitTracker()">
-            <span>単位/月</span>
+        <div class="cart-body">
+          <div id="cart-items">
+            <div class="cart-empty">まだ追加されていません</div>
           </div>
-          <!-- 数値サマリー -->
-          <div class="unit-stats">
-            <div class="unit-stat">
-              <div class="unit-stat-label">登録済（週）</div>
-              <div class="unit-stat-value" id="u-weekly">─</div>
+          <div class="cart-progress-wrap" id="cart-progress-wrap" style="display:none">
+            <div class="cart-progress-track">
+              <div class="cart-progress-fill" id="cart-fill"></div>
             </div>
-            <div class="unit-stat">
-              <div class="unit-stat-label">月換算</div>
-              <div class="unit-stat-value" id="u-monthly">─</div>
-            </div>
-            <div class="unit-stat pending">
-              <div class="unit-stat-label">追加予定</div>
-              <div class="unit-stat-value" id="u-pending">─</div>
-            </div>
+            <div class="cart-progress-label" id="cart-label"></div>
           </div>
-          <!-- プログレスバー -->
-          <div class="unit-progress-wrap">
-            <div class="unit-progress-track" id="unit-progress-track">
-              <div class="unit-progress-fill-current"  id="u-fill-current"></div>
-              <div class="unit-progress-fill-pending"  id="u-fill-pending"></div>
-              <div class="unit-progress-target-line"   id="u-target-line" style="display:none"></div>
-            </div>
-            <div class="unit-progress-label" id="u-label">目標単位数を入力してください</div>
-          </div>
+          <button class="submit-all-btn" id="submit-all-btn" onclick="submitAll()" disabled>
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span id="submit-all-label">まとめて登録する</span>
+          </button>
         </div>
       </div>
 
@@ -703,6 +758,9 @@ let durationMap = {};
 /** サービス略称 → 単位数のマップ（サービスコードテーブルから） */
 let unitMap = {};
 
+/** 登録予定リスト（カート）：まとめて登録する前の一時バッファ */
+let cart = [];
+
 /** 提供曜日の表示順序と略称定義 */
 const DAY_ORDER  = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
 const DAY_LABELS = { '月曜': '月', '火曜': '火', '水曜': '水', '木曜': '木', '金曜': '金', '土曜': '土', '日曜': '日' };
@@ -735,9 +793,6 @@ const COL_DEFS = [
 // 初期化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  // 目標単位数をlocalStorageから復元する
-  const saved = localStorage.getItem('unitTarget');
-  if (saved) document.getElementById('unit-target').value = saved;
   await loadFields();
   await loadSchedule();
 });
@@ -818,9 +873,10 @@ async function loadFields() {
  */
 function onFormChange() {
   updateServiceHint();
+  updateCartDisplay();
   updateTimeOptions();
   checkConflicts();
-  updateUnitTracker();
+  updateCartDisplay();
 }
 
 // ============================================================
@@ -1008,7 +1064,7 @@ function renderTimeline(records) {
       <i class="fa-solid fa-calendar-xmark" style="font-size:1.8rem;color:var(--border-color)"></i>
       <p style="margin-top:0.75rem">登録データがありません</p>
     </div>`;
-    updateUnitTracker();
+    updateCartDisplay();
     return;
   }
 
@@ -1070,7 +1126,7 @@ function renderTimeline(records) {
 
   wrap.appendChild(container);
   checkConflicts();
-  updateUnitTracker();
+  updateCartDisplay();
 }
 
 /**
@@ -1316,88 +1372,14 @@ function checkConflicts() {
 }
 
 // ============================================================
-// 単位数トラッカー更新
+// カート機能
 // ============================================================
 
 /**
- * 登録済みレコードの単位数合計と、フォームで入力中の追加予定単位数を集計し
- * プログレスバーと数値を更新する。
- * - weeklyUnits   : currentRecords の全レコード分（曜日別に1件ずつ）の合計
- * - monthlyUnits  : weeklyUnits × 4.3（月換算）
- * - pendingUnits  : 選択サービス略称の単位数 × 選択曜日数
+ * フォームの入力内容をバリデーションしてカートに追加する。
+ * 登録は行わず、まとめて登録ボタンが押されるまで保留する。
  */
-function updateUnitTracker() {
-  // 登録済み週単位数（各レコード1件 = 1曜日1回分）
-  const weeklyUnits = currentRecords.reduce((sum, r) => sum + (unitMap[r.サービス略称] || 0), 0);
-  const monthlyUnits = Math.round(weeklyUnits * 4.3);
-
-  // 追加予定単位数（選択中のサービス略称×曜日数）
-  const service      = document.getElementById('f-service').value.trim();
-  const days         = getSelectedDays();
-  const svcUnits     = unitMap[service] || 0;
-  const pendingUnits = svcUnits * days.length;
-  const pendingMonthly = Math.round(pendingUnits * 4.3);
-
-  // 目標値（localStorageに保存済み）
-  const target = parseInt(document.getElementById('unit-target').value, 10) || 0;
-
-  // 数値表示を更新する
-  document.getElementById('u-weekly').textContent  = weeklyUnits  > 0 ? `${weeklyUnits}` : '─';
-  document.getElementById('u-monthly').textContent = monthlyUnits > 0 ? `${monthlyUnits}` : '─';
-  document.getElementById('u-pending').textContent = pendingUnits > 0 ? `+${pendingMonthly}` : '─';
-
-  // プログレスバーを更新する
-  const fillCurrent = document.getElementById('u-fill-current');
-  const fillPending = document.getElementById('u-fill-pending');
-  const targetLine  = document.getElementById('u-target-line');
-  const label       = document.getElementById('u-label');
-
-  if (target <= 0) {
-    fillCurrent.style.width = '0';
-    fillPending.style.width = '0';
-    targetLine.style.display = 'none';
-    label.innerHTML = '目標単位数を入力してください';
-    return;
-  }
-
-  // バーの基準は目標値の1.2倍（超過してもバーが消えないように余白を持たせる）
-  const maxVal  = target * 1.2;
-  const curPct  = Math.min((monthlyUnits / maxVal) * 100, 100);
-  const addPct  = Math.min(((monthlyUnits + pendingMonthly) / maxVal) * 100, 100) - curPct;
-  const tgtPct  = Math.min((target / maxVal) * 100, 100);
-
-  fillCurrent.style.width = `${curPct}%`;
-  fillPending.style.left  = `${curPct}%`;
-  fillPending.style.width = `${Math.max(addPct, 0)}%`;
-  targetLine.style.display = 'block';
-  targetLine.style.left = `${tgtPct}%`;
-
-  // 目標に対する過不足を表示する
-  const totalMonthly = monthlyUnits + pendingMonthly;
-  const diff = totalMonthly - target;
-  if (Math.abs(diff) <= target * 0.05) {
-    // 目標の±5%以内はちょうどよい
-    label.innerHTML = `月${totalMonthly}単位 <span class="exact">目標達成 🎯</span>`;
-  } else if (diff > 0) {
-    label.innerHTML = `月${totalMonthly}単位 <span class="over">+${diff}単位 超過</span>`;
-  } else {
-    label.innerHTML = `月${totalMonthly}単位 <span class="under">${diff}単位 不足</span>`;
-  }
-}
-
-/**
- * 目標単位数をlocalStorageに保存して次回起動時に復元できるようにする
- */
-function saveTarget() {
-  const val = document.getElementById('unit-target').value;
-  if (val) localStorage.setItem('unitTarget', val);
-  else     localStorage.removeItem('unitTarget');
-}
-
-// ============================================================
-// フォーム送信
-// ============================================================
-async function submitForm() {
+function addToCart() {
   const name      = document.getElementById('f-name').value;
   const task      = document.getElementById('f-task').value;
   const service   = document.getElementById('f-service').value;
@@ -1413,43 +1395,158 @@ async function submitForm() {
   if (!time)             return showToast('提供時間を選択してください', 'error');
 
   if (document.getElementById('conflict-banner').classList.contains('visible')) {
-    return showToast('時間帯が重複しているため登録できません', 'error');
+    return showToast('時間帯が重複しているため追加できません', 'error');
   }
   if (document.getElementById('gap-banner').classList.contains('visible')) {
-    if (!confirm('同じ利用者の他サービスとの間隔が2時間未満です。\nこのまま登録しますか？')) return;
+    if (!confirm('同じ利用者の他サービスとの間隔が2時間未満です。\nこのまま追加しますか？')) return;
   }
 
-  const btn = document.getElementById('submit-btn');
+  // カートに上限超過がある場合は警告（ブロックはしない）
+  const limit = parseInt(document.getElementById('unit-limit').value, 10) || 0;
+  const svcUnits = unitMap[service] || 0;
+  const addingWeekly = svcUnits * days.length;
+  const cartTotal = cart.reduce((s, item) => s + item.weeklyUnits, 0);
+  if (limit > 0 && cartTotal + addingWeekly > limit) {
+    if (!confirm(`上限（${limit}単位/週）を超えます。\nこのまま追加しますか？`)) return;
+  }
+
+  cart.push({ 事業所: currentOffice, 氏名: name, 作業項目: task,
+    サービス略称: service, 提供曜日: days, 提供時間: time,
+    勤務区分: kinmu, 記録内容: record, 開始日: startDate, 終了日: endDate,
+    weeklyUnits: addingWeekly });
+
+  renderCart();
+  updateCartDisplay();
+  resetFormFields();
+  showToast('カートに追加しました', 'success');
+}
+
+/**
+ * カートのリスト表示を再描画する
+ */
+function renderCart() {
+  const container = document.getElementById('cart-items');
+  container.innerHTML = '';
+
+  if (cart.length === 0) {
+    container.innerHTML = '<div class="cart-empty">まだ追加されていません</div>';
+    document.getElementById('cart-progress-wrap').style.display = 'none';
+    document.getElementById('submit-all-btn').disabled = true;
+    document.getElementById('submit-all-label').textContent = 'まとめて登録する';
+    return;
+  }
+
+  cart.forEach((item, idx) => {
+    const el = document.createElement('div');
+    el.className = 'cart-item';
+    const dayStr = item.提供曜日.map(d => DAY_LABELS[d] || d).join('');
+    const svcLabel = item.サービス略称 || item.作業項目 || '─';
+    const unitStr  = item.weeklyUnits > 0 ? `${item.weeklyUnits}単位/週` : '─';
+    el.innerHTML = `
+      <div class="cart-item-info">
+        <div class="cart-item-service">${svcLabel}</div>
+        <div class="cart-item-detail">${item.氏名} / ${dayStr} / ${item.提供時間}</div>
+      </div>
+      <div class="cart-item-units">${unitStr}</div>
+      <button class="cart-item-del" onclick="removeFromCart(${idx})" title="削除">
+        <i class="fa-solid fa-xmark"></i>
+      </button>`;
+    container.appendChild(el);
+  });
+
+  document.getElementById('cart-progress-wrap').style.display = '';
+  document.getElementById('submit-all-btn').disabled = false;
+  document.getElementById('submit-all-label').textContent = `まとめて登録する（${cart.length}件）`;
+}
+
+/**
+ * 指定インデックスのカートアイテムを削除する
+ */
+function removeFromCart(idx) {
+  cart.splice(idx, 1);
+  renderCart();
+  updateCartDisplay();
+}
+
+/**
+ * カートの合計単位と上限を比較してプログレスバーを更新する
+ */
+function updateCartDisplay() {
+  if (cart.length === 0) return;
+
+  const limit      = parseInt(document.getElementById('unit-limit').value, 10) || 0;
+  const cartTotal  = cart.reduce((s, item) => s + item.weeklyUnits, 0);
+  const fill       = document.getElementById('cart-fill');
+  const label      = document.getElementById('cart-label');
+
+  if (limit <= 0) {
+    fill.style.width = '0%';
+    label.innerHTML  = `カート合計: <span>${cartTotal}単位/週</span>`;
+    return;
+  }
+
+  // 超過分を含めても視覚的にバーが消えないよう基準を1.2倍にする
+  const pct     = Math.min((cartTotal / limit) * 100, 100);
+  const isOver  = cartTotal > limit;
+  fill.style.width = `${pct}%`;
+  fill.className   = `cart-progress-fill${isOver ? ' over' : ''}`;
+
+  const diffStr = isOver
+    ? `<span class="over">+${cartTotal - limit}単位 超過</span>`
+    : `<span class="ok">あと${limit - cartTotal}単位</span>`;
+  label.innerHTML = `${cartTotal}単位/週 ${diffStr} <span>上限${limit}</span>`;
+}
+
+/**
+ * カートの全件をAPIに順番に送信して登録する。
+ * 1件でも失敗した場合は中断しユーザーに通知する。
+ */
+async function submitAll() {
+  if (cart.length === 0) return;
+
+  const btn = document.getElementById('submit-all-btn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px"></div> 登録中...';
+  btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 登録中...';
 
+  let successCount = 0;
   try {
-    const res = await fetch(`${SERVER}/api/service-schedule`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        事業所: currentOffice, 氏名: name, 作業項目: task,
-        サービス略称: service, 提供曜日: days, 提供時間: time,
-        勤務区分: kinmu, 記録内容: record, 開始日: startDate, 終了日: endDate,
-      }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
+    for (const item of cart) {
+      const res = await fetch(`${SERVER}/api/service-schedule`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // weeklyUnitsはAPIに不要なので除外して送信する
+        body: JSON.stringify({
+          事業所: item.事業所, 氏名: item.氏名, 作業項目: item.作業項目,
+          サービス略称: item.サービス略称, 提供曜日: item.提供曜日, 提供時間: item.提供時間,
+          勤務区分: item.勤務区分, 記録内容: item.記録内容,
+          開始日: item.開始日, 終了日: item.終了日,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      successCount += data.count || 1;
+    }
 
-    showToast(`${data.count}件登録しました`, 'success');
-    resetForm();
+    showToast(`${successCount}件登録しました`, 'success');
+    cart = [];
+    renderCart();
+    updateCartDisplay();
     await loadSchedule();
   } catch (err) {
-    console.error('登録エラー:', err);
+    console.error('一括登録エラー:', err);
     showToast(`登録失敗: ${err.message}`, 'error');
-  } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 登録する';
+    document.getElementById('submit-all-label').textContent = `まとめて登録する（${cart.length}件）`;
+    btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span id="submit-all-label">まとめて登録する（${cart.length}件）</span>`;
   }
 }
 
-function resetForm() {
-  document.getElementById('f-name').value    = '';
+/**
+ * カートへの追加後にフォーム入力欄のみリセットする。
+ * 氏名は次の登録でも同一人物が続く場合があるため保持する。
+ * カートとunit-limitはリセットしない。
+ */
+function resetFormFields() {
   document.getElementById('f-task').value    = '';
   document.getElementById('f-service').value = '';
   document.getElementById('f-time').value    = '';
@@ -1463,7 +1560,6 @@ function resetForm() {
   document.getElementById('service-hint').textContent = '';
   document.getElementById('time-hint').textContent    = '';
   document.querySelectorAll('.col-gap.highlight').forEach(el => el.classList.remove('highlight'));
-  updateUnitTracker();
 }
 
 // ============================================================
