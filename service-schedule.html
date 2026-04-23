@@ -1161,7 +1161,11 @@ function updateTimeOptions() {
         const displayText = duration !== null
           ? `${minsToTimeStr(normalStart)}〜${minsToTimeStr(normalEnd)}`
           : minsToTimeStr(normalStart);
-        timeEl.appendChild(new Option(displayText, minsToTimeStr(normalStart)));
+        // valueは既存レコードの保存規則（終了時刻−4分）で格納する
+        const storedMins = duration !== null
+          ? ((startMins + duration - 4 + 1440) % 1440)
+          : startMins % 1440;
+        timeEl.appendChild(new Option(displayText, minsToTimeStr(storedMins)));
         available++;
       }
     }
@@ -1499,13 +1503,13 @@ function checkConflicts() {
     return;
   }
 
-  // 提供時間のvalue = 開始時刻（HH:MM）、終了時刻 = 開始 + duration
+  // 提供時間のvalue = 終了時刻−4分（既存レコードの保存規則）
+  // endTime = stored + 4、startTime = endTime − upperLimit + 1
   const upperLimit = durationMap[selectedService] || null;
-  const duration   = upperLimit ? upperLimit - 1 : null;
   let newStart = null, newEnd = null;
-  if (duration !== null) {
-    newStart = timeToMinutes(selectedTime);
-    newEnd   = newStart + duration;
+  if (upperLimit) {
+    newEnd   = timeToMinutes(selectedTime) + 4;
+    newStart = newEnd - upperLimit + 1;
   }
 
   if (selectedDays.length === 0) {
