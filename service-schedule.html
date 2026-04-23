@@ -575,11 +575,12 @@
         </select>
       </div>
 
-      <!-- サービス略称（検索可能） -->
+      <!-- サービス略称（サービスコードテーブルから取得した選択肢） -->
       <div class="field-group">
         <label class="field-label">サービス略称</label>
-        <input class="form-input" id="f-service" list="service-list" placeholder="入力して絞り込み...">
-        <datalist id="service-list"></datalist>
+        <select class="form-select" id="f-service">
+          <option value="">-- 選択してください --</option>
+        </select>
         <!-- サービスコードから取得した時間・単位数のプレビュー -->
         <p class="field-hint" id="service-hint"></p>
       </div>
@@ -763,15 +764,14 @@ async function loadFields() {
     const taskEl = document.getElementById('f-task');
     st.作業項目.forEach(t => taskEl.appendChild(new Option(t, t)));
 
-    // サービス略称はサービスコードテーブルへのルックアップフィールドのため
-    // durationMapのキー（サービスコードテーブルのサービス略称）をdatalistに使用する。
-    // これによりdurationMap/unitMapのキーと必ず一致する。
-    const dlEl = document.getElementById('service-list');
-    Object.keys(durationMap).sort((a, b) => a.localeCompare(b, 'ja')).forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s;
-      dlEl.appendChild(opt);
-    });
+    // サービス略称セレクト：サービスコードテーブルの全略称リストを選択肢として設定する。
+    // serviceCodeNames（サーバーが全レコードから収集）を優先し、
+    // 取得失敗時のフォールバックとしてdurationMapのキーを使う。
+    const svcSelectEl = document.getElementById('f-service');
+    const svcList = (fieldsCache.serviceCodeNames?.length > 0)
+      ? fieldsCache.serviceCodeNames.slice().sort((a, b) => a.localeCompare(b, 'ja'))
+      : Object.keys(durationMap).sort((a, b) => a.localeCompare(b, 'ja'));
+    svcList.forEach(s => svcSelectEl.appendChild(new Option(s, s)));
 
     // 提供曜日チェックボックス（変更時に空き時間・衝突・単位数を再計算する）
     const dayBox = document.getElementById('day-checkboxes');
