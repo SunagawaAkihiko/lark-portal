@@ -346,31 +346,36 @@
       color: white;
     }
 
-    /* 空き時間帯 */
-    .col-gap {
-      padding: 0.3rem 0.5rem;
-      background: #f5f0eb;
-      border-bottom: 1px dashed var(--border-color);
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      text-align: center;
-      display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    /* 空き時間セル（時間割の主要コンテンツ） */
+    .col-avail {
+      padding: 0.45rem 0.55rem;
+      border-bottom: 1px solid #ede8e2;
+      cursor: default;
+      transition: background 0.15s;
     }
-    /* フォームの入力条件に合う空き枠はグリーンでハイライトする */
-    .col-gap.highlight {
-      background: #dcfce7;
-      border-bottom-color: #86efac;
-      color: #166534;
-    }
-    .col-gap-duration {
-      background: #e2dbd2;
-      border-radius: 8px;
-      padding: 0.05rem 0.35rem;
+    .col-avail:last-child { border-bottom: none; }
+    .col-avail:hover { background: #f0fdf4; }
+    .col-avail-time {
+      font-size: 0.95rem;
       font-weight: 700;
+      color: #059669;
+      white-space: nowrap;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
     }
-    .col-gap.highlight .col-gap-duration {
-      background: #bbf7d0;
+    .col-avail-dur {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.12rem;
     }
+    /* サービスが入る空き枠をハイライト */
+    .col-avail.highlight {
+      background: #dcfce7;
+      border-left: 3px solid #059669;
+      padding-left: calc(0.55rem - 3px);
+    }
+    .col-avail.highlight .col-avail-time { color: #166534; }
+    .col-avail.highlight .col-avail-dur  { color: #166534; font-weight: 700; }
     .col-empty {
       padding: 0.8rem 0.5rem;
       text-align: center;
@@ -1446,14 +1451,14 @@ function updateTimeOptions() {
  * @param {string[]} days     選択中の曜日配列
  */
 function highlightAvailableGaps(task, duration, days) {
-  document.querySelectorAll('.col-gap').forEach(el => el.classList.remove('highlight'));
+  document.querySelectorAll('.col-avail').forEach(el => el.classList.remove('highlight'));
   if (!task || !duration) return;
 
-  document.querySelectorAll('.col-gap[data-gap-task]').forEach(el => {
+  document.querySelectorAll('.col-avail[data-gap-task]').forEach(el => {
     if (el.dataset.gapTask !== task) return;
     const gapStart = parseInt(el.dataset.gapStart, 10);
     const gapEnd   = parseInt(el.dataset.gapEnd,   10);
-    // 空き時間帯の長さがduration分以上あればサービスを入れられる
+    // 空き時間帯にduration分が入るかチェックする
     if ((gapEnd - gapStart) >= duration) {
       el.classList.add('highlight');
     }
@@ -1601,12 +1606,9 @@ function renderTimeline(records) {
 
       const grid = document.createElement('div');
       grid.className = 'timeline-grid';
-      // そのセクションで実際に使われている作業項目のコラムのみ表示し、
-      // 登録ゼロのコラムは非表示にして画面を整理する
-      const usedTasks = new Set(sectionRecords.map(r => r.作業項目).filter(Boolean));
+      // 全作業項目コラムを表示する（空き時間表示が主目的のため登録ゼロでも表示する）
       for (const colDef of COL_DEFS) {
         const colRecords = sectionRecords.filter(r => r.作業項目 === colDef.key);
-        if (usedTasks.size > 0 && !usedTasks.has(colDef.key)) continue;
         grid.appendChild(buildColumn(colDef, colRecords));
       }
       section.appendChild(grid);
@@ -1628,186 +1630,115 @@ function renderTimeline(records) {
 }
 
 /**
- * 1作業項目分のコラムDOM要素を生成して返す。
- * エントリー間の空き時間帯には data-gap-* 属性を付与して
- * highlightAvailableGaps からハイライト対象として参照できるようにする。
+ * レコード配列から占有区間リストを計算する共通ヘルパー。
+ * 保存規約（保存値 = endTime − 4分）を考慮して startTime/endTime を復元する。
+ * @returns {Array<[number,number]>} 分単位の [start, end] 区間リスト
  */
-function buildColumn(colDef, records) {
-  // (startTime, 氏名, サービス略称) をキーにグループ化して曜日を集約する
+function computeOccupied(records) {
   const groups = new Map();
   for (const r of records) {
     const start = r.startTime || r.提供時間 || '';
     const gKey  = `${start}|${r.氏名}|${r.サービス略称}`;
     if (!groups.has(gKey)) {
-      groups.set(gKey, {
-        startTime:    r.startTime || null,
-        endTime:      r.endTime   || null,
-        提供時間:     r.提供時間,
-        氏名:         r.氏名,
-        サービス略称: r.サービス略称,
-        days:         new Set(),
-      });
+      groups.set(gKey, { startTime: r.startTime || null, endTime: r.endTime || null,
+        提供時間: r.提供時間, サービス略称: r.サービス略称 });
     }
-    if (r.提供曜日) groups.get(gKey).days.add(r.提供曜日);
   }
+  const intervals = [];
+  for (const g of groups.values()) {
+    let s = g.startTime, e = g.endTime;
+    if (!s && g.提供時間) {
+      const storedMins = timeToMinutes(g.提供時間);
+      const endMins    = storedMins + 4;
+      const upper      = durationMap[g.サービス略称] || null;
+      if (upper) {
+        s = minsToTimeStr(((endMins - upper + 1 + 1440) % 1440));
+        e = minsToTimeStr(endMins % 1440);
+      }
+    }
+    if (s && e) intervals.push([timeToMinutes(s), timeToMinutes(e)]);
+  }
+  return intervals.sort((a, b) => a[0] - b[0]);
+}
 
-  const sorted = [...groups.values()].sort(
-    (a, b) => timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
-  );
+/**
+ * TASK_WINDOWSと占有区間から空き区間リストを計算する。
+ * @returns {Array<[number,number]>} 空き区間の [start, end] リスト
+ */
+function computeAvailableSlots(colDef, occupied) {
+  const taskDef = TASK_WINDOWS[colDef.key];
+  if (!taskDef) return [];
+  const slots = [];
+  for (const win of taskDef.windows) {
+    let cursor = win.start;
+    const relevant = occupied.filter(([s, e]) => e >= win.start && s <= win.end);
+    for (const [s, e] of relevant) {
+      if (cursor < s) slots.push([cursor, s - 1]);
+      cursor = Math.max(cursor, e + 1);
+    }
+    if (cursor <= win.end) slots.push([cursor, win.end]);
+  }
+  return slots;
+}
 
-  // コラム全体の週あたり単位数合計を計算する（ヘッダーに表示する）
-  const colWeeklyUnits = records.reduce((sum, r) => {
-    return sum + (unitMap[r.サービス略称] || 0);
-  }, 0);
+/**
+ * 1作業項目分のコラムDOM要素を生成して返す。
+ * 空いている時間帯のみをメインコンテンツとして表示し、
+ * 登録済み件数はヘッダーバッジで確認できる。
+ */
+function buildColumn(colDef, records) {
+  const occupied  = computeOccupied(records);
+  const available = computeAvailableSlots(colDef, occupied);
+  const totalAvailMins = available.reduce((s, [a, b]) => s + b - a + 1, 0);
 
   // コラム要素を構築する
   const col = document.createElement('div');
   col.className = 'timeline-col';
   col.style.setProperty('--col-accent', colDef.accent);
 
-  // ── ヘッダー ──
+  // ── ヘッダー（登録件数 + 合計空き時間） ──
   const hdr = document.createElement('div');
   hdr.className = 'col-header';
-  const hasGap = hasTimeGap(sorted);
+  const availLabel = TASK_WINDOWS[colDef.key]
+    ? (totalAvailMins > 0 ? `空き${totalAvailMins}分` : '空きなし')
+    : '─';
   hdr.innerHTML = `
     ${colDef.label}
     ${colDef.sub ? `<span class="col-header-sub">${colDef.sub}</span>` : ''}
     <div class="col-header-meta">
-      <span class="col-header-badge">${sorted.length}件</span>
-      <span class="col-header-badge">${colWeeklyUnits > 0 ? colWeeklyUnits + '単位/週' : '─'}</span>
-      <span class="col-header-badge">${hasGap ? '空きあり' : '空きなし'}</span>
+      <span class="col-header-badge">${records.length}件登録</span>
+      <span class="col-header-badge">${availLabel}</span>
     </div>
   `;
   col.appendChild(hdr);
 
-  // ── 本体 ──
+  // ── 本体：空き区間のみ表示 ──
   const body = document.createElement('div');
   body.className = 'col-body';
 
-  if (sorted.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'col-empty';
-    empty.innerHTML = '<i class="fa-solid fa-minus" style="opacity:0.4"></i><br>登録なし';
-    body.appendChild(empty);
+  if (!TASK_WINDOWS[colDef.key]) {
+    body.innerHTML = '<div class="col-empty" style="font-size:0.72rem;color:#c8beb4">時間帯未設定</div>';
+  } else if (available.length === 0) {
+    body.innerHTML = '<div class="col-empty"><i class="fa-solid fa-lock" style="opacity:0.35"></i><br>空きなし</div>';
   } else {
-    let prevEndMins = null;
-
-    for (const g of sorted) {
-      // サーバーがstartTime/endTimeを返せない場合、クライアントdurationMapでフォールバック計算する
-      // 保存規約: 保存値 = endTime − 4分
-      let gStartTime = g.startTime;
-      let gEndTime   = g.endTime;
-      if (!gStartTime && g.提供時間) {
-        const storedMins = timeToMinutes(g.提供時間);
-        const endMins    = storedMins + 4;
-        const upperLimit = durationMap[g.サービス略称] || null;
-        if (upperLimit) {
-          const startMins = endMins - upperLimit + 1;
-          gStartTime = minsToTimeStr(((startMins % 1440) + 1440) % 1440);
-          gEndTime   = minsToTimeStr(endMins % 1440);
-        }
-      }
-      const curStartMins = gStartTime ? timeToMinutes(gStartTime) : null;
-
-      // 空き時間帯行（data-gap-* 属性でハイライト対象として識別する）
-      if (prevEndMins !== null && curStartMins !== null && curStartMins > prevEndMins + 1) {
-        const gapStart = prevEndMins + 1;
-        const gapEnd   = curStartMins - 1;
-        const gapMins  = gapEnd - gapStart + 1;
-        const gapEl    = document.createElement('div');
-        gapEl.className = 'col-gap';
-        // ハイライト判定のために作業項目・区間情報をdata属性に保持する
-        gapEl.dataset.gapTask  = colDef.key;
-        gapEl.dataset.gapStart = gapStart;
-        gapEl.dataset.gapEnd   = gapEnd;
-        gapEl.innerHTML = `
-          <i class="fa-solid fa-clock" style="opacity:0.5"></i>
-          空き <span class="col-gap-duration">${gapMins}分</span>
-        `;
-        body.appendChild(gapEl);
-      }
-
-      if (gEndTime) prevEndMins = timeToMinutes(gEndTime);
-
-      // ── エントリーセル ──
-      const entry = document.createElement('div');
-      entry.className = 'col-entry';
-
-      // 時刻行（最も目立つ要素として大きく表示する）
-      const timeEl = document.createElement('div');
-      timeEl.className = 'col-entry-time';
-      timeEl.textContent = (gStartTime && gEndTime)
-        ? `${gStartTime}〜${gEndTime}`
-        : (g.提供時間 || '');
-      entry.appendChild(timeEl);
-
-      // 氏名＋サービス略称を1行にまとめた補助情報行
-      const subEl = document.createElement('div');
-      subEl.className = 'col-entry-sub';
-      const nameEl = document.createElement('span');
-      nameEl.className = 'col-entry-name';
-      nameEl.title     = g.氏名 || '';
-      nameEl.textContent = (g.氏名 || '').slice(0, 2);
-      subEl.appendChild(nameEl);
-      if (g.サービス略称) {
-        const sep = document.createElement('span');
-        sep.textContent = '·';
-        sep.style.opacity = '0.4';
-        subEl.appendChild(sep);
-        const svcEl = document.createElement('span');
-        svcEl.className = 'col-entry-svc';
-        svcEl.title     = g.サービス略称;
-        svcEl.textContent = g.サービス略称;
-        subEl.appendChild(svcEl);
-      }
-      entry.appendChild(subEl);
-
-      // 曜日バッジ
-      const daysEl = document.createElement('div');
-      daysEl.className = 'col-entry-days';
-      for (const day of DAY_ORDER) {
-        const db = document.createElement('span');
-        db.className = 'col-day-badge' + (g.days.has(day) ? ' active' : '');
-        db.textContent = DAY_LABELS[day];
-        daysEl.appendChild(db);
-      }
-      entry.appendChild(daysEl);
-
-      body.appendChild(entry);
+    for (const [start, end] of available) {
+      const dur = end - start + 1;
+      const el  = document.createElement('div');
+      el.className = 'col-avail';
+      // ハイライト判定のために作業項目・区間情報をdata属性に保持する
+      el.dataset.gapTask  = colDef.key;
+      el.dataset.gapStart = start;
+      el.dataset.gapEnd   = end;
+      el.innerHTML = `
+        <div class="col-avail-time">${minsToTimeStr(start)}〜${minsToTimeStr(end)}</div>
+        <div class="col-avail-dur">${dur}分</div>
+      `;
+      body.appendChild(el);
     }
   }
 
   col.appendChild(body);
   return col;
-}
-
-/**
- * ソート済みグループ配列の中に時間的な隙間があるか判定する
- */
-function hasTimeGap(sorted) {
-  // durationMapフォールバック込みで開始・終了分を取得するヘルパー
-  function getInterval(g) {
-    if (g.startTime && g.endTime) {
-      return [timeToMinutes(g.startTime), timeToMinutes(g.endTime)];
-    }
-    if (g.提供時間) {
-      const storedMins = timeToMinutes(g.提供時間);
-      const endMins    = storedMins + 4;
-      const upperLimit = durationMap[g.サービス略称] || null;
-      if (upperLimit) {
-        const startMins = endMins - upperLimit + 1;
-        return [((startMins % 1440) + 1440) % 1440, endMins % 1440];
-      }
-    }
-    return null;
-  }
-  const intervals = sorted.map(getInterval).filter(Boolean);
-  if (intervals.length === 0) return true;
-  intervals.sort((a, b) => a[0] - b[0]);
-  for (let i = 0; i < intervals.length - 1; i++) {
-    if (intervals[i + 1][0] > intervals[i][1] + 1) return true;
-  }
-  return false;
 }
 
 // ============================================================
