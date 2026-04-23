@@ -1103,6 +1103,17 @@ const COL_DEFS = [
   { key: '入浴介助',       label: '入浴介助', sub: '',           accent: '#2563eb' },
 ];
 
+/**
+ * 上津役家の入浴介助は月水金チームと火木土チームで担当が分かれるため、
+ * 時間割コラムおよびサービス一覧を2列に分割して表示する
+ */
+const BATH_KAMITSUYAKU = [
+  { key: '入浴介助', label: '入浴（月水金）', sub: '月・水・金', accent: '#2563eb',
+    days: ['月曜', '水曜', '金曜'], groupLabel: '入浴介助（月水金）' },
+  { key: '入浴介助', label: '入浴（火木土）', sub: '火・木・土', accent: '#0e7490',
+    days: ['火曜', '木曜', '土曜'], groupLabel: '入浴介助（火木土）' },
+];
+
 // ============================================================
 // 初期化
 // ============================================================
@@ -1630,11 +1641,22 @@ function renderTimeline(records) {
       const grid = document.createElement('div');
       grid.className = 'timeline-grid';
       // 上津役家は勤務区分ごとに使用する作業項目が異なるため、
-      // 当該セクションに登録済の作業項目のみコラム表示する（ゼロ件の場合は全表示）
+      // 当該セクションに登録済の作業項目のみコラム表示する（ゼロ件の場合は全表示）。
+      // また、入浴介助は月水金/火木土の2列に分割して表示する。
       const usedTasks = new Set(sectionRecords.map(r => r.作業項目).filter(Boolean));
-      for (const colDef of COL_DEFS) {
+      // 入浴介助を BATH_KAMITSUYAKU の2列に置き換えたコラム定義を構築する
+      const effectiveCols = COL_DEFS.flatMap(c =>
+        c.key === '入浴介助' ? BATH_KAMITSUYAKU : [c]
+      );
+      for (const colDef of effectiveCols) {
         const colRecords = sectionRecords.filter(r => r.作業項目 === colDef.key);
-        if (usedTasks.size > 0 && !usedTasks.has(colDef.key)) continue;
+        // usedTasks フィルタ：colDef.days がある場合は対応曜日に実績があるかで判定する
+        if (usedTasks.size > 0) {
+          const hasRecord = colDef.days
+            ? colRecords.some(r => colDef.days.includes(r.提供曜日))
+            : usedTasks.has(colDef.key);
+          if (!hasRecord) continue;
+        }
         grid.appendChild(buildColumn(colDef, colRecords));
       }
       section.appendChild(grid);
@@ -1713,7 +1735,11 @@ function computeAvailableSlots(colDef, occupied) {
  * 登録済み件数はヘッダーバッジで確認できる。
  */
 function buildColumn(colDef, records) {
-  const occupied  = computeOccupied(records);
+  // days プロパティがある場合（上津役家入浴介助の月水金/火木土分割）は対象曜日のみに絞り込む
+  const filteredRecs = colDef.days
+    ? records.filter(r => colDef.days.includes(r.提供曜日))
+    : records;
+  const occupied  = computeOccupied(filteredRecs);
   const available = computeAvailableSlots(colDef, occupied);
   const totalAvailMins = available.reduce((s, [a, b]) => s + b - a + 1, 0);
 
@@ -1732,7 +1758,7 @@ function buildColumn(colDef, records) {
     ${colDef.label}
     ${colDef.sub ? `<span class="col-header-sub">${colDef.sub}</span>` : ''}
     <div class="col-header-meta">
-      <span class="col-header-badge">${records.length}件登録</span>
+      <span class="col-header-badge">${filteredRecs.length}件登録</span>
       <span class="col-header-badge">${availLabel}</span>
     </div>
   `;
@@ -2119,11 +2145,23 @@ function renderRecordsByTask(name, listEl, mode) {
     return;
   }
 
-  // COL_DEFSの表示順に合わせて作業項目でグループ化する
-  const taskOrder = COL_DEFS.map(c => c.key);
+  // COL_DEFSの表示順に合わせて作業項目でグループ化する。
+  // 上津役家の入浴介助は月水金/火木土の2グループに分割する。
+  const DAYS_MWF = new Set(['月曜', '水曜', '金曜']);
+  const DAYS_TTS = new Set(['火曜', '木曜', '土曜']);
+  const taskOrder = COL_DEFS.flatMap(c =>
+    c.key === '入浴介助' && currentOffice === '上津役家'
+      ? ['入浴介助（月水金）', '入浴介助（火木土）']
+      : [c.key]
+  );
   const grouped   = {};
   recs.forEach(r => {
-    const t = r.作業項目 || '未設定';
+    let t = r.作業項目 || '未設定';
+    // 上津役家の入浴介助は提供曜日に応じてグループを分ける
+    if (currentOffice === '上津役家' && t === '入浴介助') {
+      if (DAYS_MWF.has(r.提供曜日))      t = '入浴介助（月水金）';
+      else if (DAYS_TTS.has(r.提供曜日)) t = '入浴介助（火木土）';
+    }
     if (!grouped[t]) grouped[t] = [];
     grouped[t].push(r);
   });
@@ -2141,7 +2179,9 @@ function renderRecordsByTask(name, listEl, mode) {
     const hdr = document.createElement('div');
     hdr.className = 'rec-group-header';
 
-    const colDef = COL_DEFS.find(c => c.key === task);
+    // 上津役家の分割グループ名（入浴介助（月水金）等）は BATH_KAMITSUYAKU から accent を取得する
+    const bathDef = BATH_KAMITSUYAKU.find(c => c.groupLabel === task);
+    const colDef  = bathDef || COL_DEFS.find(c => c.key === task);
     const accentColor = colDef ? colDef.accent : 'var(--primary-color)';
     hdr.style.borderLeftColor = accentColor;
 
