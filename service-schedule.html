@@ -711,6 +711,25 @@
     }
     .cart-progress-label .over { color: #dc2626; font-weight: 700; }
     .cart-progress-label .ok   { color: #059669; font-weight: 700; }
+    /* 合計単位の大きな表示 */
+    .cart-total-display {
+      text-align: center;
+      padding: 0.5rem 0 0.2rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: 0.4rem;
+    }
+    .cart-total-number {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      line-height: 1.1;
+    }
+    .cart-total-number.over { color: #dc2626; }
+    .cart-total-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
     /* まとめて登録ボタン */
     .submit-all-btn {
       width: 100%;
@@ -949,6 +968,10 @@
         <div class="cart-body">
           <div id="cart-items">
             <div class="cart-empty">まだ追加されていません</div>
+          </div>
+          <div class="cart-total-display" id="cart-total-display" style="display:none">
+            <div class="cart-total-number" id="cart-total-number">0</div>
+            <div class="cart-total-sub" id="cart-total-sub">単位/月</div>
           </div>
           <div class="cart-progress-wrap" id="cart-progress-wrap" style="display:none">
             <div class="cart-progress-track">
@@ -2187,6 +2210,7 @@ function renderCart() {
   if (cart.length === 0) {
     container.innerHTML = '<div class="cart-empty">まだ追加されていません</div>';
     document.getElementById('cart-progress-wrap').style.display = 'none';
+    document.getElementById('cart-total-display').style.display = 'none';
     document.getElementById('submit-all-btn').disabled = true;
     document.getElementById('submit-all-label').textContent = 'まとめて登録する';
     return;
@@ -2196,12 +2220,13 @@ function renderCart() {
     const el = document.createElement('div');
     el.className = 'cart-item';
     const dayStr = item.提供曜日.map(d => DAY_LABELS[d] || d).join('');
-    const svcLabel = item.サービス略称 || item.作業項目 || '─';
-    const unitStr  = item.monthlyUnits > 0 ? `${item.monthlyUnits}単位/月` : '─';
+    const svcLabel  = item.サービス略称 || '─';
+    const taskLabel = item.作業項目 || '';
+    const unitStr   = item.monthlyUnits > 0 ? `${item.monthlyUnits}単位/月` : '─';
     el.innerHTML = `
       <div class="cart-item-info">
         <div class="cart-item-service">${svcLabel}</div>
-        <div class="cart-item-detail">${item.氏名} / ${dayStr} / ${item.提供時間}</div>
+        <div class="cart-item-detail">${taskLabel ? taskLabel + ' / ' : ''}${item.氏名} / ${dayStr} / ${item.提供時間}</div>
       </div>
       <div class="cart-item-units">${unitStr}</div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})" title="削除">
@@ -2210,6 +2235,7 @@ function renderCart() {
     container.appendChild(el);
   });
 
+  document.getElementById('cart-total-display').style.display = '';
   document.getElementById('cart-progress-wrap').style.display = '';
   document.getElementById('submit-all-btn').disabled = false;
   document.getElementById('submit-all-label').textContent = `まとめて登録する（${cart.length}件）`;
@@ -2234,10 +2260,17 @@ function updateCartDisplay() {
   const cartTotal  = cart.reduce((s, item) => s + item.monthlyUnits, 0);
   const fill       = document.getElementById('cart-fill');
   const label      = document.getElementById('cart-label');
+  const totalNum   = document.getElementById('cart-total-number');
+  const totalSub   = document.getElementById('cart-total-sub');
+
+  // 合計単位を大きく表示する
+  totalNum.textContent = cartTotal;
+  totalNum.className   = `cart-total-number${limit > 0 && cartTotal > limit ? ' over' : ''}`;
+  totalSub.textContent = limit > 0 ? `単位/月（上限 ${limit}）` : '単位/月';
 
   if (limit <= 0) {
     fill.style.width = '0%';
-    label.innerHTML  = `カート合計: <span>${cartTotal}単位/月</span>`;
+    label.innerHTML  = '';
     return;
   }
 
