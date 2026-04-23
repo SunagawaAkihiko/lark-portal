@@ -126,6 +126,26 @@
       text-align: center; padding: 1.5rem;
       color: var(--text-muted); font-size: 0.85rem;
     }
+    /* 作業項目グループヘッダー */
+    .rec-group-header {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; font-weight: 700;
+      color: var(--text-color);
+      padding: 0.45rem 0.5rem;
+      background: var(--card-bg);
+      border-radius: 6px;
+      margin: 0.6rem 0 0.35rem;
+      border-left: 3px solid var(--primary-color);
+    }
+    .rec-group-header:first-child { margin-top: 0; }
+    .rec-group-count {
+      margin-left: auto;
+      background: var(--border-color);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 0.05rem 0.45rem;
+      font-size: 0.7rem;
+    }
 
     /* 削除確認エリア */
     .delete-confirm-box {
@@ -264,51 +284,57 @@
 
     /* エントリーセル */
     .col-entry {
-      padding: 0.4rem 0.5rem;
+      padding: 0.45rem 0.55rem;
       border-bottom: 1px solid #ede8e2;
       transition: background 0.15s;
       cursor: default;
     }
     .col-entry:last-child { border-bottom: none; }
     .col-entry:hover { background: #fdf8f4; }
+
+    /* 時刻：最も目立つ要素として大きく表示する */
     .col-entry-time {
-      font-size: 0.72rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--col-accent, #64748b);
       white-space: nowrap;
       letter-spacing: -0.02em;
+      line-height: 1.2;
     }
-    .col-entry-name {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text-color);
-      margin-top: 0.1rem;
-      letter-spacing: 0.05em;
-    }
-    .col-entry-service {
-      font-size: 0.65rem;
+
+    /* 氏名＋サービス略称を1行にまとめた補助情報行 */
+    .col-entry-sub {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.18rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
-      margin-top: 0.05rem;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
     }
-    .col-entry-units {
-      font-size: 0.65rem;
+    .col-entry-name {
       font-weight: 700;
-      color: var(--col-accent, #64748b);
-      margin-top: 0.05rem;
+      color: var(--text-color);
+      flex-shrink: 0;
     }
+    .col-entry-svc {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    /* 曜日バッジ */
     .col-entry-days {
       display: flex;
       gap: 2px;
       flex-wrap: nowrap;
-      margin-top: 0.25rem;
+      margin-top: 0.22rem;
     }
     .col-day-badge {
-      width: 17px; height: 17px;
+      width: 15px; height: 15px;
       border-radius: 50%;
-      font-size: 0.58rem;
+      font-size: 0.55rem;
       font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       background: #e9e3dc;
@@ -1675,8 +1701,6 @@ function buildColumn(colDef, records) {
         const storedMins = timeToMinutes(g.提供時間);
         const endMins    = storedMins + 4;
         const upperLimit = durationMap[g.サービス略称] || null;
-        // デバッグ：startTimeがnullのレコードを確認する
-        console.log('[buildColumn fallback]', g.サービス略称, '提供時間:', g.提供時間, 'durationMap値:', upperLimit, 'durationMapキー一覧:', Object.keys(durationMap));
         if (upperLimit) {
           const startMins = endMins - upperLimit + 1;
           gStartTime = minsToTimeStr(((startMins % 1440) + 1440) % 1440);
@@ -1709,7 +1733,7 @@ function buildColumn(colDef, records) {
       const entry = document.createElement('div');
       entry.className = 'col-entry';
 
-      // 時刻行（フォールバック済みのgStartTime/gEndTimeをそのまま使う）
+      // 時刻行（最も目立つ要素として大きく表示する）
       const timeEl = document.createElement('div');
       timeEl.className = 'col-entry-time';
       timeEl.textContent = (gStartTime && gEndTime)
@@ -1717,30 +1741,26 @@ function buildColumn(colDef, records) {
         : (g.提供時間 || '');
       entry.appendChild(timeEl);
 
-      // 氏名（先頭2文字、フルネームはtooltipで参照）
-      const nameEl = document.createElement('div');
+      // 氏名＋サービス略称を1行にまとめた補助情報行
+      const subEl = document.createElement('div');
+      subEl.className = 'col-entry-sub';
+      const nameEl = document.createElement('span');
       nameEl.className = 'col-entry-name';
       nameEl.title     = g.氏名 || '';
       nameEl.textContent = (g.氏名 || '').slice(0, 2);
-      entry.appendChild(nameEl);
-
-      // サービス略称
+      subEl.appendChild(nameEl);
       if (g.サービス略称) {
-        const svcEl = document.createElement('div');
-        svcEl.className = 'col-entry-service';
-        svcEl.title = g.サービス略称;
+        const sep = document.createElement('span');
+        sep.textContent = '·';
+        sep.style.opacity = '0.4';
+        subEl.appendChild(sep);
+        const svcEl = document.createElement('span');
+        svcEl.className = 'col-entry-svc';
+        svcEl.title     = g.サービス略称;
         svcEl.textContent = g.サービス略称;
-        entry.appendChild(svcEl);
+        subEl.appendChild(svcEl);
       }
-
-      // 単位数（unitMapに存在する場合のみ表示する）
-      const units = unitMap[g.サービス略称];
-      if (units) {
-        const unitsEl = document.createElement('div');
-        unitsEl.className = 'col-entry-units';
-        unitsEl.textContent = `${units}単位`;
-        entry.appendChild(unitsEl);
-      }
+      entry.appendChild(subEl);
 
       // 曜日バッジ
       const daysEl = document.createElement('div');
@@ -2128,58 +2148,76 @@ function showToast(msg, type = '') {
 // ============================================================
 
 /**
- * 選択された氏名のサービス一覧をカード形式で表示する（変更パネル）
+ * 選択された氏名のサービス一覧を作業項目グループ別に表示する共通ヘルパー
+ * mode: 'edit' | 'delete'
  */
-function loadEditRecords() {
-  const name = document.getElementById('edit-name').value;
-  const list = document.getElementById('edit-records-list');
-  document.getElementById('edit-form-area').style.display = 'none';
-  selectedRecord = null;
-
+function renderRecordsByTask(name, listEl, mode) {
   if (!name) {
-    list.innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
+    listEl.innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
     return;
   }
-
   const recs = currentRecords.filter(r => r.氏名 === name);
   if (recs.length === 0) {
-    list.innerHTML = '<div class="rec-list-empty">登録済みのサービスがありません</div>';
+    listEl.innerHTML = '<div class="rec-list-empty">登録済みのサービスがありません</div>';
     return;
   }
 
-  list.innerHTML = '';
-  // 時刻順にソートして表示する
-  const sorted = [...recs].sort((a, b) =>
-    timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
-  );
-  sorted.forEach(r => list.appendChild(buildRecCard(r, 'edit')));
+  // COL_DEFSの表示順に合わせて作業項目でグループ化する
+  const taskOrder = COL_DEFS.map(c => c.key);
+  const grouped   = {};
+  recs.forEach(r => {
+    const t = r.作業項目 || '未設定';
+    if (!grouped[t]) grouped[t] = [];
+    grouped[t].push(r);
+  });
+  const sortedTasks = Object.keys(grouped).sort((a, b) => {
+    const ia = taskOrder.indexOf(a), ib = taskOrder.indexOf(b);
+    if (ia < 0 && ib < 0) return a.localeCompare(b, 'ja');
+    if (ia < 0) return 1;
+    if (ib < 0) return -1;
+    return ia - ib;
+  });
+
+  listEl.innerHTML = '';
+  sortedTasks.forEach(task => {
+    // グループヘッダー
+    const hdr = document.createElement('div');
+    hdr.className = 'rec-group-header';
+    hdr.innerHTML = `<i class="fa-solid fa-tag" style="opacity:0.6;font-size:0.7rem"></i>${task}<span class="rec-group-count">${grouped[task].length}件</span>`;
+    listEl.appendChild(hdr);
+
+    // 時刻順でカードを並べる
+    const sortedRecs = [...grouped[task]].sort((a, b) =>
+      timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
+    );
+    sortedRecs.forEach(r => listEl.appendChild(buildRecCard(r, mode)));
+  });
 }
 
 /**
- * 選択された氏名のサービス一覧をカード形式で表示する（削除パネル）
+ * 選択された氏名のサービス一覧を作業項目ごとにグループ表示する（変更パネル）
+ */
+function loadEditRecords() {
+  document.getElementById('edit-form-area').style.display = 'none';
+  selectedRecord = null;
+  renderRecordsByTask(
+    document.getElementById('edit-name').value,
+    document.getElementById('edit-records-list'),
+    'edit'
+  );
+}
+
+/**
+ * 選択された氏名のサービス一覧を作業項目ごとにグループ表示する（削除パネル）
  */
 function loadDeleteRecords() {
-  const name = document.getElementById('del-name').value;
-  const list = document.getElementById('del-records-list');
   document.getElementById('del-confirm-area').style.display = 'none';
   selectedRecord = null;
-
-  if (!name) {
-    list.innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
-    return;
-  }
-
-  const recs = currentRecords.filter(r => r.氏名 === name);
-  if (recs.length === 0) {
-    list.innerHTML = '<div class="rec-list-empty">登録済みのサービスがありません</div>';
-    return;
-  }
-
-  list.innerHTML = '';
-  const sorted = [...recs].sort((a, b) =>
-    timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
+  renderRecordsByTask(
+    document.getElementById('del-name').value,
+    document.getElementById('del-records-list'),
+    'delete'
   );
-  sorted.forEach(r => list.appendChild(buildRecCard(r, 'delete')));
 }
 
 /**
