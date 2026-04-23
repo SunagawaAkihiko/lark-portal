@@ -134,18 +134,41 @@
       padding: 0.45rem 0.5rem;
       background: var(--card-bg);
       border-radius: 6px;
-      margin: 0.6rem 0 0.35rem;
+      margin: 0.6rem 0 0;
       border-left: 3px solid var(--primary-color);
+      cursor: default;
     }
     .rec-group-header:first-child { margin-top: 0; }
     .rec-group-count {
-      margin-left: auto;
       background: var(--border-color);
       color: var(--text-muted);
       border-radius: 10px;
       padding: 0.05rem 0.45rem;
       font-size: 0.7rem;
     }
+    /* 詳細表示トグルボタン */
+    .rec-group-toggle {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 0.25rem;
+      font-family: inherit; font-weight: 600;
+      transition: background 0.15s;
+    }
+    .rec-group-toggle:hover { background: var(--primary-color); color: #fff; }
+    .rec-group-toggle .toggle-arrow { transition: transform 0.2s; display: inline-block; }
+    .rec-group-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    /* 個別カードのアコーディオンラッパー */
+    .rec-group-body {
+      display: none;
+      padding: 0.3rem 0 0.1rem;
+    }
+    .rec-group-body.open { display: block; }
 
     /* 削除確認エリア */
     .delete-confirm-box {
@@ -2114,17 +2137,40 @@ function renderRecordsByTask(name, listEl, mode) {
 
   listEl.innerHTML = '';
   sortedTasks.forEach(task => {
-    // グループヘッダー
+    // ──── グループヘッダー（作業項目名・件数・詳細トグルボタン）────
     const hdr = document.createElement('div');
     hdr.className = 'rec-group-header';
-    hdr.innerHTML = `<i class="fa-solid fa-tag" style="opacity:0.6;font-size:0.7rem"></i>${task}<span class="rec-group-count">${grouped[task].length}件</span>`;
+
+    const colDef = COL_DEFS.find(c => c.key === task);
+    const accentColor = colDef ? colDef.accent : 'var(--primary-color)';
+    hdr.style.borderLeftColor = accentColor;
+
+    // 詳細トグルボタン（カードのアコーディオン開閉）
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'rec-group-toggle';
+    toggleBtn.innerHTML = `詳細表示 <span class="toggle-arrow">▼</span>`;
+
+    hdr.innerHTML = `<i class="fa-solid fa-tag" style="opacity:0.6;font-size:0.7rem;color:${accentColor}"></i>${task}<span class="rec-group-count">${grouped[task].length}件</span>`;
+    hdr.appendChild(toggleBtn);
     listEl.appendChild(hdr);
+
+    // ──── 個別カードのアコーディオンボディ（デフォルト非表示）────
+    const body = document.createElement('div');
+    body.className = 'rec-group-body';
 
     // 時刻順でカードを並べる
     const sortedRecs = [...grouped[task]].sort((a, b) =>
       timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
     );
-    sortedRecs.forEach(r => listEl.appendChild(buildRecCard(r, mode)));
+    sortedRecs.forEach(r => body.appendChild(buildRecCard(r, mode)));
+    listEl.appendChild(body);
+
+    // トグルボタンのクリックでアコーディオン開閉
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = body.classList.toggle('open');
+      toggleBtn.classList.toggle('open', isOpen);
+      toggleBtn.querySelector('.toggle-arrow').textContent = isOpen ? '▲' : '▼';
+    });
   });
 }
 
