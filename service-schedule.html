@@ -1514,8 +1514,7 @@ function updateSlotPicker() {
         if (s < e) effectiveWindows.push({ start: s, end: e });
       }
     }
-    // 積集合が空の場合は suffix 制限をそのまま有効ウィンドウとして使う
-    if (effectiveWindows.length === 0) effectiveWindows = suffixWins;
+    // 積集合が空（作業項目の時間帯とsuffix制限が重ならない）場合は空き枠なしで表示する
   } else {
     effectiveWindows = taskDef.windows;
   }
