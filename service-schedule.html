@@ -1534,16 +1534,18 @@ function updateSlotPicker() {
     for (const [s, e] of occupied) {
       if (s > win.end) break;
       if (e < win.start) continue;
-      // cursor から s の手前までスロットを埋める（slotEnd <= s でよい）
+      // cursor から占有開始点(s)の手前までスロットを埋める
+      // slotEnd(= cursor + step) が s 以下なら衝突しない
       while (cursor + step <= s) {
         slots.push({ startMins: cursor, endMins: cursor + step });
         cursor += step;
       }
-      // 占有区間をスキップし、ウィンドウ基点から step の倍数位置にスナップする
+      // 占有区間の終端以降で、ウィンドウ基点から step 倍数の最小位置にカーソルを進める。
+      // ceil((e - win.start) / step) で e を含む区間の次のグリッド番号を求める。
+      // 例: win.start=540, step=60, e=600 → ceil(1)=1 → cursor=600（10:00から再開）
       if (cursor <= e) {
-        cursor = e + 1;
-        const offset = (cursor - win.start) % step;
-        if (offset > 0) cursor += step - offset;
+        const stepsNeeded = Math.ceil((e - win.start) / step);
+        cursor = win.start + stepsNeeded * step;
       }
     }
     // ウィンドウ末尾まで残りのスロットを生成する
