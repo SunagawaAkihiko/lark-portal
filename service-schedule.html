@@ -1492,44 +1492,32 @@ function updateSlotPicker() {
   // スロット1枠あたりの長さ（分）= upperLimit - 1
   const step = upperLimit - 1;
 
-  // 選択した氏名・作業項目の既存レコードから占有区間を収集する（全曜日を集計）。
-  // Lark返却値に余分なスペースが含まれる場合を考慮して trim で正規化する。
-  const nameTrimmed = name.trim();
-  const taskTrimmed = task.trim();
-  const personRecs = currentRecords.filter(r =>
-    (r.氏名 || '').trim() === nameTrimmed && (r.作業項目 || '').trim() === taskTrimmed
-  );
-  // デバッグ：currentRecords 内の氏名一覧を出力して名前の不一致を検出する
-  const allNames = [...new Set(currentRecords.map(r => r.氏名).filter(Boolean))];
-  console.log(`[slot-picker] 対象レコード数: ${personRecs.length} (氏名=${name} 作業項目=${task})`);
-  if (personRecs.length === 0) {
-    console.log(`[slot-picker] currentRecords 氏名一覧:`, allNames.slice(0, 10));
-  }
+  // 事業所全体の登録済みサービス（氏名・作業項目問わず）から占有時間区間を収集する。
+  // 上津役家は選択中の勤務区分のみ対象（シフトごとに担当が異なるため）。
+  // この占有区間を除いた後、選択した作業項目の時間ウィンドウ内の空き枠を表示する。
+  const selectedKinmu = document.querySelector('input[name="kinmu"]:checked')?.value;
+  const allRecs = currentRecords.filter(r => {
+    if (currentOffice === '上津役家' && selectedKinmu) return r.勤務区分 === selectedKinmu;
+    return true;
+  });
 
-  // 既存レコードの提供時間（stored value）を Set で持っておき、スロット生成時に完全一致チェックで使う
-  const occupiedStoredSet = new Set(personRecs.map(r => r.提供時間).filter(Boolean));
+  // 既存レコードの提供時間（stored value）を Set で持っておき、スロット生成時の完全一致チェックに使う
+  const occupiedStoredSet = new Set(allRecs.map(r => r.提供時間).filter(Boolean));
 
-  const occupied = personRecs.flatMap(r => {
+  const occupied = allRecs.flatMap(r => {
     // ① サーバーが startTime/endTime を計算済みの場合はそのまま使う
     if (r.startTime && r.endTime) {
-      console.log(`[slot-picker] 占有(A): ${r.startTime}〜${r.endTime} 曜日=${r.提供曜日}`);
       return [[timeToMinutes(r.startTime), timeToMinutes(r.endTime)]];
     }
-    // ② サーバー計算 upperLimit → durationMap の順で duration を取得する。
-    //    どちらも null の場合は step（登録しようとしているサービスの長さ）を保守的なフォールバックとして使う。
-    //    これにより同一サービスの重複登録を確実にブロックする。
-    const upper = r.upperLimit || durationMap[r.サービス略称] || step;
-    if (r.提供時間) {
+    // ② durationMap またはサーバー計算値で時間区間を推定する
+    const upper = r.upperLimit || durationMap[r.サービス略称] || null;
+    if (r.提供時間 && upper) {
       const endMins   = timeToMinutes(r.提供時間) + 4;
       const startMins = ((endMins - upper + 1) + 1440) % 1440;
-      console.log(`[slot-picker] 占有(B): 提供時間=${r.提供時間} upper=${upper} → ${startMins}〜${endMins % 1440} 曜日=${r.提供曜日}`);
       return [[startMins % 1440, endMins % 1440]];
     }
-    console.warn(`[slot-picker] SKIP（提供時間なし）: 氏名=${r.氏名} サービス略称=${r.サービス略称}`);
     return [];
   }).sort((a, b) => a[0] - b[0]);
-
-  console.log(`[slot-picker] 占有区間: ${JSON.stringify(occupied)}`);
 
   // TASK_WINDOWS の各ウィンドウ内で空き区間を計算し step 単位に分割してスロット生成
   const slots = [];
