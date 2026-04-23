@@ -1171,6 +1171,7 @@ let currentAction = 'register';
 /** 変更・削除で選択中のレコード */
 let selectedRecord   = null;
 let bulkEditRecords  = null; // 一括変更モード時に対象レコード配列を保持する
+let bulkDeleteRecords = null; // 一括削除モード時に対象レコード配列を保持する
 
 /** 提供曜日の表示順序と略称定義 */
 const DAY_ORDER  = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
@@ -2504,7 +2505,7 @@ function renderRecordsByTask(name, listEl, mode) {
 
     hdr.innerHTML = `<i class="fa-solid fa-tag" style="opacity:0.6;font-size:0.7rem;color:${accentColor}"></i>${task}<span class="rec-group-count">${grouped[task].length}件</span>`;
 
-    // 変更パネルのみ一括変更ボタンを追加する
+    // 変更パネルは一括変更ボタン、削除パネルは一括削除ボタンを追加する
     if (mode === 'edit') {
       const bulkBtn = document.createElement('button');
       bulkBtn.className = 'rec-group-bulk-btn';
@@ -2514,6 +2515,18 @@ function renderRecordsByTask(name, listEl, mode) {
         populateBulkEditForm(task, grouped[task]);
       };
       hdr.appendChild(bulkBtn);
+    } else if (mode === 'delete') {
+      const bulkDelBtn = document.createElement('button');
+      bulkDelBtn.className = 'rec-group-bulk-btn';
+      bulkDelBtn.style.cssText = 'border-color:#dc2626;color:#dc2626;';
+      bulkDelBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 一括削除';
+      bulkDelBtn.onmouseenter = () => { bulkDelBtn.style.background = '#dc2626'; bulkDelBtn.style.color = '#fff'; };
+      bulkDelBtn.onmouseleave = () => { bulkDelBtn.style.background = ''; bulkDelBtn.style.color = '#dc2626'; };
+      bulkDelBtn.onclick = (e) => {
+        e.stopPropagation();
+        showBulkDeleteConfirm(task, grouped[task]);
+      };
+      hdr.appendChild(bulkDelBtn);
     }
 
     hdr.appendChild(toggleBtn);
@@ -2561,7 +2574,8 @@ function loadEditRecords() {
  */
 function loadDeleteRecords() {
   document.getElementById('del-confirm-area').style.display = 'none';
-  selectedRecord = null;
+  selectedRecord   = null;
+  bulkDeleteRecords = null;
   renderRecordsByTask(
     document.getElementById('del-name').value,
     document.getElementById('del-records-list'),
@@ -2791,6 +2805,27 @@ async function submitEdit() {
 /**
  * 選択したレコードの削除確認エリアを表示する
  */
+/**
+ * 作業項目グループ全体の一括削除確認を表示する
+ */
+function showBulkDeleteConfirm(task, records) {
+  bulkDeleteRecords = records;
+  selectedRecord    = null;
+  document.querySelectorAll('.rec-card.selected').forEach(c => c.classList.remove('selected'));
+
+  document.getElementById('del-confirm-msg').innerHTML = `
+    以下のグループをまとめて削除します。この操作は取り消せません。<br><br>
+    <strong>${records[0]?.氏名}</strong>｜<strong>${task}</strong><br>
+    対象 <strong>${records.length}件</strong>（全曜日分）
+  `;
+  document.getElementById('del-confirm-btn').innerHTML =
+    `<i class="fa-solid fa-trash-can"></i> ${records.length}件をまとめて削除する`;
+  document.getElementById('del-confirm-area').style.display = '';
+}
+
+/**
+ * 単一レコードの削除確認を表示する
+ */
 function showDeleteConfirm(r) {
   const upperLimit = durationMap[r.サービス略称] || null;
   let timeRange = r.提供時間 || '';
@@ -2802,11 +2837,14 @@ function showDeleteConfirm(r) {
     timeRange = `${minsToTimeStr(((startMins + 1440) % 1440))}〜${minsToTimeStr(endMins % 1440)}`;
   }
 
+  bulkDeleteRecords = null;
   document.getElementById('del-confirm-msg').innerHTML = `
     以下のレコードを削除します。この操作は取り消せません。<br><br>
     <strong>${r.氏名}</strong>｜${r.作業項目 || '─'}｜${r.サービス略称 || '─'}<br>
     ${r.提供曜日}　${timeRange}　${r.勤務区分 || ''}
   `;
+  document.getElementById('del-confirm-btn').innerHTML =
+    '<i class="fa-solid fa-trash-can"></i> この1件を削除する';
   document.getElementById('del-confirm-area').style.display = '';
 }
 
@@ -2814,21 +2852,38 @@ function showDeleteConfirm(r) {
  * 選択したレコードを削除する
  */
 async function submitDelete() {
-  if (!selectedRecord?.recordId) return showToast('削除するレコードが選択されていません', 'error');
+  const isBulk = bulkDeleteRecords !== null && bulkDeleteRecords.length > 0;
+  if (!isBulk && !selectedRecord?.recordId) {
+    return showToast('削除するレコードが選択されていません', 'error');
+  }
 
   const btn = document.getElementById('del-confirm-btn');
   btn.disabled = true;
   btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 削除中...';
 
   try {
-    const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
-      method: 'DELETE',
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
+    if (isBulk) {
+      // 一括削除：グループ内の全レコードを順番に削除する
+      for (const rec of bulkDeleteRecords) {
+        const res = await fetch(`${SERVER}/api/service-schedule/${rec.recordId}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+      }
+      showToast(`${bulkDeleteRecords.length}件を一括削除しました`, 'success');
+      bulkDeleteRecords = null;
+    } else {
+      // 単一削除
+      const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      showToast('削除しました', 'success');
+      selectedRecord = null;
+    }
 
-    showToast('削除しました', 'success');
-    selectedRecord = null;
     document.getElementById('del-confirm-area').style.display = 'none';
     await loadSchedule();
     loadDeleteRecords();
