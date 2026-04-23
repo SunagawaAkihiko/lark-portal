@@ -244,11 +244,11 @@
     .edit-save-btn:hover { background: #047857; }
     .edit-save-btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
-    /* ===== メインレイアウト（時間割削除により中央1カラム） ===== */
+    /* ===== メインレイアウト（時間割削除後：中央1カラム） ===== */
     .main-layout {
       display: flex;
       justify-content: center;
-      padding: 1rem;
+      padding: 1.25rem 1rem 3rem;
     }
 
     /* ===== 時間割カード ===== */
@@ -463,26 +463,26 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== 登録フォームカード ===== */
-    .form-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      overflow: hidden;
+    /* ===== 登録・変更・削除パネル（カード枠なし、フラット表示） ===== */
+    .panel-plain {
       width: 100%;
       max-width: 560px;
-      position: sticky;
-      top: 100px;
     }
-    .form-card-header {
-      background: var(--primary-color);
-      padding: 0.75rem 1rem;
-      font-weight: 700;
-      font-size: 0.9rem;
-      color: white;
+    /* パネル見出し行（タイトル＋マスタ更新ボタン等） */
+    .panel-plain-header {
       display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.92rem; font-weight: 700;
+      color: var(--text-color);
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 2px solid var(--border-color);
     }
-    .form-body { padding: 0.9rem 1rem 1rem; }
+    .panel-plain-header .panel-title-icon {
+      color: var(--primary-color);
+    }
+    .panel-plain-header.delete-header .panel-title-icon { color: #dc2626; }
+    .panel-plain-header.edit-header   .panel-title-icon { color: #059669; }
+    .form-body { padding: 0; }
 
     /* ===== フォーム部品 ===== */
     .field-group { margin-bottom: 0.85rem; }
@@ -619,37 +619,40 @@
     .unit-stat-value { font-size: 0.95rem; font-weight: 700; color: var(--text-color); }
     .unit-stat.pending .unit-stat-value { color: var(--primary-color); }
 
-    /* ===== カートセクション ===== */
+    /* ===== カートセクション（登録予定リスト：別枠として視覚的に強調） ===== */
     .cart-section {
-      margin-top: 1rem;
-      border: 1.5px solid var(--border-color);
-      border-radius: 10px;
+      margin-top: 1.5rem;
+      border: 2px solid var(--primary-color);
+      border-radius: 12px;
       overflow: hidden;
+      box-shadow: 0 2px 8px rgba(231,111,81,0.10);
     }
     .cart-header {
-      background: var(--card-bg);
-      padding: 0.5rem 0.75rem;
-      font-size: 0.82rem;
+      background: var(--primary-color);
+      padding: 0.55rem 0.75rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: var(--text-color);
-      border-bottom: 1px solid var(--border-color);
+      color: white;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
       display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
     }
+    .cart-limit-row { color: rgba(255,255,255,0.85); }
     .cart-limit-row {
       display: flex; align-items: center; gap: 0.4rem;
-      font-size: 0.78rem; font-weight: 400; color: var(--text-muted);
+      font-size: 0.78rem; font-weight: 400;
     }
     .cart-limit-row input {
       width: 72px;
       padding: 0.2rem 0.45rem;
-      border: 1.5px solid var(--border-color);
+      border: 1.5px solid rgba(255,255,255,0.4);
       border-radius: 6px;
       font-family: inherit;
       font-size: 0.82rem;
       color: var(--text-color);
       outline: none;
+      background: white;
     }
-    .cart-limit-row input:focus { border-color: var(--primary-color); }
+    .cart-limit-row input:focus { border-color: white; }
     .cart-body { padding: 0.5rem 0.75rem 0.75rem; }
     .cart-empty {
       padding: 0.75rem 0;
@@ -824,14 +827,14 @@
 
   <!-- ─── 操作パネル（登録/変更/削除タブで切り替え） ─── -->
   <!-- 登録パネル -->
-  <section class="form-card" id="panel-register">
-    <div class="form-card-header">
-      <i class="fa-solid fa-plus-circle"></i>
-      新規サービス登録
+  <section class="panel-plain" id="panel-register">
+    <div class="panel-plain-header">
+      <i class="fa-solid fa-plus-circle panel-title-icon"></i>
+      <span>新規サービス登録</span>
       <!-- サービスコードマスタを手動リフレッシュするボタン -->
       <button id="refresh-codes-btn" onclick="refreshServiceCodes()"
         title="サービスマスタをLarkから再取得"
-        style="margin-left:auto;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;color:white;font-size:0.78rem;padding:0.2rem 0.55rem;display:flex;align-items:center;gap:0.3rem;">
+        style="margin-left:auto;background:var(--card-bg);border:1.5px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-muted);font-size:0.78rem;padding:0.2rem 0.6rem;display:flex;align-items:center;gap:0.3rem;font-family:inherit;">
         <i class="fa-solid fa-arrows-rotate"></i> マスタ更新
       </button>
     </div>
@@ -964,9 +967,10 @@
   </section>
 
   <!-- 変更パネル -->
-  <section class="form-card" id="panel-edit" style="display:none">
-    <div class="form-card-header">
-      <i class="fa-solid fa-pen-to-square"></i> サービス変更
+  <section class="panel-plain" id="panel-edit" style="display:none">
+    <div class="panel-plain-header edit-header">
+      <i class="fa-solid fa-pen-to-square panel-title-icon"></i>
+      <span>サービス変更</span>
     </div>
     <div class="form-body">
 
@@ -1039,9 +1043,10 @@
   </section>
 
   <!-- 削除パネル -->
-  <section class="form-card" id="panel-delete" style="display:none">
-    <div class="form-card-header" style="background:#7f1d1d;">
-      <i class="fa-solid fa-trash-can"></i> サービス削除
+  <section class="panel-plain" id="panel-delete" style="display:none">
+    <div class="panel-plain-header delete-header">
+      <i class="fa-solid fa-trash-can panel-title-icon"></i>
+      <span>サービス削除</span>
     </div>
     <div class="form-body">
 
@@ -1796,56 +1801,37 @@ function resetEditDeletePanels() {
 }
 
 // ============================================================
-// 時間割データ取得
+// スケジュールデータ取得（時間割は削除済みのためDOM描画は行わない）
 // ============================================================
 async function loadSchedule() {
-  const wrap = document.getElementById('timetable-wrap');
-  wrap.innerHTML = `
-    <div class="timetable-empty">
-      <div class="loading-spinner"></div>
-      <p style="margin-top:0.75rem">読み込み中...</p>
-    </div>`;
-
   try {
     const res = await fetch(`${SERVER}/api/service-schedule?office=${encodeURIComponent(currentOffice)}`);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
 
     currentRecords = data.records;
-    renderTimeline(currentRecords);
-    // 事業所のレコードから氏名を抽出してセレクトを更新する
+    // 氏名セレクトを現在の事業所でフィルタして更新する
     updateNameSelects();
+    // カートや衝突バナーを最新データで再評価する
+    checkConflicts();
+    updateCartDisplay();
   } catch (err) {
     console.error('スケジュール取得エラー:', err);
-    wrap.innerHTML = `<div class="timetable-empty" style="color:#dc2626">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <p style="margin-top:0.5rem">取得失敗: ${err.message}</p>
-    </div>`;
+    showToast(`データ取得失敗: ${err.message}`, 'error');
   }
 }
 
 // ============================================================
-// 時間割描画（コラム形式）
+// 時間割描画（参照用関数 — 現在は画面に表示していないが内部計算で使用）
 // ============================================================
 
 /**
- * レコード配列をコラム形式のタイムラインとして描画する。
- * 大浦家：作業項目ごとに1コラム（横並び）。
- * 上津役家：勤務区分ごとにセクションを分けてそれぞれコラム横並び。
+ * レコード配列からコラムDOMを生成するが、表示は行わない（時間割は削除済み）。
+ * buildColumn/computeOccupied などのユーティリティは衝突検出・スロットピッカーで使用するため保持する。
  */
 function renderTimeline(records) {
-  const wrap = document.getElementById('timetable-wrap');
-
-  if (records.length === 0) {
-    wrap.innerHTML = `<div class="timetable-empty">
-      <i class="fa-solid fa-calendar-xmark" style="font-size:1.8rem;color:var(--border-color)"></i>
-      <p style="margin-top:0.75rem">登録データがありません</p>
-    </div>`;
-    updateCartDisplay();
-    return;
-  }
-
-  wrap.innerHTML = '';
+  // 時間割表示は廃止済み。副作用のみ実行して返る。
+  updateCartDisplay();
   const container = document.createElement('div');
   container.className = 'timeline-container';
 
@@ -1912,7 +1898,7 @@ function renderTimeline(records) {
     container.appendChild(grid);
   }
 
-  wrap.appendChild(container);
+  // wrap（timetable-wrap）は削除済みのためDOMへの追加は行わない
   checkConflicts();
   updateCartDisplay();
 }
