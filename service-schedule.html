@@ -684,9 +684,11 @@
       <!-- 記録内容 -->
       <div class="field-group">
         <label class="field-label">記録内容テンプレート</label>
-        <select class="form-select" id="f-record">
+        <select class="form-select" id="f-record" onchange="showRecordPreview()">
           <option value="">-- 選択しない --</option>
         </select>
+        <!-- 選択したテンプレートの全文プレビュー -->
+        <div id="record-preview" style="display:none;margin-top:0.4rem;padding:0.5rem 0.65rem;background:var(--bg-color);border:1px solid var(--border-color);border-radius:7px;font-size:0.75rem;color:var(--text-color);line-height:1.55;white-space:pre-wrap;word-break:break-all;"></div>
       </div>
 
       <!-- 開始日・終了日 -->
@@ -944,12 +946,27 @@ function onFormChange() {
  * 選択中の作業項目に対応する記録内容テンプレートのみセレクトに表示する。
  * fieldsCache.static.記録内容 は作業項目をキーにしたオブジェクト。
  */
+/**
+ * 記録内容テンプレート選択時に全文をプレビューエリアに表示する
+ */
+function showRecordPreview() {
+  const val     = document.getElementById('f-record').value;
+  const preview = document.getElementById('record-preview');
+  if (val) {
+    preview.textContent = val;
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
 function updateRecordTemplates() {
   const task  = document.getElementById('f-task').value;
   const recEl = document.getElementById('f-record');
   const prev  = recEl.value;
 
   recEl.innerHTML = '<option value="">-- 選択しない --</option>';
+  document.getElementById('record-preview').style.display = 'none';
   if (!fieldsCache || !task) return;
 
   // 定型文設定テーブルから取得したtemplateMapを優先し、
@@ -1653,6 +1670,7 @@ function resetFormFields() {
   document.getElementById('f-start').value   = '';
   document.getElementById('f-end').value     = '';
   document.getElementById('f-record').value  = '';
+  document.getElementById('record-preview').style.display = 'none';
   document.querySelectorAll('#day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
   const allCb = document.getElementById('day-all');
   if (allCb) allCb.checked = false;
