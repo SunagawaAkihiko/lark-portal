@@ -906,9 +906,12 @@ async function loadFields() {
       kinmuEl.appendChild(lbl);
     });
 
-    // 記録内容セレクト
+    // 記録内容セレクト（本文冒頭を表示し内容を判別できるようにする）
     const recEl = document.getElementById('f-record');
-    st.記録内容.forEach((r, i) => recEl.appendChild(new Option(`テンプレート${i + 1}`, r)));
+    st.記録内容.forEach(r => {
+      const label = r.length > 28 ? r.slice(0, 28) + '…' : r;
+      recEl.appendChild(new Option(label, r));
+    });
 
     // 各フォーム部品の変更でonFormChangeを呼ぶ
     document.getElementById('f-task').addEventListener('change',    onFormChange);
