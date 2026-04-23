@@ -1506,10 +1506,25 @@ function updateSlotPicker() {
   // スロット1枠あたりの長さ（分）= upperLimit - 1
   const step = upperLimit - 1;
 
-  // 選択した氏名・作業項目の既存レコードから占有区間を収集する（全曜日を集計）
+  // 選択した氏名・作業項目の既存レコードから占有区間を収集する（全曜日を集計）。
+  // startTime/endTime が未設定のレコードは 提供時間（保存値 = 終了時刻-4分）と
+  // durationMap から逆算して区間を求める（computeOccupied と同じフォールバック）。
   const occupied = currentRecords
-    .filter(r => r.氏名 === name && r.作業項目 === task && r.startTime && r.endTime)
-    .map(r => [timeToMinutes(r.startTime), timeToMinutes(r.endTime)])
+    .filter(r => r.氏名 === name && r.作業項目 === task)
+    .flatMap(r => {
+      if (r.startTime && r.endTime) {
+        return [[timeToMinutes(r.startTime), timeToMinutes(r.endTime)]];
+      }
+      if (r.提供時間) {
+        const upper = durationMap[r.サービス略称] || null;
+        if (upper) {
+          const endMins   = timeToMinutes(r.提供時間) + 4;
+          const startMins = ((endMins - upper + 1) + 1440) % 1440;
+          return [[startMins, endMins % 1440]];
+        }
+      }
+      return []; // 時間情報が不足している場合はスキップ
+    })
     .sort((a, b) => a[0] - b[0]);
 
   // TASK_WINDOWS の各ウィンドウ内で空き区間を計算し step 単位に分割してスロット生成
