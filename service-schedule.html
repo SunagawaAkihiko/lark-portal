@@ -72,6 +72,90 @@
       color: white;
     }
 
+    /* ===== 操作タブ（登録・変更・削除） ===== */
+    .action-tabs {
+      display: flex;
+      background: var(--card-bg);
+      border-bottom: 2px solid var(--border-color);
+      padding: 0 1rem;
+      gap: 0;
+    }
+    .action-btn {
+      padding: 0.55rem 1.3rem;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      background: none;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.2s, border-color 0.2s;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .action-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .action-btn.action-delete.active { color: #dc2626; border-bottom-color: #dc2626; }
+
+    /* ===== レコード選択カード（変更・削除タブ） ===== */
+    .rec-card {
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: white;
+    }
+    .rec-card:hover { border-color: var(--primary-color); background: var(--primary-light); }
+    .rec-card.selected { border-color: var(--primary-color); background: var(--primary-light); }
+    .rec-card-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.85rem; font-weight: 700; margin-bottom: 0.3rem;
+    }
+    .rec-card-task { color: var(--primary-color); }
+    .rec-card-meta {
+      font-size: 0.78rem; color: var(--text-muted);
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .rec-card-badge {
+      background: #f3f4f6; border-radius: 4px;
+      padding: 0.1rem 0.4rem; font-size: 0.75rem;
+    }
+    .rec-list-empty {
+      text-align: center; padding: 1.5rem;
+      color: var(--text-muted); font-size: 0.85rem;
+    }
+
+    /* 削除確認エリア */
+    .delete-confirm-box {
+      background: #fef2f2; border: 2px solid #fca5a5;
+      border-radius: 8px; padding: 1rem;
+      margin-top: 0.75rem;
+    }
+    .delete-confirm-box p { font-size: 0.85rem; margin-bottom: 0.75rem; color: #991b1b; }
+    .delete-confirm-btn {
+      width: 100%; padding: 0.75rem;
+      background: #dc2626; color: white;
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .delete-confirm-btn:hover { background: #b91c1c; }
+    .delete-confirm-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* 変更フォームの保存ボタン */
+    .edit-save-btn {
+      width: 100%; padding: 0.75rem;
+      background: #059669; color: white;
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .edit-save-btn:hover { background: #047857; }
+    .edit-save-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
     /* ===== メインレイアウト（PC: 左右2分割、SP: 縦積み） ===== */
     .main-layout {
       display: grid;
@@ -626,6 +710,19 @@
   </button>
 </nav>
 
+<!-- ===== 操作タブ ===== -->
+<nav class="action-tabs">
+  <button class="action-btn active" data-action="register" onclick="switchAction('register')">
+    <i class="fa-solid fa-plus-circle"></i> 登録
+  </button>
+  <button class="action-btn" data-action="edit" onclick="switchAction('edit')">
+    <i class="fa-solid fa-pen-to-square"></i> 変更
+  </button>
+  <button class="action-btn action-delete" data-action="delete" onclick="switchAction('delete')">
+    <i class="fa-solid fa-trash-can"></i> 削除
+  </button>
+</nav>
+
 <!-- ===== メインレイアウト ===== -->
 <div class="main-layout">
 
@@ -646,8 +743,9 @@
     </div>
   </section>
 
-  <!-- ─── 右：登録フォーム ─── -->
-  <section class="form-card">
+  <!-- ─── 右：操作パネル（登録/変更/削除タブで切り替え） ─── -->
+  <!-- 登録パネル -->
+  <section class="form-card" id="panel-register">
     <div class="form-card-header">
       <i class="fa-solid fa-plus-circle"></i>
       新規サービス登録
@@ -776,6 +874,114 @@
     </div>
   </section>
 
+  <!-- 変更パネル -->
+  <section class="form-card" id="panel-edit" style="display:none">
+    <div class="form-card-header">
+      <i class="fa-solid fa-pen-to-square"></i> サービス変更
+    </div>
+    <div class="form-body">
+
+      <!-- 氏名選択 -->
+      <div class="field-group">
+        <label class="field-label">氏名<span class="req">*</span></label>
+        <select class="form-select" id="edit-name" onchange="loadEditRecords()">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- レコード一覧 -->
+      <div id="edit-records-list">
+        <div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>
+      </div>
+
+      <!-- 編集フォーム（レコード選択後に表示） -->
+      <div id="edit-form-area" style="display:none; margin-top:0.75rem; border-top:1px solid var(--border-color); padding-top:0.75rem;">
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
+          <i class="fa-solid fa-circle-info"></i> 変更したい項目を編集して保存してください
+        </p>
+
+        <div class="field-group">
+          <label class="field-label">作業項目</label>
+          <select class="form-select" id="edit-task" onchange="onEditFormChange()">
+            <option value="">-- 選択してください --</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">サービス略称</label>
+          <select class="form-select" id="edit-service" onchange="onEditFormChange()">
+            <option value="">-- 選択してください --</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">提供曜日<span class="req">*</span></label>
+          <select class="form-select" id="edit-day">
+            <option value="">-- 選択してください --</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">提供時間<span class="req">*</span></label>
+          <select class="form-select" id="edit-time">
+            <option value="">作業項目を選択してください</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">勤務区分</label>
+          <select class="form-select" id="edit-kinmu"></select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">適用期間（任意）</label>
+          <div class="date-row">
+            <input type="date" class="form-input" id="edit-start">
+            <input type="date" class="form-input" id="edit-end">
+          </div>
+        </div>
+
+        <button class="edit-save-btn" id="edit-save-btn" onclick="submitEdit()">
+          <i class="fa-solid fa-floppy-disk"></i> 変更を保存する
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 削除パネル -->
+  <section class="form-card" id="panel-delete" style="display:none">
+    <div class="form-card-header" style="background:#7f1d1d;">
+      <i class="fa-solid fa-trash-can"></i> サービス削除
+    </div>
+    <div class="form-body">
+
+      <!-- 氏名選択 -->
+      <div class="field-group">
+        <label class="field-label">氏名<span class="req">*</span></label>
+        <select class="form-select" id="del-name" onchange="loadDeleteRecords()">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- レコード一覧 -->
+      <div id="del-records-list">
+        <div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>
+      </div>
+
+      <!-- 削除確認エリア（レコード選択後に表示） -->
+      <div id="del-confirm-area" style="display:none; margin-top:0.75rem;">
+        <div class="delete-confirm-box">
+          <p id="del-confirm-msg"></p>
+          <button class="delete-confirm-btn" id="del-confirm-btn" onclick="submitDelete()">
+            <i class="fa-solid fa-trash-can"></i> この1件を削除する
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
 </div><!-- /.main-layout -->
 
 <!-- ===== トースト通知 ===== -->
@@ -808,6 +1014,12 @@ let unitMap = {};
 
 /** 登録予定リスト（カート）：まとめて登録する前の一時バッファ */
 let cart = [];
+
+/** 現在の操作タブ: 'register' | 'edit' | 'delete' */
+let currentAction = 'register';
+
+/** 変更・削除で選択中のレコード */
+let selectedRecord = null;
 
 /** 提供曜日の表示順序と略称定義 */
 const DAY_ORDER  = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
@@ -911,9 +1123,13 @@ async function loadFields() {
 
     const st = fieldsCache.static;
 
-    // 氏名セレクト
+    // 氏名セレクト（登録・変更・削除パネル全てに同じ選択肢を設定する）
     const nameEl = document.getElementById('f-name');
     st.氏名.forEach(n => nameEl.appendChild(new Option(n, n)));
+    ['edit-name', 'del-name'].forEach(id => {
+      const el = document.getElementById(id);
+      st.氏名.forEach(n => el.appendChild(new Option(n, n)));
+    });
 
     // 作業項目セレクト
     const taskEl = document.getElementById('f-task');
@@ -955,6 +1171,16 @@ async function loadFields() {
     });
 
     // 記録内容は作業項目選択後に絞り込んで表示するためここでは初期化のみ行う
+
+    // 変更フォームの選択肢を登録フォームと同じ内容で初期化する
+    const editTaskEl = document.getElementById('edit-task');
+    st.作業項目.forEach(t => editTaskEl.appendChild(new Option(t, t)));
+    const editSvcEl = document.getElementById('edit-service');
+    svcList.forEach(s => editSvcEl.appendChild(new Option(s, s)));
+    const editKinmuEl = document.getElementById('edit-kinmu');
+    st.勤務区分.forEach(k => editKinmuEl.appendChild(new Option(k, k)));
+    const editDayEl = document.getElementById('edit-day');
+    st.提供曜日.forEach(d => editDayEl.appendChild(new Option(d, d)));
 
     // 各フォーム部品の変更でonFormChangeを呼ぶ
     document.getElementById('f-task').addEventListener('change',    onFormChange);
@@ -1123,9 +1349,16 @@ function updateTimeOptions() {
   const { windows, label: winLabel } = taskDef;
 
   // 同作業項目・選択曜日（未選択なら全曜日）の占有区間を収集する
-  const targetDays = days.length > 0 ? days : DAY_ORDER;
+  // 上津役家は選択中の勤務区分に絞ることで担当ごとの空き枠を正しく計算する
+  const targetDays    = days.length > 0 ? days : DAY_ORDER;
+  const selectedKinmu = document.querySelector('input[name="kinmu"]:checked')?.value;
   const occupiedRanges = currentRecords
-    .filter(r => r.作業項目 === task && targetDays.includes(r.提供曜日) && r.startTime && r.endTime)
+    .filter(r => {
+      if (r.作業項目 !== task || !targetDays.includes(r.提供曜日)) return false;
+      if (!r.startTime || !r.endTime) return false;
+      if (currentOffice === '上津役家' && selectedKinmu) return r.勤務区分 === selectedKinmu;
+      return true;
+    })
     .map(r => [timeToMinutes(r.startTime), timeToMinutes(r.endTime)]);
 
   // duration = upperLimit - 1（20分未満コード → 19分が実サービス時間）
@@ -1215,7 +1448,31 @@ function switchOffice(btn) {
   currentOffice = btn.dataset.office;
   document.getElementById('timetable-title').textContent = `${currentOffice} 時間割`;
   document.getElementById('conflict-banner').classList.remove('visible');
+  // 事業所切り替え時に変更・削除パネルのリストをリセットする
+  resetEditDeletePanels();
   loadSchedule();
+}
+
+// ============================================================
+// 操作タブ切り替え
+// ============================================================
+function switchAction(action) {
+  currentAction = action;
+  document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.action-btn[data-action="${action}"]`).classList.add('active');
+  document.getElementById('panel-register').style.display = action === 'register' ? '' : 'none';
+  document.getElementById('panel-edit').style.display     = action === 'edit'     ? '' : 'none';
+  document.getElementById('panel-delete').style.display   = action === 'delete'   ? '' : 'none';
+}
+
+function resetEditDeletePanels() {
+  selectedRecord = null;
+  document.getElementById('edit-name').value = '';
+  document.getElementById('del-name').value  = '';
+  document.getElementById('edit-records-list').innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
+  document.getElementById('del-records-list').innerHTML  = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
+  document.getElementById('edit-form-area').style.display  = 'none';
+  document.getElementById('del-confirm-area').style.display = 'none';
 }
 
 // ============================================================
@@ -1548,9 +1805,11 @@ function checkConflicts() {
     return;
   }
 
-  // ── 1. 時間帯重複チェック ──
+  // ── 1. 時間帯重複チェック（上津役家は同一勤務区分のみ対象）──
+  const kinmuForConflict = document.querySelector('input[name="kinmu"]:checked')?.value;
   const conflicts = currentRecords.filter(r => {
     if (!selectedDays.includes(r.提供曜日)) return false;
+    if (currentOffice === '上津役家' && kinmuForConflict && r.勤務区分 !== kinmuForConflict) return false;
     if (newStart !== null && r.startTime && r.endTime) {
       return newStart <= timeToMinutes(r.endTime) && newEnd >= timeToMinutes(r.startTime);
     }
@@ -1845,6 +2104,270 @@ function showToast(msg, type = '') {
   el.textContent = msg;
   el.className = `toast ${type} show`;
   setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ============================================================
+// 変更パネル
+// ============================================================
+
+/**
+ * 選択された氏名のサービス一覧をカード形式で表示する（変更パネル）
+ */
+function loadEditRecords() {
+  const name = document.getElementById('edit-name').value;
+  const list = document.getElementById('edit-records-list');
+  document.getElementById('edit-form-area').style.display = 'none';
+  selectedRecord = null;
+
+  if (!name) {
+    list.innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
+    return;
+  }
+
+  const recs = currentRecords.filter(r => r.氏名 === name);
+  if (recs.length === 0) {
+    list.innerHTML = '<div class="rec-list-empty">登録済みのサービスがありません</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  // 時刻順にソートして表示する
+  const sorted = [...recs].sort((a, b) =>
+    timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
+  );
+  sorted.forEach(r => list.appendChild(buildRecCard(r, 'edit')));
+}
+
+/**
+ * 選択された氏名のサービス一覧をカード形式で表示する（削除パネル）
+ */
+function loadDeleteRecords() {
+  const name = document.getElementById('del-name').value;
+  const list = document.getElementById('del-records-list');
+  document.getElementById('del-confirm-area').style.display = 'none';
+  selectedRecord = null;
+
+  if (!name) {
+    list.innerHTML = '<div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>';
+    return;
+  }
+
+  const recs = currentRecords.filter(r => r.氏名 === name);
+  if (recs.length === 0) {
+    list.innerHTML = '<div class="rec-list-empty">登録済みのサービスがありません</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  const sorted = [...recs].sort((a, b) =>
+    timeToMinutes(a.startTime || a.提供時間) - timeToMinutes(b.startTime || b.提供時間)
+  );
+  sorted.forEach(r => list.appendChild(buildRecCard(r, 'delete')));
+}
+
+/**
+ * レコードをカード形式のDOM要素として生成する
+ * mode: 'edit' | 'delete'
+ */
+function buildRecCard(r, mode) {
+  const card = document.createElement('div');
+  card.className = 'rec-card';
+
+  // 提供時間の表示（startTime/endTimeがあれば範囲表示、なければ保存値を逆算）
+  let timeRange = r.提供時間 || '';
+  const upperLimit = durationMap[r.サービス略称] || null;
+  if (r.startTime && r.endTime) {
+    timeRange = `${r.startTime}〜${r.endTime}`;
+  } else if (upperLimit && r.提供時間) {
+    const endMins   = timeToMinutes(r.提供時間) + 4;
+    const startMins = endMins - upperLimit + 1;
+    timeRange = `${minsToTimeStr(((startMins + 1440) % 1440))}〜${minsToTimeStr(endMins % 1440)}`;
+  }
+
+  card.innerHTML = `
+    <div class="rec-card-header">
+      <span class="rec-card-task">${r.作業項目 || '─'}</span>
+      <span style="color:var(--text-muted);font-size:0.8rem;">${r.サービス略称 || ''}</span>
+    </div>
+    <div class="rec-card-meta">
+      <span class="rec-card-badge"><i class="fa-solid fa-clock" style="opacity:0.6"></i> ${timeRange}</span>
+      <span class="rec-card-badge">${r.提供曜日 || ''}</span>
+      ${r.勤務区分 ? `<span class="rec-card-badge">${r.勤務区分}</span>` : ''}
+    </div>
+  `;
+
+  card.onclick = () => {
+    document.querySelectorAll('.rec-card.selected').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedRecord = r;
+    if (mode === 'edit') populateEditForm(r);
+    else showDeleteConfirm(r);
+  };
+  return card;
+}
+
+/**
+ * 選択したレコードの値を変更フォームに流し込む
+ */
+function populateEditForm(r) {
+  document.getElementById('edit-task').value    = r.作業項目    || '';
+  document.getElementById('edit-service').value = r.サービス略称 || '';
+  document.getElementById('edit-day').value     = r.提供曜日    || '';
+  document.getElementById('edit-kinmu').value   = r.勤務区分    || '';
+
+  // 開始日・終了日（Larkはエポックミリ秒で格納されている場合がある）
+  const toDateStr = v => {
+    if (!v) return '';
+    if (typeof v === 'number') return new Date(v).toISOString().slice(0, 10);
+    return v;
+  };
+  document.getElementById('edit-start').value = toDateStr(r.開始日);
+  document.getElementById('edit-end').value   = toDateStr(r.終了日);
+
+  // 提供時間の選択肢を更新してから現在値を選択する
+  updateEditTimeOptions(r.提供時間);
+
+  document.getElementById('edit-form-area').style.display = '';
+}
+
+/**
+ * 変更フォームの提供時間ドロップダウンを更新し、currentVal を初期選択する
+ */
+function updateEditTimeOptions(currentVal) {
+  const task    = document.getElementById('edit-task').value;
+  const service = document.getElementById('edit-service').value;
+  const timeEl  = document.getElementById('edit-time');
+  timeEl.innerHTML = '<option value="">-- 選択してください --</option>';
+
+  const taskDef = TASK_WINDOWS[task];
+  if (!taskDef) { timeEl.options[0].text = '作業項目を先に選択してください'; return; }
+
+  const upperLimit = durationMap[service] || null;
+  const duration   = upperLimit ? upperLimit - 1 : null;
+
+  for (const win of taskDef.windows) {
+    for (let startMins = win.start; startMins < win.end; startMins += 5) {
+      if (duration !== null && startMins + duration > win.end) continue;
+      const normalStart = startMins % 1440;
+      const normalEnd   = (startMins + (duration ?? 0)) % 1440;
+      const displayText = duration !== null
+        ? `${minsToTimeStr(normalStart)}〜${minsToTimeStr(normalEnd)}`
+        : minsToTimeStr(normalStart);
+      const storedMins = duration !== null
+        ? ((startMins + duration - 4 + 1440) % 1440)
+        : startMins % 1440;
+      timeEl.appendChild(new Option(displayText, minsToTimeStr(storedMins)));
+    }
+  }
+
+  // 現在登録されている提供時間を選択する（選択肢にあれば）
+  if (currentVal && [...timeEl.options].some(o => o.value === currentVal)) {
+    timeEl.value = currentVal;
+  }
+}
+
+function onEditFormChange() {
+  const currentVal = document.getElementById('edit-time').value;
+  updateEditTimeOptions(currentVal);
+}
+
+/**
+ * 変更フォームの内容をAPIに送信する
+ */
+async function submitEdit() {
+  if (!selectedRecord?.recordId) return showToast('変更するレコードが選択されていません', 'error');
+
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 保存中...';
+
+  try {
+    const body = {
+      作業項目:    document.getElementById('edit-task').value,
+      サービス略称: document.getElementById('edit-service').value,
+      提供曜日:    document.getElementById('edit-day').value,
+      提供時間:    document.getElementById('edit-time').value,
+      勤務区分:    document.getElementById('edit-kinmu').value,
+      開始日:      document.getElementById('edit-start').value || null,
+      終了日:      document.getElementById('edit-end').value   || null,
+    };
+
+    const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    showToast('変更を保存しました', 'success');
+    selectedRecord = null;
+    document.getElementById('edit-form-area').style.display = 'none';
+    await loadSchedule();
+    // 時間割リロード後にリストを再描画する
+    loadEditRecords();
+  } catch (err) {
+    showToast(`保存失敗: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 変更を保存する';
+  }
+}
+
+// ============================================================
+// 削除パネル
+// ============================================================
+
+/**
+ * 選択したレコードの削除確認エリアを表示する
+ */
+function showDeleteConfirm(r) {
+  const upperLimit = durationMap[r.サービス略称] || null;
+  let timeRange = r.提供時間 || '';
+  if (r.startTime && r.endTime) {
+    timeRange = `${r.startTime}〜${r.endTime}`;
+  } else if (upperLimit && r.提供時間) {
+    const endMins   = timeToMinutes(r.提供時間) + 4;
+    const startMins = endMins - upperLimit + 1;
+    timeRange = `${minsToTimeStr(((startMins + 1440) % 1440))}〜${minsToTimeStr(endMins % 1440)}`;
+  }
+
+  document.getElementById('del-confirm-msg').innerHTML = `
+    以下のレコードを削除します。この操作は取り消せません。<br><br>
+    <strong>${r.氏名}</strong>｜${r.作業項目 || '─'}｜${r.サービス略称 || '─'}<br>
+    ${r.提供曜日}　${timeRange}　${r.勤務区分 || ''}
+  `;
+  document.getElementById('del-confirm-area').style.display = '';
+}
+
+/**
+ * 選択したレコードを削除する
+ */
+async function submitDelete() {
+  if (!selectedRecord?.recordId) return showToast('削除するレコードが選択されていません', 'error');
+
+  const btn = document.getElementById('del-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 削除中...';
+
+  try {
+    const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    showToast('削除しました', 'success');
+    selectedRecord = null;
+    document.getElementById('del-confirm-area').style.display = 'none';
+    await loadSchedule();
+    loadDeleteRecords();
+  } catch (err) {
+    showToast(`削除失敗: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> この1件を削除する';
+  }
 }
 </script>
 </body>
