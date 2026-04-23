@@ -906,12 +906,7 @@ async function loadFields() {
       kinmuEl.appendChild(lbl);
     });
 
-    // 記録内容セレクト（本文冒頭を表示し内容を判別できるようにする）
-    const recEl = document.getElementById('f-record');
-    st.記録内容.forEach(r => {
-      const label = r.length > 28 ? r.slice(0, 28) + '…' : r;
-      recEl.appendChild(new Option(label, r));
-    });
+    // 記録内容は作業項目選択後に絞り込んで表示するためここでは初期化のみ行う
 
     // 各フォーム部品の変更でonFormChangeを呼ぶ
     document.getElementById('f-task').addEventListener('change',    onFormChange);
@@ -933,11 +928,39 @@ async function loadFields() {
  * フォームの任意の入力が変化したときに一括で再計算を実行する
  */
 function onFormChange() {
+  updateRecordTemplates();
   updateServiceHint();
   updateCartDisplay();
   updateTimeOptions();
   checkConflicts();
   updateCartDisplay();
+}
+
+// ============================================================
+// 記録内容テンプレート絞り込み
+// ============================================================
+
+/**
+ * 選択中の作業項目に対応する記録内容テンプレートのみセレクトに表示する。
+ * fieldsCache.static.記録内容 は作業項目をキーにしたオブジェクト。
+ */
+function updateRecordTemplates() {
+  const task  = document.getElementById('f-task').value;
+  const recEl = document.getElementById('f-record');
+  const prev  = recEl.value;
+
+  recEl.innerHTML = '<option value="">-- 選択しない --</option>';
+
+  if (!fieldsCache || !task) return;
+
+  const templates = fieldsCache.static.記録内容[task] || [];
+  templates.forEach(r => {
+    const label = r.length > 28 ? r.slice(0, 28) + '…' : r;
+    recEl.appendChild(new Option(label, r));
+  });
+
+  // 作業項目変更後も以前の選択が同じリストに存在すれば復元する
+  if (prev && [...recEl.options].some(o => o.value === prev)) recEl.value = prev;
 }
 
 // ============================================================
