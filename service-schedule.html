@@ -1183,15 +1183,16 @@ async function refreshServiceCodes() {
     const res  = await fetch(`${SERVER}/api/service-schedule/refresh-codes`, { method: 'POST' });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-    // サーバーのキャッシュ更新後にフィールド情報を再取得してフォームに反映する
+    // サーバーのキャッシュ更新後にフィールド情報（durationMap等）を再取得する
     await reloadServiceCodeFields();
+    // 続いてレコードを再取得する（サーバー側で upperLimit/startTime/endTime を再計算させるため）
+    await loadSchedule();
     showToast(`マスタ更新完了（${data.count}件）`, 'success');
   } catch (err) {
     showToast(`更新失敗: ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> マスタ更新';
-
   }
 }
 
@@ -1825,11 +1826,14 @@ async function loadSchedule() {
     if (!data.ok) throw new Error(data.error);
 
     currentRecords = data.records;
+    console.log(`[loadSchedule] ${currentOffice}: ${currentRecords.length}件取得`);
     // 氏名セレクトを現在の事業所でフィルタして更新する
     updateNameSelects();
     // カートや衝突バナーを最新データで再評価する
     checkConflicts();
     updateCartDisplay();
+    // フォームに氏名・作業項目・サービス略称が既に選択されている場合はスロットを再計算する
+    updateSlotPicker();
   } catch (err) {
     console.error('スケジュール取得エラー:', err);
     showToast(`データ取得失敗: ${err.message}`, 'error');
