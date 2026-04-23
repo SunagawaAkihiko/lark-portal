@@ -566,6 +566,45 @@
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { background: #0e8a6e; }
     .toast.error   { background: #dc2626; }
+
+    /* ===== カスタムドロップダウン（記録内容テンプレート用） ===== */
+    .custom-select-wrap { position: relative; }
+    .custom-select-trigger {
+      width: 100%;
+      padding: 0.5rem 2rem 0.5rem 0.7rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 0.7rem center;
+      font-family: inherit; font-size: 0.88rem;
+      color: var(--text-color);
+      text-align: left; cursor: pointer; outline: none;
+      transition: border-color 0.2s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .custom-select-trigger.placeholder { color: var(--text-muted); }
+    .custom-select-wrap.open .custom-select-trigger { border-color: var(--primary-color); }
+    .custom-select-dropdown {
+      display: none;
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white;
+      border: 1.5px solid var(--primary-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      z-index: 200;
+      max-height: 300px; overflow-y: auto;
+    }
+    .custom-select-wrap.open .custom-select-dropdown { display: block; }
+    .custom-select-option {
+      padding: 0.55rem 0.75rem;
+      font-size: 0.8rem; color: var(--text-color);
+      line-height: 1.55; cursor: pointer;
+      border-bottom: 1px solid var(--border-color);
+      word-break: break-all;
+    }
+    .custom-select-option:last-child { border-bottom: none; }
+    .custom-select-option:hover { background: var(--primary-light); }
+    .custom-select-option.selected { background: var(--card-bg); font-weight: 700; }
+    .custom-select-option.placeholder-opt { color: var(--text-muted); font-style: italic; }
   </style>
 </head>
 <body>
@@ -681,14 +720,16 @@
         <div class="radio-group" id="kinmu-radios"></div>
       </div>
 
-      <!-- 記録内容 -->
+      <!-- 記録内容（全文表示カスタムドロップダウン） -->
       <div class="field-group">
         <label class="field-label">記録内容テンプレート</label>
-        <select class="form-select" id="f-record" onchange="showRecordPreview()">
-          <option value="">-- 選択しない --</option>
-        </select>
-        <!-- 選択したテンプレートの全文プレビュー -->
-        <div id="record-preview" style="display:none;margin-top:0.4rem;padding:0.5rem 0.65rem;background:var(--bg-color);border:1px solid var(--border-color);border-radius:7px;font-size:0.75rem;color:var(--text-color);line-height:1.55;white-space:pre-wrap;word-break:break-all;"></div>
+        <div class="custom-select-wrap" id="record-select-wrap">
+          <button type="button" class="custom-select-trigger placeholder" id="record-trigger"
+            onclick="toggleRecordDropdown()">-- 選択しない --</button>
+          <div class="custom-select-dropdown" id="record-dropdown"></div>
+        </div>
+        <!-- 選択値をフォーム送信用に保持する隠しフィールド -->
+        <input type="hidden" id="f-record" value="">
       </div>
 
       <!-- 開始日・終了日 -->
@@ -800,6 +841,11 @@ const COL_DEFS = [
 // 初期化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // カスタムドロップダウン外をクリックしたら閉じる
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('record-select-wrap');
+    if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+  });
   await loadFields();
   await loadSchedule();
 });
@@ -947,40 +993,76 @@ function onFormChange() {
  * fieldsCache.static.記録内容 は作業項目をキーにしたオブジェクト。
  */
 /**
- * 記録内容テンプレート選択時に全文をプレビューエリアに表示する
+ * 記録内容カスタムドロップダウンの開閉を切り替える
  */
-function showRecordPreview() {
-  const val     = document.getElementById('f-record').value;
-  const preview = document.getElementById('record-preview');
-  if (val) {
-    preview.textContent = val;
-    preview.style.display = 'block';
-  } else {
-    preview.style.display = 'none';
-  }
+function toggleRecordDropdown() {
+  document.getElementById('record-select-wrap').classList.toggle('open');
 }
 
-function updateRecordTemplates() {
-  const task  = document.getElementById('f-task').value;
-  const recEl = document.getElementById('f-record');
-  const prev  = recEl.value;
+/**
+ * カスタムドロップダウンの選択肢をクリックしたときに選択値を確定する
+ */
+function selectRecordOption(value, label) {
+  document.getElementById('f-record').value = value;
+  const trigger = document.getElementById('record-trigger');
+  trigger.textContent = label || '-- 選択しない --';
+  trigger.classList.toggle('placeholder', !value);
+  // 全選択肢のselectedクラスを更新する
+  document.querySelectorAll('#record-dropdown .custom-select-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.value === value);
+  });
+  document.getElementById('record-select-wrap').classList.remove('open');
+}
 
-  recEl.innerHTML = '<option value="">-- 選択しない --</option>';
-  document.getElementById('record-preview').style.display = 'none';
+/**
+ * 作業項目に対応するテンプレートをカスタムドロップダウンに展開する。
+ * 各選択肢は全文を折り返して表示する。
+ */
+function updateRecordTemplates() {
+  const task    = document.getElementById('f-task').value;
+  const hidden  = document.getElementById('f-record');
+  const dropdown = document.getElementById('record-dropdown');
+  const trigger  = document.getElementById('record-trigger');
+  const prev     = hidden.value;
+
+  // ドロップダウンと選択値をリセットする
+  dropdown.innerHTML = '';
+  hidden.value = '';
+  trigger.textContent = '-- 選択しない --';
+  trigger.classList.add('placeholder');
+  document.getElementById('record-select-wrap').classList.remove('open');
+
   if (!fieldsCache || !task) return;
 
-  // 定型文設定テーブルから取得したtemplateMapを優先し、
-  // 未取得の場合はサーバーハードコードのstatic.記録内容にフォールバックする
+  // 定型文設定テーブル優先、フォールバックはstatic定義
   const templates = (fieldsCache.templateMap?.[task])
     ?? (fieldsCache.static.記録内容?.[task])
     ?? [];
 
+  // 「選択しない」選択肢を先頭に追加する
+  const noneEl = document.createElement('div');
+  noneEl.className = 'custom-select-option placeholder-opt';
+  noneEl.textContent = '-- 選択しない --';
+  noneEl.dataset.value = '';
+  noneEl.onclick = () => selectRecordOption('', '');
+  dropdown.appendChild(noneEl);
+
   templates.forEach(r => {
-    const label = r.length > 28 ? r.slice(0, 28) + '…' : r;
-    recEl.appendChild(new Option(label, r));
+    const el = document.createElement('div');
+    el.className = 'custom-select-option';
+    el.textContent = r; // 全文表示（折り返しはCSSで制御）
+    el.dataset.value = r;
+    if (r === prev) el.classList.add('selected');
+    el.onclick = () => selectRecordOption(r, r.length > 24 ? r.slice(0, 24) + '…' : r);
+    dropdown.appendChild(el);
   });
 
-  if (prev && [...recEl.options].some(o => o.value === prev)) recEl.value = prev;
+  // 以前の選択が同じ作業項目のリストに含まれていれば復元する
+  if (prev && templates.includes(prev)) {
+    hidden.value = prev;
+    trigger.textContent = prev.length > 24 ? prev.slice(0, 24) + '…' : prev;
+    trigger.classList.remove('placeholder');
+  }
 }
 
 // ============================================================
@@ -1669,8 +1751,11 @@ function resetFormFields() {
   document.getElementById('f-time').value    = '';
   document.getElementById('f-start').value   = '';
   document.getElementById('f-end').value     = '';
-  document.getElementById('f-record').value  = '';
-  document.getElementById('record-preview').style.display = 'none';
+  document.getElementById('f-record').value = '';
+  document.getElementById('record-trigger').textContent = '-- 選択しない --';
+  document.getElementById('record-trigger').classList.add('placeholder');
+  document.getElementById('record-select-wrap').classList.remove('open');
+  document.getElementById('record-dropdown').querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
   document.querySelectorAll('#day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
   const allCb = document.getElementById('day-all');
   if (allCb) allCb.checked = false;
