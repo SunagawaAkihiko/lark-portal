@@ -1393,7 +1393,23 @@ function buildColumn(colDef, records) {
     let prevEndMins = null;
 
     for (const g of sorted) {
-      const curStartMins = g.startTime ? timeToMinutes(g.startTime) : null;
+      // サーバーがstartTime/endTimeを返せない場合、クライアントdurationMapでフォールバック計算する
+      // 保存規約: 保存値 = endTime − 4分
+      let gStartTime = g.startTime;
+      let gEndTime   = g.endTime;
+      if (!gStartTime && g.提供時間) {
+        const storedMins = timeToMinutes(g.提供時間);
+        const endMins    = storedMins + 4;
+        const upperLimit = durationMap[g.サービス略称] || null;
+        // デバッグ：startTimeがnullのレコードを確認する
+        console.log('[buildColumn fallback]', g.サービス略称, '提供時間:', g.提供時間, 'durationMap値:', upperLimit, 'durationMapキー一覧:', Object.keys(durationMap));
+        if (upperLimit) {
+          const startMins = endMins - upperLimit + 1;
+          gStartTime = minsToTimeStr(((startMins % 1440) + 1440) % 1440);
+          gEndTime   = minsToTimeStr(endMins % 1440);
+        }
+      }
+      const curStartMins = gStartTime ? timeToMinutes(gStartTime) : null;
 
       // 空き時間帯行（data-gap-* 属性でハイライト対象として識別する）
       if (prevEndMins !== null && curStartMins !== null && curStartMins > prevEndMins + 1) {
@@ -1413,17 +1429,17 @@ function buildColumn(colDef, records) {
         body.appendChild(gapEl);
       }
 
-      if (g.endTime) prevEndMins = timeToMinutes(g.endTime);
+      if (gEndTime) prevEndMins = timeToMinutes(gEndTime);
 
       // ── エントリーセル ──
       const entry = document.createElement('div');
       entry.className = 'col-entry';
 
-      // 時刻行
+      // 時刻行（フォールバック済みのgStartTime/gEndTimeをそのまま使う）
       const timeEl = document.createElement('div');
       timeEl.className = 'col-entry-time';
-      timeEl.textContent = (g.startTime && g.endTime)
-        ? `${g.startTime}〜${g.endTime}`
+      timeEl.textContent = (gStartTime && gEndTime)
+        ? `${gStartTime}〜${gEndTime}`
         : (g.提供時間 || '');
       entry.appendChild(timeEl);
 
@@ -1475,9 +1491,23 @@ function buildColumn(colDef, records) {
  * ソート済みグループ配列の中に時間的な隙間があるか判定する
  */
 function hasTimeGap(sorted) {
-  const intervals = sorted
-    .filter(g => g.startTime && g.endTime)
-    .map(g => [timeToMinutes(g.startTime), timeToMinutes(g.endTime)]);
+  // durationMapフォールバック込みで開始・終了分を取得するヘルパー
+  function getInterval(g) {
+    if (g.startTime && g.endTime) {
+      return [timeToMinutes(g.startTime), timeToMinutes(g.endTime)];
+    }
+    if (g.提供時間) {
+      const storedMins = timeToMinutes(g.提供時間);
+      const endMins    = storedMins + 4;
+      const upperLimit = durationMap[g.サービス略称] || null;
+      if (upperLimit) {
+        const startMins = endMins - upperLimit + 1;
+        return [((startMins % 1440) + 1440) % 1440, endMins % 1440];
+      }
+    }
+    return null;
+  }
+  const intervals = sorted.map(getInterval).filter(Boolean);
   if (intervals.length === 0) return true;
   intervals.sort((a, b) => a[0] - b[0]);
   for (let i = 0; i < intervals.length - 1; i++) {
