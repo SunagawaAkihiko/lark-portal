@@ -1066,7 +1066,7 @@ const TASK_WINDOWS = {
   'イブニングケア': { windows: [{ start: 1080, end: 1260 }], label: '18:00〜21:00'  },
   '排泄介助':       { windows: [{ start: 1320, end: 1440 }, { start: 1440, end: 1680 }], label: '22:00〜翌4:00' },
   '排泄介助②':     { windows: [{ start: 1320, end: 1440 }, { start: 1440, end: 1680 }], label: '22:00〜翌4:00' },
-  '入浴介助':       { windows: [{ start: 540,  end: 1020 }], label: '9:00〜17:00'   },
+  '入浴介助':       { windows: [{ start: 540,  end: 1080 }], label: '9:00〜18:00'   },
 };
 
 /**
@@ -1606,9 +1606,12 @@ function renderTimeline(records) {
 
       const grid = document.createElement('div');
       grid.className = 'timeline-grid';
-      // 全作業項目コラムを表示する（空き時間表示が主目的のため登録ゼロでも表示する）
+      // 上津役家は勤務区分ごとに使用する作業項目が異なるため、
+      // 当該セクションに登録済の作業項目のみコラム表示する（ゼロ件の場合は全表示）
+      const usedTasks = new Set(sectionRecords.map(r => r.作業項目).filter(Boolean));
       for (const colDef of COL_DEFS) {
         const colRecords = sectionRecords.filter(r => r.作業項目 === colDef.key);
+        if (usedTasks.size > 0 && !usedTasks.has(colDef.key)) continue;
         grid.appendChild(buildColumn(colDef, colRecords));
       }
       section.appendChild(grid);
