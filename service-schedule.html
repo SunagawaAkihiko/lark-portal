@@ -2221,12 +2221,12 @@ function renderCart() {
     el.className = 'cart-item';
     const dayStr = item.提供曜日.map(d => DAY_LABELS[d] || d).join('');
     const svcLabel  = item.サービス略称 || '─';
-    const taskLabel = item.作業項目 || '';
+    const taskLabel = item.作業項目 || '─';
     const unitStr   = item.monthlyUnits > 0 ? `${item.monthlyUnits}単位/月` : '─';
     el.innerHTML = `
       <div class="cart-item-info">
-        <div class="cart-item-service">${svcLabel}</div>
-        <div class="cart-item-detail">${taskLabel ? taskLabel + ' / ' : ''}${item.氏名} / ${dayStr} / ${item.提供時間}</div>
+        <div class="cart-item-service">${taskLabel}</div>
+        <div class="cart-item-detail">${svcLabel} / ${item.氏名} / ${dayStr} / ${item.提供時間}</div>
       </div>
       <div class="cart-item-units">${unitStr}</div>
       <button class="cart-item-del" onclick="removeFromCart(${idx})" title="削除">
