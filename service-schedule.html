@@ -1492,25 +1492,34 @@ function updateSlotPicker() {
   const step = upperLimit - 1;
 
   // 選択した氏名・作業項目の既存レコードから占有区間を収集する（全曜日を集計）。
-  // ① startTime/endTime がサーバー側で計算済みならそれを使う
-  // ② なければ r.upperLimit（サーバー計算済み）または durationMap から逆算する
-  const personRecs = currentRecords.filter(r => r.氏名 === name && r.作業項目 === task);
+  // Lark返却値に余分なスペースが含まれる場合を考慮して trim で正規化する。
+  const nameTrimmed = name.trim();
+  const taskTrimmed = task.trim();
+  const personRecs = currentRecords.filter(r =>
+    (r.氏名 || '').trim() === nameTrimmed && (r.作業項目 || '').trim() === taskTrimmed
+  );
   console.log(`[slot-picker] 対象レコード数: ${personRecs.length} (氏名=${name} 作業項目=${task})`);
 
+  // 既存レコードの提供時間（stored value）を Set で持っておき、スロット生成時に完全一致チェックで使う
+  const occupiedStoredSet = new Set(personRecs.map(r => r.提供時間).filter(Boolean));
+
   const occupied = personRecs.flatMap(r => {
+    // ① サーバーが startTime/endTime を計算済みの場合はそのまま使う
     if (r.startTime && r.endTime) {
       console.log(`[slot-picker] 占有(A): ${r.startTime}〜${r.endTime} 曜日=${r.提供曜日}`);
       return [[timeToMinutes(r.startTime), timeToMinutes(r.endTime)]];
     }
-    // r.upperLimit はサーバーが serviceCodeDurationMap から事前計算した値を使う
-    const upper = r.upperLimit || durationMap[r.サービス略称] || null;
-    if (r.提供時間 && upper) {
+    // ② サーバー計算 upperLimit → durationMap の順で duration を取得する。
+    //    どちらも null の場合は step（登録しようとしているサービスの長さ）を保守的なフォールバックとして使う。
+    //    これにより同一サービスの重複登録を確実にブロックする。
+    const upper = r.upperLimit || durationMap[r.サービス略称] || step;
+    if (r.提供時間) {
       const endMins   = timeToMinutes(r.提供時間) + 4;
       const startMins = ((endMins - upper + 1) + 1440) % 1440;
-      console.log(`[slot-picker] 占有(B): 提供時間=${r.提供時間} upper=${upper} → ${startMins}〜${endMins} 曜日=${r.提供曜日}`);
-      return [[startMins, endMins % 1440]];
+      console.log(`[slot-picker] 占有(B): 提供時間=${r.提供時間} upper=${upper} → ${startMins}〜${endMins % 1440} 曜日=${r.提供曜日}`);
+      return [[startMins % 1440, endMins % 1440]];
     }
-    console.warn(`[slot-picker] SKIP（時間算出不可）: 氏名=${r.氏名} サービス略称=${r.サービス略称} 提供時間=${r.提供時間} upperLimit=${r.upperLimit}`);
+    console.warn(`[slot-picker] SKIP（提供時間なし）: 氏名=${r.氏名} サービス略称=${r.サービス略称}`);
     return [];
   }).sort((a, b) => a[0] - b[0]);
 
@@ -1526,12 +1535,15 @@ function updateSlotPicker() {
       // cursor から占有開始点(s)の手前までスロットを埋める
       // slotEnd(= cursor + step) が s 以下なら衝突しない
       while (cursor + step <= s) {
-        slots.push({ startMins: cursor, endMins: cursor + step });
+        // 追加の保護: storedValue が既存レコードと完全一致するスロットは除外する
+        const storedStr = minsToTimeStr((cursor + step - 4 + 1440) % 1440);
+        if (!occupiedStoredSet.has(storedStr)) {
+          slots.push({ startMins: cursor, endMins: cursor + step });
+        }
         cursor += step;
       }
       // 占有区間の終端以降で、ウィンドウ基点から step 倍数の最小位置にカーソルを進める。
       // ceil((e - win.start) / step) で e を含む区間の次のグリッド番号を求める。
-      // 例: win.start=540, step=60, e=600 → ceil(1)=1 → cursor=600（10:00から再開）
       if (cursor <= e) {
         const stepsNeeded = Math.ceil((e - win.start) / step);
         cursor = win.start + stepsNeeded * step;
@@ -1539,7 +1551,10 @@ function updateSlotPicker() {
     }
     // ウィンドウ末尾まで残りのスロットを生成する
     while (cursor + step <= win.end) {
-      slots.push({ startMins: cursor, endMins: cursor + step });
+      const storedStr = minsToTimeStr((cursor + step - 4 + 1440) % 1440);
+      if (!occupiedStoredSet.has(storedStr)) {
+        slots.push({ startMins: cursor, endMins: cursor + step });
+      }
       cursor += step;
     }
   }
