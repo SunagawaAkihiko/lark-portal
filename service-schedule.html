@@ -1495,28 +1495,24 @@ function updateSlotPicker() {
   // サービス略称の末尾によって提供可能な時間帯を絞り込む。
   // 「夜」：6:00-8:00 および 18:00-22:00 のみ許可
   // 「深」：22:00-翌6:00 のみ許可（深夜帯、日付をまたぐため1440超の値で表現）
-  // それ以外：TASK_WINDOWS の定義をそのまま使用
+  // suffix無し：8:00-18:00 のみ許可（夜・深の時間帯を除いた日中帯）
   const SUFFIX_WINDOWS = {
     '夜': [{ start: 360, end: 480 }, { start: 1080, end: 1320 }],
     '深': [{ start: 1320, end: 1440 }, { start: 1440, end: 1800 }],
+    '':   [{ start: 480, end: 1080 }],
   };
-  const suffix = service.slice(-1);
-  const suffixWins = SUFFIX_WINDOWS[suffix] ?? null;
+  const suffix = ['夜', '深'].includes(service.slice(-1)) ? service.slice(-1) : '';
+  const suffixWins = SUFFIX_WINDOWS[suffix];
 
   // TASK_WINDOWS と suffix 制限の積集合を求めて有効ウィンドウを決定する
-  let effectiveWindows;
-  if (suffixWins) {
-    effectiveWindows = [];
-    for (const tw of taskDef.windows) {
-      for (const sw of suffixWins) {
-        const s = Math.max(tw.start, sw.start);
-        const e = Math.min(tw.end,   sw.end);
-        if (s < e) effectiveWindows.push({ start: s, end: e });
-      }
+  // 積集合が空（作業項目の時間帯とsuffix制限が重ならない）場合は空き枠なしになる
+  const effectiveWindows = [];
+  for (const tw of taskDef.windows) {
+    for (const sw of suffixWins) {
+      const s = Math.max(tw.start, sw.start);
+      const e = Math.min(tw.end,   sw.end);
+      if (s < e) effectiveWindows.push({ start: s, end: e });
     }
-    // 積集合が空（作業項目の時間帯とsuffix制限が重ならない）場合は空き枠なしで表示する
-  } else {
-    effectiveWindows = taskDef.windows;
   }
 
   // 事業所全体の登録済みサービス（氏名・作業項目問わず）から占有時間区間を収集する。
