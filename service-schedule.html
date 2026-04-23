@@ -208,6 +208,31 @@
     .rec-group-toggle:hover { background: var(--primary-color); color: #fff; }
     .rec-group-toggle .toggle-arrow { transition: transform 0.2s; display: inline-block; }
     .rec-group-toggle.open .toggle-arrow { transform: rotate(180deg); }
+    /* 一括変更ボタン（グループヘッダー内） */
+    .rec-group-bulk-btn {
+      background: none;
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      color: var(--primary-color);
+      cursor: pointer;
+      font-family: inherit; font-weight: 600;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .rec-group-bulk-btn:hover { background: var(--primary-color); color: #fff; }
+    /* 一括変更モードの案内バナー */
+    .bulk-edit-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.78rem;
+      color: #1d4ed8;
+      margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
     /* 個別カードのアコーディオンラッパー */
     .rec-group-body {
       display: none;
@@ -1012,7 +1037,12 @@
 
       <!-- 編集フォーム（レコード選択後に表示） -->
       <div id="edit-form-area" style="display:none; margin-top:0.75rem; border-top:1px solid var(--border-color); padding-top:0.75rem;">
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        <!-- 一括変更モード時のバナー（通常は非表示） -->
+        <div class="bulk-edit-banner" id="bulk-edit-banner" style="display:none">
+          <i class="fa-solid fa-layer-group"></i>
+          <span id="bulk-edit-banner-text"></span>
+        </div>
+        <p id="edit-form-hint" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
           <i class="fa-solid fa-circle-info"></i> 変更したい項目を編集して保存してください
         </p>
 
@@ -1030,7 +1060,7 @@
           </select>
         </div>
 
-        <div class="field-group">
+        <div class="field-group" id="edit-day-group">
           <label class="field-label">提供曜日<span class="req">*</span></label>
           <select class="form-select" id="edit-day">
             <option value="">-- 選択してください --</option>
@@ -1139,7 +1169,8 @@ let cart = [];
 let currentAction = 'register';
 
 /** 変更・削除で選択中のレコード */
-let selectedRecord = null;
+let selectedRecord   = null;
+let bulkEditRecords  = null; // 一括変更モード時に対象レコード配列を保持する
 
 /** 提供曜日の表示順序と略称定義 */
 const DAY_ORDER  = ['月曜', '火曜', '水曜', '木曜', '金曜', '土曜', '日曜'];
@@ -2325,7 +2356,6 @@ async function submitAll() {
     console.error('一括登録エラー:', err);
     showToast(`登録失敗: ${err.message}`, 'error');
     btn.disabled = false;
-    document.getElementById('submit-all-label').textContent = `まとめて登録する（${cart.length}件）`;
     btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span id="submit-all-label">まとめて登録する（${cart.length}件）</span>`;
   }
 }
@@ -2473,6 +2503,19 @@ function renderRecordsByTask(name, listEl, mode) {
     toggleBtn.innerHTML = `詳細表示 <span class="toggle-arrow">▼</span>`;
 
     hdr.innerHTML = `<i class="fa-solid fa-tag" style="opacity:0.6;font-size:0.7rem;color:${accentColor}"></i>${task}<span class="rec-group-count">${grouped[task].length}件</span>`;
+
+    // 変更パネルのみ一括変更ボタンを追加する
+    if (mode === 'edit') {
+      const bulkBtn = document.createElement('button');
+      bulkBtn.className = 'rec-group-bulk-btn';
+      bulkBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> 一括変更';
+      bulkBtn.onclick = (e) => {
+        e.stopPropagation();
+        populateBulkEditForm(task, grouped[task]);
+      };
+      hdr.appendChild(bulkBtn);
+    }
+
     hdr.appendChild(toggleBtn);
     listEl.appendChild(hdr);
 
@@ -2501,7 +2544,11 @@ function renderRecordsByTask(name, listEl, mode) {
  */
 function loadEditRecords() {
   document.getElementById('edit-form-area').style.display = 'none';
-  selectedRecord = null;
+  document.getElementById('edit-day-group').style.display = '';
+  document.getElementById('bulk-edit-banner').style.display = 'none';
+  document.getElementById('edit-form-hint').style.display = '';
+  selectedRecord  = null;
+  bulkEditRecords = null;
   renderRecordsByTask(
     document.getElementById('edit-name').value,
     document.getElementById('edit-records-list'),
@@ -2564,9 +2611,51 @@ function buildRecCard(r, mode) {
 }
 
 /**
- * 選択したレコードの値を変更フォームに流し込む
+ * 作業項目グループ全体を一括変更モードでフォームに展開する。
+ * 提供曜日は曜日ごとに異なるため変更対象から外し、非表示にする。
+ * 代表値は先頭レコードから取得する。
+ */
+function populateBulkEditForm(task, records) {
+  // 一括モードのフラグをセットし、単一レコード選択をリセットする
+  bulkEditRecords = records;
+  selectedRecord  = null;
+  document.querySelectorAll('.rec-card.selected').forEach(c => c.classList.remove('selected'));
+
+  // 先頭レコードを代表値として使用する
+  const rep = records[0];
+  document.getElementById('edit-task').value    = rep.作業項目    || '';
+  document.getElementById('edit-service').value = rep.サービス略称 || '';
+  document.getElementById('edit-kinmu').value   = rep.勤務区分    || '';
+
+  const toDateStr = v => {
+    if (!v) return '';
+    if (typeof v === 'number') return new Date(v).toISOString().slice(0, 10);
+    return v;
+  };
+  document.getElementById('edit-start').value = toDateStr(rep.開始日);
+  document.getElementById('edit-end').value   = toDateStr(rep.終了日);
+
+  // 提供曜日フィールドは一括変更対象外のため非表示にする
+  document.getElementById('edit-day-group').style.display = 'none';
+  updateEditTimeOptions(rep.提供時間);
+
+  // 一括モードバナーを表示する
+  document.getElementById('bulk-edit-banner').style.display = '';
+  document.getElementById('bulk-edit-banner-text').textContent =
+    `「${task}」${records.length}件を一括変更します（提供曜日は変更されません）`;
+  document.getElementById('edit-form-hint').style.display = 'none';
+  document.getElementById('edit-form-area').style.display = '';
+}
+
+/**
+ * 選択したレコードの値を変更フォームに流し込む（単一レコードモード）
  */
 function populateEditForm(r) {
+  // 一括モードを解除して単一レコードモードに戻す
+  bulkEditRecords = null;
+  document.getElementById('edit-day-group').style.display = '';
+  document.getElementById('bulk-edit-banner').style.display = 'none';
+  document.getElementById('edit-form-hint').style.display = '';
   document.getElementById('edit-task').value    = r.作業項目    || '';
   document.getElementById('edit-service').value = r.サービス略称 || '';
   document.getElementById('edit-day').value     = r.提供曜日    || '';
@@ -2632,36 +2721,60 @@ function onEditFormChange() {
  * 変更フォームの内容をAPIに送信する
  */
 async function submitEdit() {
-  if (!selectedRecord?.recordId) return showToast('変更するレコードが選択されていません', 'error');
+  // 一括変更モードと単一レコードモードを判定する
+  const isBulk = bulkEditRecords !== null && bulkEditRecords.length > 0;
+  if (!isBulk && !selectedRecord?.recordId) {
+    return showToast('変更するレコードが選択されていません', 'error');
+  }
 
   const btn = document.getElementById('edit-save-btn');
   btn.disabled = true;
   btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 保存中...';
 
+  // 一括変更時は提供時間・勤務区分・サービス略称・作業項目・適用期間のみ変更する
+  // 提供曜日は各レコードの元の値を維持するため送信しない
+  const commonBody = {
+    作業項目:    document.getElementById('edit-task').value,
+    サービス略称: document.getElementById('edit-service').value,
+    提供時間:    document.getElementById('edit-time').value,
+    勤務区分:    document.getElementById('edit-kinmu').value,
+    開始日:      document.getElementById('edit-start').value || null,
+    終了日:      document.getElementById('edit-end').value   || null,
+  };
+
   try {
-    const body = {
-      作業項目:    document.getElementById('edit-task').value,
-      サービス略称: document.getElementById('edit-service').value,
-      提供曜日:    document.getElementById('edit-day').value,
-      提供時間:    document.getElementById('edit-time').value,
-      勤務区分:    document.getElementById('edit-kinmu').value,
-      開始日:      document.getElementById('edit-start').value || null,
-      終了日:      document.getElementById('edit-end').value   || null,
-    };
+    if (isBulk) {
+      // 一括変更：グループ内の全レコードを順番に更新する
+      for (const rec of bulkEditRecords) {
+        const res = await fetch(`${SERVER}/api/service-schedule/${rec.recordId}`, {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(commonBody),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+      }
+      showToast(`${bulkEditRecords.length}件を一括変更しました`, 'success');
+      bulkEditRecords = null;
+    } else {
+      // 単一変更：提供曜日も含めて更新する
+      const body = { ...commonBody, 提供曜日: document.getElementById('edit-day').value };
+      const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      showToast('変更を保存しました', 'success');
+      selectedRecord = null;
+    }
 
-    const res = await fetch(`${SERVER}/api/service-schedule/${selectedRecord.recordId}`, {
-      method:  'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-
-    showToast('変更を保存しました', 'success');
-    selectedRecord = null;
     document.getElementById('edit-form-area').style.display = 'none';
+    document.getElementById('edit-day-group').style.display = '';
+    document.getElementById('bulk-edit-banner').style.display = 'none';
+    document.getElementById('edit-form-hint').style.display = '';
     await loadSchedule();
-    // 時間割リロード後にリストを再描画する
     loadEditRecords();
   } catch (err) {
     showToast(`保存失敗: ${err.message}`, 'error');
