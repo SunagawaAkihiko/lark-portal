@@ -1123,13 +1123,8 @@ async function loadFields() {
 
     const st = fieldsCache.static;
 
-    // 氏名セレクト（登録・変更・削除パネル全てに同じ選択肢を設定する）
-    const nameEl = document.getElementById('f-name');
-    st.氏名.forEach(n => nameEl.appendChild(new Option(n, n)));
-    ['edit-name', 'del-name'].forEach(id => {
-      const el = document.getElementById(id);
-      st.氏名.forEach(n => el.appendChild(new Option(n, n)));
-    });
+    // 氏名セレクトはloadSchedule()→updateNameSelects()で事業所ごとに動的設定するため
+    // ここでは初期化のみ（loadSchedule完了後に正しい選択肢が入る）
 
     // 作業項目セレクト
     const taskEl = document.getElementById('f-task');
@@ -1465,6 +1460,26 @@ function switchAction(action) {
   document.getElementById('panel-delete').style.display   = action === 'delete'   ? '' : 'none';
 }
 
+/**
+ * currentRecordsから事業所に紐づく氏名を抽出し、
+ * 登録・変更・削除パネルの氏名セレクトを同期する。
+ * loadSchedule()完了後に呼び出す。
+ */
+function updateNameSelects() {
+  // 重複なし・五十音順で氏名リストを生成する
+  const names = [...new Set(currentRecords.map(r => r.氏名).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ja'));
+
+  ['f-name', 'edit-name', 'del-name'].forEach(id => {
+    const el   = document.getElementById(id);
+    const prev = el.value; // 選択中の値を保持する
+    el.innerHTML = '<option value="">-- 選択してください --</option>';
+    names.forEach(n => el.appendChild(new Option(n, n)));
+    // 事業所切り替え後も同じ氏名が選択肢にあれば復元する
+    if (prev && names.includes(prev)) el.value = prev;
+  });
+}
+
 function resetEditDeletePanels() {
   selectedRecord = null;
   document.getElementById('edit-name').value = '';
@@ -1493,6 +1508,8 @@ async function loadSchedule() {
 
     currentRecords = data.records;
     renderTimeline(currentRecords);
+    // 事業所のレコードから氏名を抽出してセレクトを更新する
+    updateNameSelects();
   } catch (err) {
     console.error('スケジュール取得エラー:', err);
     wrap.innerHTML = `<div class="timetable-empty" style="color:#dc2626">
