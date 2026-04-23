@@ -146,6 +146,51 @@
       padding: 0.05rem 0.45rem;
       font-size: 0.7rem;
     }
+    /* ===== 登録ウィザード ===== */
+    /* Step2・Step3の区切り帯 */
+    .step-divider {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; font-weight: 700; color: var(--primary-color);
+      padding: 0.55rem 0 0.4rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: 0.6rem; margin-bottom: 0.6rem;
+    }
+    /* スロットカードのグリッドコンテナ */
+    .slot-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+    /* 個別スロットカード */
+    .slot-card {
+      padding: 0.45rem 0.25rem;
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 7px;
+      font-size: 0.78rem; font-weight: 700;
+      color: #15803d; text-align: center;
+      cursor: pointer; line-height: 1.25;
+      transition: background 0.12s, border-color 0.12s, transform 0.1s;
+    }
+    .slot-card:hover  { background: #dcfce7; border-color: #4ade80; transform: translateY(-1px); }
+    .slot-card.selected { background: #059669; border-color: #047857; color: #fff; }
+    .slot-empty-msg { font-size: 0.8rem; color: var(--text-muted); padding: 0.5rem; text-align: center; }
+    /* 選択済み時間帯バッジ */
+    .selected-slot-badge {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: #059669; color: white;
+      border-radius: 8px; padding: 0.55rem 0.75rem;
+      font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem;
+    }
+    .slot-change-btn {
+      margin-left: auto;
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 4px; color: white; font-size: 0.72rem;
+      padding: 0.15rem 0.5rem; cursor: pointer; font-family: inherit;
+    }
+    .slot-change-btn:hover { background: rgba(255,255,255,0.35); }
+
     /* 詳細表示トグルボタン */
     .rec-group-toggle {
       margin-left: auto;
@@ -812,18 +857,7 @@
     </div>
     <div class="form-body">
 
-      <!-- 時間帯重複警告（赤） -->
-      <div class="conflict-banner" id="conflict-banner">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span id="conflict-msg"></span>
-      </div>
-
-      <!-- 2時間未満ギャップ警告（オレンジ） -->
-      <div class="conflict-banner" id="gap-banner" style="background:#fff7ed;border-color:#fb923c;color:#c2410c;">
-        <i class="fa-solid fa-clock"></i>
-        <span id="gap-msg"></span>
-      </div>
-
+      <!-- ══ Step1：基本選択（氏名・作業項目・サービス略称） ══ -->
       <!-- 氏名 -->
       <div class="field-group">
         <label class="field-label">氏名<span class="req">*</span></label>
@@ -846,57 +880,78 @@
         <select class="form-select" id="f-service">
           <option value="">-- 選択してください --</option>
         </select>
-        <!-- サービスコードから取得した時間・単位数のプレビュー -->
         <p class="field-hint" id="service-hint"></p>
       </div>
 
-      <!-- 提供曜日（複数選択） -->
-      <div class="field-group">
-        <label class="field-label">提供曜日<span class="req">*</span></label>
-        <div class="day-checkboxes" id="day-checkboxes"></div>
-      </div>
-
-      <!-- 提供時間（作業項目＋サービス略称選択後に空き枠のみ表示） -->
-      <div class="field-group">
-        <label class="field-label">提供時間<span class="req">*</span></label>
-        <select class="form-select" id="f-time">
-          <option value="">作業項目を選択してください</option>
-        </select>
-        <!-- 時間ウィンドウと空き枠数ヒント -->
-        <p class="field-hint" id="time-hint"></p>
-      </div>
-
-      <!-- 勤務区分 -->
-      <div class="field-group">
-        <label class="field-label">勤務区分</label>
-        <div class="radio-group" id="kinmu-radios"></div>
-      </div>
-
-      <!-- 記録内容（全文表示カスタムドロップダウン） -->
-      <div class="field-group">
-        <label class="field-label">記録内容テンプレート</label>
-        <div class="custom-select-wrap" id="record-select-wrap">
-          <button type="button" class="custom-select-trigger placeholder" id="record-trigger"
-            onclick="toggleRecordDropdown()">-- 選択しない --</button>
-          <div class="custom-select-dropdown" id="record-dropdown"></div>
+      <!-- ══ Step2：空き時間帯スロットピッカー（3項目が揃ったら表示） ══ -->
+      <div id="reg-step2" style="display:none">
+        <div class="step-divider">
+          <i class="fa-solid fa-clock"></i> 空いている時間帯を選択
+          <span class="field-hint ok" id="slot-hint" style="margin-left:auto;font-weight:400;"></span>
         </div>
-        <!-- 選択値をフォーム送信用に保持する隠しフィールド -->
-        <input type="hidden" id="f-record" value="">
+        <!-- サービス時間単位で区切ったスロットカードを動的に生成する -->
+        <div id="slot-picker-grid" class="slot-picker-grid"></div>
       </div>
 
-      <!-- 開始日・終了日 -->
-      <div class="field-group">
-        <label class="field-label">適用期間（任意）</label>
-        <div class="date-row">
-          <input type="date" class="form-input" id="f-start" placeholder="開始日">
-          <input type="date" class="form-input" id="f-end" placeholder="終了日">
+      <!-- ══ Step3：詳細入力（スロット選択後に表示） ══ -->
+      <div id="reg-step3" style="display:none">
+        <!-- 選択済み時間帯バッジ -->
+        <div class="selected-slot-badge">
+          <i class="fa-solid fa-check-circle"></i>
+          <span id="selected-slot-text"></span>
+          <button class="slot-change-btn" onclick="clearSlotSelection()">変更</button>
         </div>
-      </div>
+        <!-- 提供時間の値をaddToCart/checkConflictsが参照する隠しフィールド -->
+        <input type="hidden" id="f-time" value="">
 
-      <!-- リストに追加ボタン -->
-      <button class="submit-btn" id="add-btn" onclick="addToCart()">
-        リストに追加
-      </button>
+        <!-- 時間帯重複警告（赤） -->
+        <div class="conflict-banner" id="conflict-banner">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="conflict-msg"></span>
+        </div>
+        <!-- 2時間未満ギャップ警告（オレンジ） -->
+        <div class="conflict-banner" id="gap-banner" style="background:#fff7ed;border-color:#fb923c;color:#c2410c;">
+          <i class="fa-solid fa-clock"></i>
+          <span id="gap-msg"></span>
+        </div>
+
+        <!-- 提供曜日（複数選択） -->
+        <div class="field-group">
+          <label class="field-label">提供曜日<span class="req">*</span></label>
+          <div class="day-checkboxes" id="day-checkboxes"></div>
+        </div>
+
+        <!-- 勤務区分 -->
+        <div class="field-group">
+          <label class="field-label">勤務区分</label>
+          <div class="radio-group" id="kinmu-radios"></div>
+        </div>
+
+        <!-- 記録内容（全文表示カスタムドロップダウン） -->
+        <div class="field-group">
+          <label class="field-label">記録内容テンプレート</label>
+          <div class="custom-select-wrap" id="record-select-wrap">
+            <button type="button" class="custom-select-trigger placeholder" id="record-trigger"
+              onclick="toggleRecordDropdown()">-- 選択しない --</button>
+            <div class="custom-select-dropdown" id="record-dropdown"></div>
+          </div>
+          <input type="hidden" id="f-record" value="">
+        </div>
+
+        <!-- 開始日・終了日 -->
+        <div class="field-group">
+          <label class="field-label">適用期間（任意）</label>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-start" placeholder="開始日">
+            <input type="date" class="form-input" id="f-end" placeholder="終了日">
+          </div>
+        </div>
+
+        <!-- リストに追加ボタン -->
+        <button class="submit-btn" id="add-btn" onclick="addToCart()">
+          リストに追加
+        </button>
+      </div>
 
       <!-- ===== 登録予定リスト（カート） ===== -->
       <div class="cart-section">
@@ -1219,7 +1274,7 @@ async function loadFields() {
       dayBox.appendChild(lbl);
     });
 
-    // 提供時間は動的生成のためここでは初期化しない（updateTimeOptions参照）
+    // 提供時間は updateSlotPicker() が動的に設定するため初期化不要
 
     // 勤務区分ラジオ
     const kinmuEl = document.getElementById('kinmu-radios');
@@ -1264,9 +1319,11 @@ async function loadFields() {
 function onFormChange() {
   updateRecordTemplates();
   updateServiceHint();
-  updateCartDisplay();
-  updateTimeOptions();
-  checkConflicts();
+  updateSlotPicker();
+  // スロット選択済みの場合のみ衝突検出を実行する（曜日変更に対応）
+  if (document.getElementById('f-time').value) {
+    checkConflicts();
+  }
   updateCartDisplay();
 }
 
@@ -1379,6 +1436,153 @@ function updateServiceHint() {
 }
 
 // ============================================================
+// 空き時間スロットピッカー（登録ウィザード Step2/Step3）
+// ============================================================
+
+/**
+ * 現在のスロット選択状態を管理するグローバル変数。
+ * 氏名・作業項目・サービス略称のいずれかが変わると null にリセットされる。
+ */
+let selectedSlot  = null; // { startMins, endMins, storedValue }
+let slotPickerKey = '';   // 前回描画時の "氏名|作業項目|サービス略称" キー
+
+/**
+ * 氏名・作業項目・サービス略称が揃ったときに、
+ * その人のその作業項目について空いているサービス単位スロットをカード表示する。
+ * - 既存レコードの占有区間を全曜日で集計して空き区間を算出する
+ * - 空き区間をサービス時間単位（upperLimit-1 分）で分割してカードを生成する
+ * - ウィンドウ基点からstep倍数にスナップして表示を揃える
+ */
+function updateSlotPicker() {
+  const name    = document.getElementById('f-name').value;
+  const task    = document.getElementById('f-task').value;
+  const service = document.getElementById('f-service').value.trim();
+  const step2   = document.getElementById('reg-step2');
+  const step3   = document.getElementById('reg-step3');
+
+  const newKey = `${name}|${task}|${service}`;
+  if (newKey !== slotPickerKey) {
+    // 選択値が変わったので選択済みスロットをリセットする
+    selectedSlot  = null;
+    slotPickerKey = newKey;
+    step3.style.display = 'none';
+    document.getElementById('f-time').value = '';
+  }
+
+  if (!name || !task || !service) {
+    step2.style.display = 'none';
+    return;
+  }
+
+  const upperLimit = durationMap[service];
+  const taskDef    = TASK_WINDOWS[task];
+  if (!upperLimit || !taskDef) {
+    step2.style.display = 'none';
+    return;
+  }
+
+  // スロット1枠あたりの長さ（分）= upperLimit - 1
+  const step = upperLimit - 1;
+
+  // 選択した氏名・作業項目の既存レコードから占有区間を収集する（全曜日を集計）
+  const occupied = currentRecords
+    .filter(r => r.氏名 === name && r.作業項目 === task && r.startTime && r.endTime)
+    .map(r => [timeToMinutes(r.startTime), timeToMinutes(r.endTime)])
+    .sort((a, b) => a[0] - b[0]);
+
+  // TASK_WINDOWS の各ウィンドウ内で空き区間を計算し step 単位に分割してスロット生成
+  const slots = [];
+  for (const win of taskDef.windows) {
+    let cursor = win.start;
+    for (const [s, e] of occupied) {
+      if (s > win.end) break;
+      if (e < win.start) continue;
+      // cursor から s の手前までスロットを埋める（slotEnd <= s でよい）
+      while (cursor + step <= s) {
+        slots.push({ startMins: cursor, endMins: cursor + step });
+        cursor += step;
+      }
+      // 占有区間をスキップし、ウィンドウ基点から step の倍数位置にスナップする
+      if (cursor <= e) {
+        cursor = e + 1;
+        const offset = (cursor - win.start) % step;
+        if (offset > 0) cursor += step - offset;
+      }
+    }
+    // ウィンドウ末尾まで残りのスロットを生成する
+    while (cursor + step <= win.end) {
+      slots.push({ startMins: cursor, endMins: cursor + step });
+      cursor += step;
+    }
+  }
+
+  // スロットカードをグリッドに描画する
+  const grid = document.getElementById('slot-picker-grid');
+  const hint = document.getElementById('slot-hint');
+  grid.innerHTML = '';
+
+  if (slots.length === 0) {
+    grid.innerHTML = '<div class="slot-empty-msg"><i class="fa-solid fa-lock" style="opacity:0.4"></i> 空きがありません</div>';
+    hint.textContent = '空き枠なし';
+    hint.className = 'field-hint warn';
+  } else {
+    hint.textContent = `${slots.length}枠空きあり`;
+    hint.className = 'field-hint ok';
+    slots.forEach(({ startMins, endMins }) => {
+      const storedMins = (endMins - 4 + 1440) % 1440;
+      const storedStr  = minsToTimeStr(storedMins);
+      const card = document.createElement('div');
+      card.className = 'slot-card';
+      card.dataset.start  = startMins;
+      card.dataset.end    = endMins;
+      card.dataset.stored = storedStr;
+      card.innerHTML = `${minsToTimeStr(startMins)}<br>〜<br>${minsToTimeStr(endMins)}`;
+      // 前回と同じスロットが選択されていた場合は選択状態を復元する
+      if (selectedSlot && selectedSlot.startMins === startMins) {
+        card.classList.add('selected');
+      }
+      card.onclick = () => selectSlot(card, startMins, endMins, storedStr);
+      grid.appendChild(card);
+    });
+  }
+
+  step2.style.display = '';
+
+  // 時間割のハイライトも更新する
+  highlightAvailableGaps(task, step, getSelectedDays());
+}
+
+/**
+ * スロットカードをクリックしたときに提供時間を確定してStep3を表示する
+ */
+function selectSlot(card, startMins, endMins, storedValue) {
+  // 前回選択のハイライトを解除して新しいカードを選択する
+  document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+
+  selectedSlot = { startMins, endMins, storedValue };
+  document.getElementById('f-time').value = storedValue;
+
+  const displayText = `${minsToTimeStr(startMins)} 〜 ${minsToTimeStr(endMins)}`;
+  document.getElementById('selected-slot-text').textContent = displayText;
+  document.getElementById('reg-step3').style.display = '';
+
+  checkConflicts();
+}
+
+/**
+ * 「変更」ボタンでスロット選択を取り消し Step2 の状態に戻す
+ */
+function clearSlotSelection() {
+  selectedSlot = null;
+  document.getElementById('f-time').value = '';
+  document.getElementById('reg-step3').style.display = 'none';
+  document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('conflict-banner').classList.remove('visible');
+  document.getElementById('gap-banner').classList.remove('visible');
+}
+
+// ============================================================
 // 空き時間更新（作業項目＋サービス略称＋提供曜日から動的に生成）
 // ============================================================
 
@@ -1387,6 +1591,8 @@ function updateServiceHint() {
  * 表示形式：「開始時刻〜終了時刻」（5分刻み）。
  * duration = durationMap[service] - 1 （20分未満コード → 最大19分）。
  * 提供時間ドロップダウンのvalue = 開始時刻（HH:MM）。
+ * ※ 登録パネルでは updateSlotPicker() が代わりに呼ばれ、この関数は使用しない。
+ *   変更パネルの updateEditTimeOptions から引き続き利用されている。
  */
 function updateTimeOptions() {
   const task    = document.getElementById('f-task').value;
@@ -2061,10 +2267,9 @@ async function submitAll() {
 function resetFormFields() {
   document.getElementById('f-task').value    = '';
   document.getElementById('f-service').value = '';
-  document.getElementById('f-time').value    = '';
   document.getElementById('f-start').value   = '';
   document.getElementById('f-end').value     = '';
-  document.getElementById('f-record').value = '';
+  document.getElementById('f-record').value  = '';
   document.getElementById('record-trigger').textContent = '-- 選択しない --';
   document.getElementById('record-trigger').classList.add('placeholder');
   document.getElementById('record-select-wrap').classList.remove('open');
@@ -2073,11 +2278,17 @@ function resetFormFields() {
   const allCb = document.getElementById('day-all');
   if (allCb) allCb.checked = false;
   document.querySelector('input[name="kinmu"]').checked = true;
+  document.getElementById('service-hint').textContent = '';
+  document.querySelectorAll('.col-avail.highlight').forEach(el => el.classList.remove('highlight'));
+
+  // スロットピッカーをリセットする（Step2/Step3を非表示にして選択状態をクリア）
+  selectedSlot  = null;
+  slotPickerKey = '';
+  document.getElementById('f-time').value              = '';
+  document.getElementById('reg-step2').style.display   = 'none';
+  document.getElementById('reg-step3').style.display   = 'none';
   document.getElementById('conflict-banner').classList.remove('visible');
   document.getElementById('gap-banner').classList.remove('visible');
-  document.getElementById('service-hint').textContent = '';
-  document.getElementById('time-hint').textContent    = '';
-  document.querySelectorAll('.col-gap.highlight').forEach(el => el.classList.remove('highlight'));
 }
 
 // ============================================================
