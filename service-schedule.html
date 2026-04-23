@@ -1121,6 +1121,9 @@ let durationMap = {};
 /** サービス略称 → 単位数のマップ（サービスコードテーブルから） */
 let unitMap = {};
 
+/** 顧客情報テーブルから取得した利用者一覧（{ name, office } の配列）。氏名セレクトの正規ソース。 */
+let customersCache = [];
+
 /** 登録予定リスト（カート）：まとめて登録する前の一時バッファ */
 let cart = [];
 
@@ -1179,6 +1182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
   });
   await loadFields();
+  await loadCustomers(); // 顧客情報から氏名リストを取得する
   await loadSchedule();
 });
 
@@ -1306,6 +1310,24 @@ async function loadFields() {
   } catch (err) {
     console.error('フィールド取得エラー:', err);
     showToast('フィールドの読み込みに失敗しました', 'error');
+  }
+}
+
+/**
+ * 顧客情報テーブルから全利用者の氏名・事業所を取得して customersCache に格納する。
+ * 取得失敗時はサイレントに無視し、updateNameSelects で currentRecords にフォールバックする。
+ */
+async function loadCustomers() {
+  try {
+    const res  = await fetch(`${SERVER}/api/customers/get`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    // { name, office } の配列として格納する
+    customersCache = (data.data || []).map(c => ({ name: c.name, office: c.office }));
+    console.log(`[loadCustomers] ${customersCache.length}名の顧客情報を取得しました`);
+  } catch (err) {
+    console.warn('[loadCustomers] 顧客情報の取得に失敗しました（フォールバックを使用します）:', err.message);
+    customersCache = [];
   }
 }
 
@@ -1737,9 +1759,21 @@ function switchAction(action) {
  * loadSchedule()完了後に呼び出す。
  */
 function updateNameSelects() {
-  // 重複なし・五十音順で氏名リストを生成する
-  const names = [...new Set(currentRecords.map(r => r.氏名).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, 'ja'));
+  // 氏名リストの優先ソース：顧客情報テーブルを現在の事業所でフィルタする。
+  // customersCache が空（取得失敗）の場合は currentRecords をフォールバックとして使う。
+  let names;
+  if (customersCache.length > 0) {
+    // 顧客情報テーブルから現在の事業所の利用者のみ抽出する
+    names = customersCache
+      .filter(c => c.office === currentOffice && c.name)
+      .map(c => c.name);
+    // 既存レコードにいるが顧客テーブルにない氏名も合算してデータ欠落を防ぐ
+    const fromRecords = currentRecords.map(r => r.氏名).filter(Boolean);
+    names = [...new Set([...names, ...fromRecords])];
+  } else {
+    names = [...new Set(currentRecords.map(r => r.氏名).filter(Boolean))];
+  }
+  names = names.sort((a, b) => a.localeCompare(b, 'ja'));
 
   ['f-name', 'edit-name', 'del-name'].forEach(id => {
     const el   = document.getElementById(id);
