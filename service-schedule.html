@@ -950,16 +950,19 @@ function updateRecordTemplates() {
   const prev  = recEl.value;
 
   recEl.innerHTML = '<option value="">-- 選択しない --</option>';
-
   if (!fieldsCache || !task) return;
 
-  const templates = fieldsCache.static.記録内容[task] || [];
+  // 定型文設定テーブルから取得したtemplateMapを優先し、
+  // 未取得の場合はサーバーハードコードのstatic.記録内容にフォールバックする
+  const templates = (fieldsCache.templateMap?.[task])
+    ?? (fieldsCache.static.記録内容?.[task])
+    ?? [];
+
   templates.forEach(r => {
     const label = r.length > 28 ? r.slice(0, 28) + '…' : r;
     recEl.appendChild(new Option(label, r));
   });
 
-  // 作業項目変更後も以前の選択が同じリストに存在すれば復元する
   if (prev && [...recEl.options].some(o => o.value === prev)) recEl.value = prev;
 }
 
