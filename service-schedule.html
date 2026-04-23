@@ -615,7 +615,7 @@
       <!-- サービスコードマスタを手動リフレッシュするボタン -->
       <button id="refresh-codes-btn" onclick="refreshServiceCodes()"
         title="サービスマスタをLarkから再取得"
-        style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.82rem;display:flex;align-items:center;gap:0.3rem;">
+        style="margin-left:auto;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;color:white;font-size:0.78rem;padding:0.2rem 0.55rem;display:flex;align-items:center;gap:0.3rem;">
         <i class="fa-solid fa-arrows-rotate"></i> マスタ更新
       </button>
     </div>
@@ -698,10 +698,9 @@
         </div>
       </div>
 
-      <!-- カートに追加ボタン -->
+      <!-- リストに追加ボタン -->
       <button class="submit-btn" id="add-btn" onclick="addToCart()">
-        <i class="fa-solid fa-cart-plus"></i>
-        カートに追加
+        リストに追加
       </button>
 
       <!-- ===== 登録予定リスト（カート） ===== -->
@@ -823,6 +822,7 @@ async function refreshServiceCodes() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> マスタ更新';
+
   }
 }
 
