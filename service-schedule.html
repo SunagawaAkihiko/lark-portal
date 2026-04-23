@@ -1499,7 +1499,12 @@ function updateSlotPicker() {
   const personRecs = currentRecords.filter(r =>
     (r.氏名 || '').trim() === nameTrimmed && (r.作業項目 || '').trim() === taskTrimmed
   );
+  // デバッグ：currentRecords 内の氏名一覧を出力して名前の不一致を検出する
+  const allNames = [...new Set(currentRecords.map(r => r.氏名).filter(Boolean))];
   console.log(`[slot-picker] 対象レコード数: ${personRecs.length} (氏名=${name} 作業項目=${task})`);
+  if (personRecs.length === 0) {
+    console.log(`[slot-picker] currentRecords 氏名一覧:`, allNames.slice(0, 10));
+  }
 
   // 既存レコードの提供時間（stored value）を Set で持っておき、スロット生成時に完全一致チェックで使う
   const occupiedStoredSet = new Set(personRecs.map(r => r.提供時間).filter(Boolean));
