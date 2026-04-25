@@ -35,35 +35,29 @@
       box-shadow: 0 2px 6px rgba(139,115,95,0.12);
     }
 
-    /* ==================== 事業所タブバー（1段目） ==================== */
+    /* ==================== 事業所タブバー（1段目・顧客別作業設定と統一デザイン） ==================== */
     .office-tabs {
       display: flex;
-      overflow-x: auto;
-      background: var(--bg-color);
-      padding: 0.6rem 1rem;
-      gap: 0.6rem;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
     }
-    .office-tabs::-webkit-scrollbar { display: none; }
-    /* 事業所タブ: 丸みが大きいpill形状、オレンジ系カラー */
     .office-tab {
-      white-space: nowrap;
-      flex-shrink: 0;
-      padding: 0.38rem 1.3rem;
-      border-radius: 20px;
-      border: 1.5px solid var(--primary-color);
-      background: var(--card-bg);
-      color: var(--primary-color);
+      flex: 1;
+      padding: 0.55rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
       font-size: 0.95rem;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.18s;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
     }
     .office-tab.active {
       background: var(--primary-color);
       color: white;
-      border-color: var(--primary-color);
     }
 
     /* ==================== テーブルタブバー（2段目） ==================== */

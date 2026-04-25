@@ -26,39 +26,32 @@
     }
     .hidden { display: none !important; }
 
-    /* ===== 事業所タブ（pill形状・care-record/calendar統一デザイン） ===== */
+    /* ===== 事業所タブ（顧客別作業設定と統一デザイン） ===== */
     .office-tabs {
       position: sticky;
       top: 0;
       z-index: 15;
       display: flex;
-      overflow-x: auto;
-      background: var(--bg-color);
-      padding: 0.6rem 1rem;
-      gap: 0.6rem;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      box-shadow: 0 2px 6px rgba(139,115,95,0.12);
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
     }
-    .office-tabs::-webkit-scrollbar { display: none; }
     .office-tab {
-      white-space: nowrap;
-      flex-shrink: 0;
-      padding: 0.38rem 1.3rem;
-      border-radius: 20px;
-      border: 1.5px solid var(--primary-color);
-      background: var(--card-bg);
-      color: var(--primary-color);
+      flex: 1;
+      padding: 0.55rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
       font-size: 0.95rem;
       font-weight: 700;
-      font-family: inherit;
       cursor: pointer;
-      transition: all 0.18s;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
     }
     .office-tab.active {
       background: var(--primary-color);
       color: white;
-      border-color: var(--primary-color);
     }
 
     /* ===== ローディング ===== */
@@ -571,7 +564,9 @@
     item.id = `supply-${id}`;
 
     // 商品セレクトのoptionを生成する（マスタから動的に生成、末尾に「その他」を追加）
-    const optionsHtml = allProducts.map(p => `<option>${p}</option>`).join('') +
+    // マスタに「その他」が含まれる場合の重複を防ぐため事前に除外する
+    const filteredProducts = allProducts.filter(p => p !== 'その他');
+    const optionsHtml = filteredProducts.map(p => `<option>${p}</option>`).join('') +
                         '<option value="その他">その他</option>';
 
     item.innerHTML = `
