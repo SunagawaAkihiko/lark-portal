@@ -224,6 +224,12 @@ function extractOffices(data) {
         currentOfficeFilter = officeArray[0];
     }
 
+    // ラベルを先頭に追加してからボタンを生成する
+    const label = document.createElement('span');
+    label.className = 'office-tabs-label';
+    label.innerHTML = '<i class="fa-solid fa-building"></i> 事業所';
+    officeTabs.appendChild(label);
+
     officeArray.forEach(off => {
         const btn = document.createElement('button');
         btn.className = 'office-tab';

@@ -32,9 +32,20 @@
       top: 0;
       z-index: 15;
       display: flex;
+      flex-wrap: wrap;
       background: var(--text-color);
       padding: 0 1rem 0.75rem;
       gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%;
+      color: white;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
     .office-tab {
       flex: 1;
@@ -494,7 +505,7 @@
   // ===== タブ生成 =====
   function buildTabs() {
     const bar = document.getElementById('tabBar');
-    bar.innerHTML = '';
+    bar.innerHTML = '<span class="office-tabs-label"><i class="fa-solid fa-building"></i> 事業所</span>';
     offices.forEach(office => {
       const btn = document.createElement('button');
       btn.className = 'office-tab';
