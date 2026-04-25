@@ -353,17 +353,15 @@
       color: var(--text-muted);
       font-size: 0.9rem;
     }
-    /* カテゴリタブは横スクロール可能なピル型 */
+    /* カテゴリタブは折り返して全件表示するピル型 */
     .picker-cat-tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.4rem;
       padding: 0.6rem 0.75rem;
-      overflow-x: auto;
       flex-shrink: 0;
       border-bottom: 1px solid var(--border-color);
-      scrollbar-width: none;
     }
-    .picker-cat-tabs::-webkit-scrollbar { display: none; }
     .picker-cat-tab {
       flex-shrink: 0;
       padding: 0.35rem 0.85rem;
