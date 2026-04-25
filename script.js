@@ -29,7 +29,7 @@ const portalLinks = [
         title: "消耗品提供",
         description: "入居者へ消耗品を提供した際に使用",
         icon: "fa-box-open",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgebT5SdABbf312t"
+        url: "consumable-record.html"
     },
     {
         title: "【大浦】消耗品発注",
