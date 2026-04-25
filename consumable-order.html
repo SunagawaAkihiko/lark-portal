@@ -363,40 +363,6 @@
     .toast.success { background: #2d6a4f; }
     .toast.error   { background: #c1121f; }
 
-    /* ===== 横画面レイアウト（スマートフォン横向きのみ、PCは除外） ===== */
-    /* max-height: 500px でスマホ横向き（〜430px）とPC（600px〜）を判別する */
-    @media (orientation: landscape) and (max-height: 500px) {
-      /* 事業所タブをコンパクトにする */
-      .office-tabs { padding: 0 0.8rem 0.5rem; gap: 0.4rem; }
-      .office-tabs-label { font-size: 0.88rem; padding: 0.5rem 0 0.1rem; }
-      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
-
-      /* 左カラム：発注メタ情報、右カラム：発注品リスト＋サマリー */
-      .main-content {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr auto;
-        grid-template-areas:
-          "meta    orders"
-          "summary orders";
-        max-height: calc(100vh - 72px);
-        overflow: hidden;
-        padding: 0.6rem;
-        gap: 0.6rem;
-      }
-      #section-meta    { grid-area: meta; overflow-y: auto; }
-      #section-orders  { grid-area: orders; overflow-y: auto; }
-      #section-summary { grid-area: summary; }
-
-      /* フッターをコンパクトにする */
-      .footer-bar { padding: 0.45rem 0.8rem; gap: 0.5rem; }
-      .submit-btn { padding: 0.6rem; font-size: 0.88rem; }
-      .order-count-chip { padding: 0.35rem 0.55rem; font-size: 0.75rem; }
-      .order-count-chip .num { font-size: 0.95rem; }
-
-      /* トーストの位置を調整する */
-      .toast { bottom: 4rem; }
-    }
   </style>
 </head>
 <body>
