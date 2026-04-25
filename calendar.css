@@ -350,7 +350,7 @@ body {
    カレンダーを左側、選択日の予定を右側に並べる
    事業所タブはヘッダー内に統合済みなので独立行不要
    ================================================ */
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) {
     /* タブバーを横画面でコンパクトにする */
     .office-tabs {
         padding: 0 0.8rem 0.5rem;
