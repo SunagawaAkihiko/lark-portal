@@ -227,7 +227,7 @@ function extractOffices(data) {
     // ラベルを先頭に追加してからボタンを生成する
     const label = document.createElement('span');
     label.className = 'office-tabs-label';
-    label.innerHTML = '<i class="fa-solid fa-building"></i> 事業所';
+    label.innerHTML = '<i class="fa-solid fa-calendar-days"></i> 予定カレンダー';
     officeTabs.appendChild(label);
 
     officeArray.forEach(off => {
