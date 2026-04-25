@@ -385,15 +385,17 @@
       .office-tabs-label { font-size: 0.88rem; padding: 0.5rem 0 0.1rem; }
       .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
 
-      /* メインコンテンツを2カラムグリッドに切り替える */
+      /* メインコンテンツを2カラムグリッドに切り替える
+         左: 提供日（上）＋利用者選択（下）
+         右: 提供品リスト（上）＋サマリー（下） */
       .main-content {
         display: grid;
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto 1fr auto;
         grid-template-areas:
-          "date    supplies"
+          "date      supplies"
           "customers supplies"
-          "summary supplies";
+          "customers summary";
         max-height: calc(100vh - 72px);
         overflow: hidden;
         padding: 0.6rem;
