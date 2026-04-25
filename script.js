@@ -32,16 +32,10 @@ const portalLinks = [
         url: "consumable-record.html"
     },
     {
-        title: "【大浦】消耗品発注",
-        description: "大浦での消耗品の発注・確認処理を行います",
+        title: "消耗品発注",
+        description: "消耗品の発注登録（大浦・上津役共通）",
         icon: "fa-cart-shopping",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeLY5YLshKno5JW"
-    },
-    {
-        title: "【上津役】消耗品発注",
-        description: "上津役での消耗品の発注・確認処理を行います",
-        icon: "fa-cart-plus",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeW03l9yB6mxM7l"
+        url: "consumable-order.html"
     },
     {
         title: "物品購入申請",
