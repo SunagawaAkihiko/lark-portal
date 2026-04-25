@@ -181,34 +181,6 @@
       align-items: flex-start;
     }
     .order-item-body { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-    .supply-select {
-      width: 100%;
-      padding: 0.55rem 0.75rem;
-      border: 1.5px solid var(--border-color);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      color: var(--text-color);
-      background: white;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      padding-right: 2.2rem;
-    }
-    .supply-select:focus { outline: none; border-color: var(--primary-color); }
-    .supply-select:disabled { opacity: 0.45; cursor: not-allowed; }
-    .supply-other-input {
-      width: 100%;
-      padding: 0.55rem 0.75rem;
-      border: 1.5px solid var(--border-color);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      color: var(--text-color);
-      background: white;
-    }
-    .supply-other-input:focus { outline: none; border-color: var(--primary-color); }
     .supply-count-row {
       display: flex;
       align-items: center;
@@ -267,21 +239,217 @@
       gap: 0.4rem;
     }
 
-    /* ===== 備考欄 ===== */
-    .notes-textarea {
+    /* ===== 商品ピッカーボタン ===== */
+    .picker-btn {
       width: 100%;
-      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.55rem 0.75rem;
       border: 1.5px solid var(--border-color);
       border-radius: 10px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      color: var(--text-color);
       background: white;
-      resize: vertical;
-      min-height: 80px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s, background 0.15s;
+      text-align: left;
     }
-    .notes-textarea:focus { outline: none; border-color: var(--primary-color); }
-    .notes-textarea::placeholder { color: var(--text-muted); }
+    .picker-btn:focus { outline: none; }
+    /* 商品選択済みのボタンは枠と背景をプライマリカラーに変える */
+    .picker-btn.selected {
+      border-color: var(--primary-color);
+      background: var(--primary-light);
+    }
+    .picker-thumb {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      position: relative;
+    }
+    /* サムネイルの画像はボックスいっぱいに表示する */
+    .picker-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .picker-name {
+      flex: 1;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* 選択済みは商品名を強調表示する */
+    .picker-btn.selected .picker-name {
+      color: var(--text-color);
+      font-weight: 700;
+    }
+    .picker-arrow {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* ===== 商品ピッカー ボトムシートモーダル ===== */
+    .picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .picker-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* シートは画面下端に固定し、初期状態では下に隠れている */
+    .picker-sheet {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 45;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .picker-sheet.open {
+      transform: translateY(0);
+    }
+    .picker-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1rem 0.6rem;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+    .picker-sheet-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    .picker-close-btn {
+      border: none;
+      background: var(--bg-color);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    /* カテゴリタブは横スクロール可能なピル型 */
+    .picker-cat-tabs {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0.6rem 0.75rem;
+      overflow-x: auto;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border-color);
+      scrollbar-width: none;
+    }
+    .picker-cat-tabs::-webkit-scrollbar { display: none; }
+    .picker-cat-tab {
+      flex-shrink: 0;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      border: 1.5px solid var(--border-color);
+      background: white;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .picker-cat-tab.active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+    /* 3列グリッドで商品カードを並べる */
+    .picker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+      padding: 0.75rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .picker-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 0.4rem;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    /* 選択中のカードはプライマリカラーの枠をつける */
+    .picker-card.selected {
+      border-color: var(--primary-color);
+      background: var(--primary-light);
+    }
+    .picker-card-img {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 8px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      color: var(--border-color);
+    }
+    /* 画像が読み込まれたらアイコンの上に被せる */
+    .picker-card-img img {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    /* 選択チェックバッジ（右上に重ねて表示） */
+    .picker-check {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 20px; height: 20px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      font-size: 0.65rem;
+      z-index: 1;
+    }
+    .picker-card-name {
+      font-size: 0.72rem;
+      color: var(--text-color);
+      text-align: center;
+      line-height: 1.3;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      width: 100%;
+    }
 
     /* ===== サマリー ===== */
     .summary-card {
@@ -434,20 +602,43 @@
 <!-- トースト通知 -->
 <div class="toast" id="toast"></div>
 
+<!-- 商品ピッカー：オーバーレイ（タップで閉じる） -->
+<div class="picker-overlay" id="pickerOverlay" onclick="closePicker()"></div>
+
+<!-- 商品ピッカー：ボトムシート（全アイテム共通で1つだけ用意して使い回す） -->
+<div class="picker-sheet" id="pickerSheet">
+  <div class="picker-sheet-header">
+    <span class="picker-sheet-title">商品を選ぶ</span>
+    <button class="picker-close-btn" onclick="closePicker()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <!-- カテゴリのタブ（横スクロール可能なピル型） -->
+  <div class="picker-cat-tabs" id="pickerCatTabs"></div>
+  <!-- 商品グリッド（3列） -->
+  <div class="picker-grid" id="pickerGrid"></div>
+</div>
+
 <script>
   // ローカル開発と本番Renderを自動で切り替える
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  // allProducts: [{ id: record_id, name, category }]（消耗品マスタから取得）
-  // ordererOptions: [string]（発注リストの「注文者」フィールド定義から取得、valid な選択肢）
+  // allProducts: [{ id: record_id, name, category, imageToken }]（消耗品マスタから取得）
+  // ordererOptions: [string]（発注リストの「注文者」フィールド定義から取得）
   // allStaff: [{ name, offices[] }]（スタッフテーブルから取得、事業所フィルタ用）
+  // selectedProduct[itemId]: 各発注品アイテムで選択中の商品オブジェクト（null = 未選択）
   let allProducts    = [];
   let ordererOptions = [];
   let allStaff       = [];
   let offices        = [];
   let activeOffice   = '';
+
+  // 商品ピッカーの状態
+  const selectedProduct    = {};   // itemId → { id, name, imageToken } | null
+  let pickerActiveItemId   = null; // 現在ピッカーが開いているアイテムのID
+  let pickerActiveCategory = '';   // ピッカー内で選択中のカテゴリ
 
   // ===== 初期化 =====
   async function init() {
@@ -463,7 +654,7 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      allProducts    = data.products;       // { id, name, category }[]
+      allProducts    = data.products;       // { id, name, category, imageToken }[]
       ordererOptions = data.ordererOptions; // string[] from Lark field definition
       allStaff       = data.staffList;      // { name, offices[] }[] for filtering
       offices        = data.officeOptions;
@@ -514,8 +705,6 @@
     const sel        = document.getElementById('ordererSelect');
     const currentVal = sel.value;
 
-    // Lark フィールド定義の選択肢のうち、選択中の事業所に属するものだけ表示する
-    // スタッフテーブルにない名前はフォールバックとして全事業所で表示する
     const filtered = ordererOptions.filter(name => {
       const staff = allStaff.find(s => s.name === name);
       if (!staff) return true;  // スタッフテーブル未登録 → 常に表示
@@ -548,25 +737,23 @@
   }
 
   function addOrderItem() {
-    const id   = ++orderIdCounter;
+    const id = ++orderIdCounter;
+    selectedProduct[id] = null;
+
     const item = document.createElement('div');
     item.className = 'order-item';
     item.id = `order-${id}`;
 
-    // カテゴリセレクトのoption
-    const catOptionsHtml = getCategories()
-      .map(c => `<option value="${c}">${c}</option>`)
-      .join('');
-
     item.innerHTML = `
       <div class="order-item-body">
-        <select class="supply-select" id="cat-${id}" onchange="onCategoryChange(${id})">
-          <option value="">-- カテゴリを選択 --</option>
-          ${catOptionsHtml}
-        </select>
-        <select class="supply-select" id="prod-${id}" onchange="updateSummary()" disabled>
-          <option value="">-- 商品を選択 --</option>
-        </select>
+        <!-- 商品ピッカーボタン：タップするとボトムシートが開く -->
+        <button class="picker-btn" id="picker-${id}" onclick="openPicker(${id})">
+          <div class="picker-thumb" id="picker-thumb-${id}">
+            <i class="fa-solid fa-box-open"></i>
+          </div>
+          <span class="picker-name" id="picker-name-${id}">商品を選ぶ</span>
+          <i class="fa-solid fa-chevron-right picker-arrow"></i>
+        </button>
         <div class="supply-count-row">
           <span class="supply-count-label">数量</span>
           <button class="count-btn" onclick="changeCount(${id}, -1)">−</button>
@@ -578,29 +765,105 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
     `;
+
     document.getElementById('orderList').appendChild(item);
     updateSummary();
   }
 
-  // カテゴリ変更時に商品セレクトを絞り込む
-  function onCategoryChange(id) {
-    const cat     = document.getElementById(`cat-${id}`).value;
-    const prodSel = document.getElementById(`prod-${id}`);
+  // ===== 商品ピッカーを開く =====
+  function openPicker(id) {
+    pickerActiveItemId = id;
 
-    if (!cat) {
-      prodSel.innerHTML = '<option value="">-- 商品を選択 --</option>';
-      prodSel.disabled = true;
-      updateSummary();
-      return;
+    // カテゴリタブを生成する（最初のカテゴリを選択状態にする）
+    const categories = getCategories();
+    pickerActiveCategory = categories[0] || '';
+
+    const tabs = document.getElementById('pickerCatTabs');
+    tabs.innerHTML = categories.map(c => `
+      <button class="picker-cat-tab${c === pickerActiveCategory ? ' active' : ''}"
+              onclick="switchPickerCategory(this, '${c.replace(/'/g, "\\'")}')">${c}</button>
+    `).join('');
+
+    renderPickerGrid();
+
+    // オーバーレイとシートを表示する
+    document.getElementById('pickerOverlay').classList.add('open');
+    document.getElementById('pickerSheet').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // ===== ピッカー内カテゴリを切り替える =====
+  function switchPickerCategory(btnEl, cat) {
+    pickerActiveCategory = cat;
+    document.querySelectorAll('.picker-cat-tab').forEach(btn => {
+      btn.classList.toggle('active', btn === btnEl);
+    });
+    renderPickerGrid();
+  }
+
+  // ===== 現在のカテゴリの商品グリッドを描画する =====
+  function renderPickerGrid() {
+    const products        = allProducts.filter(p => p.category === pickerActiveCategory);
+    const currentSelected = selectedProduct[pickerActiveItemId];
+    const grid            = document.getElementById('pickerGrid');
+
+    grid.innerHTML = products.map(p => {
+      const isSelected = currentSelected && currentSelected.id === p.id;
+      // imageToken があればプロキシ経由の URL を生成する（Lark 画像は直接アクセス不可）
+      const imgSrc = p.imageToken
+        ? `${API_BASE}/api/lark/image?token=${encodeURIComponent(p.imageToken)}`
+        : null;
+
+      return `
+        <div class="picker-card${isSelected ? ' selected' : ''}"
+             onclick="selectProductById('${p.id}')">
+          <div class="picker-card-img">
+            ${imgSrc
+              ? `<img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">`
+              : ''}
+            <i class="fa-solid fa-box"></i>
+            ${isSelected ? '<div class="picker-check"><i class="fa-solid fa-check"></i></div>' : ''}
+          </div>
+          <div class="picker-card-name">${p.name}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== 商品を選択して確定する =====
+  function selectProductById(productId) {
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    selectedProduct[pickerActiveItemId] = product;
+
+    // ピッカーボタンのサムネイルと商品名を更新する
+    const btn     = document.getElementById(`picker-${pickerActiveItemId}`);
+    const thumbEl = document.getElementById(`picker-thumb-${pickerActiveItemId}`);
+    const nameEl  = document.getElementById(`picker-name-${pickerActiveItemId}`);
+
+    // 選択済みスタイルを適用する
+    btn.classList.add('selected');
+    nameEl.textContent = product.name;
+
+    // サムネイル画像を設定する（imageToken がなければアイコンのまま）
+    if (product.imageToken) {
+      const imgSrc = `${API_BASE}/api/lark/image?token=${encodeURIComponent(product.imageToken)}`;
+      thumbEl.innerHTML = `<img src="${imgSrc}" alt="" onerror="this.style.display='none'"><i class="fa-solid fa-box"></i>`;
+    } else {
+      thumbEl.innerHTML = '<i class="fa-solid fa-box"></i>';
     }
 
-    // 選択されたカテゴリに属する商品のみ表示する
-    // value = 消耗品マスタの record_id（Lark側の「商品」フィールド自動計算に必要）
-    const filtered = allProducts.filter(p => p.category === cat);
-    prodSel.innerHTML = '<option value="">-- 商品を選択 --</option>' +
-      filtered.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    prodSel.disabled = false;
+    closePicker();
     updateSummary();
+  }
+
+  // ===== ピッカーを閉じる =====
+  function closePicker() {
+    document.getElementById('pickerOverlay').classList.remove('open');
+    document.getElementById('pickerSheet').classList.remove('open');
+    document.body.style.overflow = '';
+    pickerActiveItemId = null;
   }
 
   // 個数の増減（最小1）
@@ -619,6 +882,7 @@
       return;
     }
     document.getElementById(`order-${id}`).remove();
+    delete selectedProduct[id]; // 選択状態を破棄する
     updateSummary();
   }
 
@@ -629,12 +893,11 @@
   function getValidItems() {
     const result = [];
     document.querySelectorAll('#orderList .order-item').forEach(item => {
-      const domId  = item.id.replace('order-', '');
-      const prodSel = document.getElementById(`prod-${domId}`);
-      if (!prodSel || !prodSel.value) return; // 商品未選択はスキップする
-      const count   = parseInt(document.getElementById(`count-${domId}`).textContent) || 1;
-      const selName = prodSel.options[prodSel.selectedIndex]?.text || '';
-      result.push({ id: prodSel.value, name: selName, count });
+      const domId   = item.id.replace('order-', '');
+      const product = selectedProduct[domId];
+      if (!product) return; // 商品未選択はスキップする
+      const count = parseInt(document.getElementById(`count-${domId}`).textContent) || 1;
+      result.push({ id: product.id, name: product.name, count });
     });
     return result;
   }
@@ -685,6 +948,8 @@
 
       // 登録後に発注リストをリセットする
       document.getElementById('orderList').innerHTML = '';
+      // 選択状態をすべてクリアする
+      Object.keys(selectedProduct).forEach(k => delete selectedProduct[k]);
       orderIdCounter = 0;
       addOrderItem();
       updateSummary();
@@ -706,7 +971,7 @@
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
-  document.getElementById('dateInput').onchange    = updateSummary;
+  document.getElementById('dateInput').onchange     = updateSummary;
   document.getElementById('ordererSelect').onchange = updateSummary;
 
   init();
