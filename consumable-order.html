@@ -625,7 +625,7 @@
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  // allProducts: [{ id: record_id, name, category, imageToken }]（消耗品マスタから取得）
+  // allProducts: [{ id: record_id, name, category, imageUrl }]（消耗品マスタから取得）
   // ordererOptions: [string]（発注リストの「注文者」フィールド定義から取得）
   // allStaff: [{ name, offices[] }]（スタッフテーブルから取得、事業所フィルタ用）
   // selectedProduct[itemId]: 各発注品アイテムで選択中の商品オブジェクト（null = 未選択）
@@ -810,16 +810,13 @@
     grid.innerHTML = products.map(p => {
       const isSelected = currentSelected && currentSelected.id === p.id;
       // imageToken があればプロキシ経由の URL を生成する（Lark 画像は直接アクセス不可）
-      const imgSrc = p.imageToken
-        ? `${API_BASE}/api/lark/image?token=${encodeURIComponent(p.imageToken)}`
-        : null;
-
+      // imageUrl は order-meta 取得時点での tmp_url（約10分有効の署名付きURL）
       return `
         <div class="picker-card${isSelected ? ' selected' : ''}"
              onclick="selectProductById('${p.id}')">
           <div class="picker-card-img">
-            ${imgSrc
-              ? `<img src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">`
+            ${p.imageUrl
+              ? `<img src="${p.imageUrl}" alt="" loading="lazy" onerror="this.style.display='none'">`
               : ''}
             <i class="fa-solid fa-box"></i>
             ${isSelected ? '<div class="picker-check"><i class="fa-solid fa-check"></i></div>' : ''}
@@ -846,10 +843,9 @@
     btn.classList.add('selected');
     nameEl.textContent = product.name;
 
-    // サムネイル画像を設定する（imageToken がなければアイコンのまま）
-    if (product.imageToken) {
-      const imgSrc = `${API_BASE}/api/lark/image?token=${encodeURIComponent(product.imageToken)}`;
-      thumbEl.innerHTML = `<img src="${imgSrc}" alt="" onerror="this.style.display='none'"><i class="fa-solid fa-box"></i>`;
+    // サムネイル画像を設定する（imageUrl がなければアイコンのまま）
+    if (product.imageUrl) {
+      thumbEl.innerHTML = `<img src="${product.imageUrl}" alt="" onerror="this.style.display='none'"><i class="fa-solid fa-box"></i>`;
     } else {
       thumbEl.innerHTML = '<i class="fa-solid fa-box"></i>';
     }
