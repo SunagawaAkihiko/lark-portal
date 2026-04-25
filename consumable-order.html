@@ -197,6 +197,7 @@
       padding-right: 2.2rem;
     }
     .supply-select:focus { outline: none; border-color: var(--primary-color); }
+    .supply-select:disabled { opacity: 0.45; cursor: not-allowed; }
     .supply-other-input {
       width: 100%;
       padding: 0.55rem 0.75rem;
@@ -538,23 +539,33 @@
   // ===== 発注品アイテム追加 =====
   let orderIdCounter = 0;
 
+  // allProducts からカテゴリ一覧を重複なしで抽出する（マスタの順序を維持）
+  function getCategories() {
+    const seen = new Set();
+    return allProducts
+      .map(p => p.category)
+      .filter(c => c && !seen.has(c) && seen.add(c));
+  }
+
   function addOrderItem() {
     const id   = ++orderIdCounter;
     const item = document.createElement('div');
     item.className = 'order-item';
     item.id = `order-${id}`;
 
-    // 商品セレクトのoption: value = 消耗品マスタの record_id、表示 = 商品名(略)
-    // record_id を「record ID」フィールドに書き込むことで Lark 側の商品フィールドが自動計算される
-    const optionsHtml = allProducts
-      .map(p => `<option value="${p.id}">${p.name}${p.category ? ' (' + p.category + ')' : ''}</option>`)
+    // カテゴリセレクトのoption
+    const catOptionsHtml = getCategories()
+      .map(c => `<option value="${c}">${c}</option>`)
       .join('');
 
     item.innerHTML = `
       <div class="order-item-body">
-        <select class="supply-select" onchange="updateSummary()">
+        <select class="supply-select" id="cat-${id}" onchange="onCategoryChange(${id})">
+          <option value="">-- カテゴリを選択 --</option>
+          ${catOptionsHtml}
+        </select>
+        <select class="supply-select" id="prod-${id}" onchange="updateSummary()" disabled>
           <option value="">-- 商品を選択 --</option>
-          ${optionsHtml}
         </select>
         <div class="supply-count-row">
           <span class="supply-count-label">数量</span>
@@ -568,6 +579,27 @@
       </button>
     `;
     document.getElementById('orderList').appendChild(item);
+    updateSummary();
+  }
+
+  // カテゴリ変更時に商品セレクトを絞り込む
+  function onCategoryChange(id) {
+    const cat     = document.getElementById(`cat-${id}`).value;
+    const prodSel = document.getElementById(`prod-${id}`);
+
+    if (!cat) {
+      prodSel.innerHTML = '<option value="">-- 商品を選択 --</option>';
+      prodSel.disabled = true;
+      updateSummary();
+      return;
+    }
+
+    // 選択されたカテゴリに属する商品のみ表示する
+    // value = 消耗品マスタの record_id（Lark側の「商品」フィールド自動計算に必要）
+    const filtered = allProducts.filter(p => p.category === cat);
+    prodSel.innerHTML = '<option value="">-- 商品を選択 --</option>' +
+      filtered.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    prodSel.disabled = false;
     updateSummary();
   }
 
@@ -597,12 +629,12 @@
   function getValidItems() {
     const result = [];
     document.querySelectorAll('#orderList .order-item').forEach(item => {
-      const domId = item.id.replace('order-', '');
-      const sel   = item.querySelector('.supply-select');
-      if (!sel.value) return; // 未選択はスキップする
+      const domId  = item.id.replace('order-', '');
+      const prodSel = document.getElementById(`prod-${domId}`);
+      if (!prodSel || !prodSel.value) return; // 商品未選択はスキップする
       const count   = parseInt(document.getElementById(`count-${domId}`).textContent) || 1;
-      const selName = sel.options[sel.selectedIndex]?.text?.replace(/\s*\(.*\)$/, '') || sel.value;
-      result.push({ id: sel.value, name: selName, count });
+      const selName = prodSel.options[prodSel.selectedIndex]?.text || '';
+      result.push({ id: prodSel.value, name: selName, count });
     });
     return result;
   }
