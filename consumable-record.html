@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>消耗品提供記録</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 7rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== ヘッダー ===== */
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .page-header h1 { font-size: 1.05rem; font-weight: 700; flex: 1; }
+    .back-btn {
+      background: none; border: none;
+      color: white; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;
+    }
+
+    /* ===== 事業所タブ ===== */
+    .tab-bar {
+      position: sticky;
+      top: 48px;
+      z-index: 15;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+      display: flex;
+      padding: 0 0.5rem;
+      gap: 0.3rem;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0;
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: inherit;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+      font-weight: 700;
+    }
+
+    /* ===== ローディング ===== */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 1rem;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ===== セクションカード ===== */
+    .section-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .section-head {
+      background: var(--primary-light);
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-head-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      flex: 1;
+    }
+    .section-head-badge {
+      background: var(--primary-color);
+      color: white;
+      border-radius: 20px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .section-body { padding: 0.75rem; }
+
+    /* ===== 提供日 ===== */
+    .date-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.75rem 1rem;
+    }
+    .date-row label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .date-row input[type="date"] {
+      flex: 1;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    .date-row input[type="date"]:focus { outline: none; }
+
+    /* ===== 利用者チェックリスト ===== */
+    .select-all-btn {
+      width: 100%;
+      padding: 0.5rem;
+      background: none;
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .customer-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .customer-item + .customer-item {
+      border-top: 1px solid var(--bg-color);
+    }
+    .customer-checkbox {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: transparent;
+      flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .customer-item.checked .customer-checkbox {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+    .customer-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      color: var(--primary-color);
+      flex-shrink: 0;
+    }
+    .customer-name { font-size: 0.95rem; font-weight: 700; }
+
+    /* ===== 提供品リスト ===== */
+    .supply-item {
+      background: var(--bg-color);
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+    .supply-item-body { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .supply-select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.2rem;
+    }
+    .supply-select:focus { outline: none; border-color: var(--primary-color); }
+    .supply-other-input {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+    }
+    .supply-other-input:focus { outline: none; border-color: var(--primary-color); }
+    .supply-count-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .supply-count-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .count-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      background: white;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .count-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      min-width: 2rem;
+      text-align: center;
+    }
+    .remove-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: #fee2e2;
+      color: #e63946;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.2rem;
+    }
+    .add-supply-btn {
+      width: 100%;
+      padding: 0.65rem;
+      background: none;
+      border: 1.5px dashed var(--primary-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.4rem;
+    }
+
+    /* ===== サマリー ===== */
+    .summary-card {
+      background: var(--primary-light);
+      border: 1.5px solid var(--primary-color);
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .summary-icon { font-size: 1.5rem; color: var(--primary-color); }
+    .summary-text { flex: 1; }
+    .summary-count { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); }
+    .summary-detail { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    /* ===== 固定フッター ===== */
+    .footer-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 25;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .submit-btn {
+      flex: 1;
+      padding: 0.85rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem;
+      transition: opacity 0.15s;
+    }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .record-count-chip {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .record-count-chip .num { font-size: 1.1rem; }
+
+    /* ===== トースト通知 ===== */
+    .toast {
+      position: fixed;
+      bottom: 5.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(1rem);
+      background: #4a3f35;
+      color: white;
+      padding: 0.7rem 1.3rem;
+      border-radius: 30px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 50;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.success { background: #2d6a4f; }
+    .toast.error   { background: #c1121f; }
+  </style>
+</head>
+<body>
+
+<!-- ページヘッダー -->
+<header class="page-header">
+  <button class="back-btn" onclick="history.back()">
+    <i class="fa-solid fa-chevron-left"></i>
+  </button>
+  <h1><i class="fa-solid fa-box-open" style="margin-right:0.4rem"></i>消耗品提供記録</h1>
+</header>
+
+<!-- 事業所タブ -->
+<div class="tab-bar" id="tabBar"></div>
+
+<!-- ローディング -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div>データを読み込み中...</div>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main-content hidden" id="mainContent">
+
+  <!-- ① 提供日 -->
+  <div class="section-card">
+    <div class="date-row">
+      <label><i class="fa-solid fa-calendar-day" style="color:var(--primary-color)"></i> 提供日</label>
+      <input type="date" id="dateInput">
+    </div>
+  </div>
+
+  <!-- ② 利用者（複数選択） -->
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-users" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">利用者を選択（複数可）</span>
+      <span class="section-head-badge" id="customerBadge">0名</span>
+    </div>
+    <div class="section-body">
+      <button class="select-all-btn" id="selectAllBtn">
+        <i class="fa-solid fa-check-double"></i> 全員選択
+      </button>
+      <div id="customerList"></div>
+    </div>
+  </div>
+
+  <!-- ③ 提供品リスト（複数追加可） -->
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-box-open" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">提供する商品（複数可）</span>
+      <span class="section-head-badge" id="supplyBadge">0品</span>
+    </div>
+    <div class="section-body">
+      <div id="supplyList"></div>
+      <button class="add-supply-btn" id="addSupplyBtn">
+        <i class="fa-solid fa-plus"></i> 商品を追加
+      </button>
+    </div>
+  </div>
+
+  <!-- ④ 登録サマリー -->
+  <div class="summary-card">
+    <div class="summary-icon"><i class="fa-solid fa-layer-group"></i></div>
+    <div class="summary-text">
+      <div class="summary-count" id="summaryCount">合計 0件 登録されます</div>
+      <div class="summary-detail" id="summaryDetail">利用者と商品を選択してください</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 固定フッター -->
+<div class="footer-bar hidden" id="footerBar">
+  <div class="record-count-chip">
+    <div class="num" id="footerCount">0件</div>
+    <div>一括登録</div>
+  </div>
+  <button class="submit-btn" id="submitBtn" disabled>
+    <i class="fa-solid fa-paper-plane"></i> まとめて登録する
+  </button>
+</div>
+
+<!-- トースト通知 -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // APIのベースURLを環境に応じて切り替える（ローカル開発 vs 本番Render）
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+  const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // ===== 状態管理 =====
+  let allCustomers = [];   // 全利用者データ
+  let allProducts  = [];   // 全商品名リスト
+  let offices      = [];   // 事業所リスト
+  let activeOffice = '';   // 選択中の事業所
+
+  // ===== 初期化 =====
+  async function init() {
+    // 提供日を今日にセットする
+    const today = new Date();
+    const yyyy  = today.getFullYear();
+    const mm    = String(today.getMonth() + 1).padStart(2, '0');
+    const dd    = String(today.getDate()).padStart(2, '0');
+    document.getElementById('dateInput').value = `${yyyy}-${mm}-${dd}`;
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/meta`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      allCustomers = data.customers;
+      allProducts  = data.products;
+      offices      = data.officeOptions;
+
+      buildTabs();
+      // 最初の事業所を選択状態にする
+      if (offices.length > 0) switchOffice(offices[0]);
+
+      // 商品リストの初期アイテムを1件追加する
+      addSupplyItem();
+
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+      document.getElementById('footerBar').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('loadingScreen').innerHTML =
+        `<div style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 読み込みに失敗しました<br><small>${err.message}</small></div>`;
+    }
+  }
+
+  // ===== タブ生成 =====
+  function buildTabs() {
+    const bar = document.getElementById('tabBar');
+    bar.innerHTML = '';
+    offices.forEach(office => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.textContent = office;
+      btn.onclick = () => switchOffice(office);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ===== 事業所切り替え =====
+  function switchOffice(office) {
+    activeOffice = office;
+    // タブのアクティブ状態を更新する
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent === office);
+    });
+    renderCustomerList();
+  }
+
+  // ===== 利用者リスト描画 =====
+  function renderCustomerList() {
+    const list = document.getElementById('customerList');
+    // 選択中の事業所で利用者を絞り込む
+    const filtered = allCustomers.filter(c => c.office === activeOffice);
+    list.innerHTML = '';
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem;font-size:0.85rem">この事業所の利用者がいません</div>';
+      return;
+    }
+
+    filtered.forEach(customer => {
+      const item = document.createElement('div');
+      item.className = 'customer-item';
+      item.dataset.name = customer.name;
+      item.innerHTML = `
+        <div class="customer-checkbox"><i class="fa-solid fa-check"></i></div>
+        <div class="customer-avatar"><i class="fa-solid fa-user"></i></div>
+        <div class="customer-name">${customer.name}</div>
+      `;
+      item.onclick = () => {
+        item.classList.toggle('checked');
+        updateBadgesAndSummary();
+      };
+      list.appendChild(item);
+    });
+
+    updateBadgesAndSummary();
+  }
+
+  // ===== 全員選択ボタン =====
+  document.getElementById('selectAllBtn').onclick = () => {
+    const items = document.querySelectorAll('#customerList .customer-item');
+    // 全員選択済みなら全解除、そうでなければ全選択する
+    const allChecked = [...items].every(i => i.classList.contains('checked'));
+    items.forEach(i => i.classList.toggle('checked', !allChecked));
+    updateBadgesAndSummary();
+  };
+
+  // ===== 提供品アイテム追加 =====
+  let supplyIdCounter = 0;
+
+  function addSupplyItem() {
+    const id   = ++supplyIdCounter;
+    const item = document.createElement('div');
+    item.className = 'supply-item';
+    item.id = `supply-${id}`;
+
+    // 商品セレクトのoptionを生成する（マスタから動的に生成、末尾に「その他」を追加）
+    const optionsHtml = allProducts.map(p => `<option>${p}</option>`).join('') +
+                        '<option value="その他">その他</option>';
+
+    item.innerHTML = `
+      <div class="supply-item-body">
+        <select class="supply-select" onchange="onProductChange(${id})">
+          <option value="">-- 商品を選択 --</option>
+          ${optionsHtml}
+        </select>
+        <input type="text" class="supply-other-input hidden" placeholder="商品名を入力..." id="other-${id}">
+        <div class="supply-count-row">
+          <span class="supply-count-label">個数</span>
+          <button class="count-btn" onclick="changeCount(${id}, -1)">−</button>
+          <span class="count-value" id="count-${id}">1</span>
+          <button class="count-btn" onclick="changeCount(${id}, 1)">＋</button>
+        </div>
+      </div>
+      <button class="remove-btn" onclick="removeSupplyItem(${id})">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+    document.getElementById('supplyList').appendChild(item);
+    updateBadgesAndSummary();
+  }
+
+  // 商品選択変更時に「その他」テキスト欄の表示を切り替える
+  function onProductChange(id) {
+    const sel   = document.querySelector(`#supply-${id} .supply-select`);
+    const other = document.getElementById(`other-${id}`);
+    other.classList.toggle('hidden', sel.value !== 'その他');
+    updateBadgesAndSummary();
+  }
+
+  // 個数の増減（最小1）
+  function changeCount(id, delta) {
+    const el  = document.getElementById(`count-${id}`);
+    const cur = parseInt(el.textContent) || 1;
+    el.textContent = Math.max(1, cur + delta);
+    updateBadgesAndSummary();
+  }
+
+  // 提供品アイテムを削除する（1件以上残す）
+  function removeSupplyItem(id) {
+    const list = document.getElementById('supplyList');
+    if (list.children.length <= 1) {
+      showToast('提供品は1件以上必要です');
+      return;
+    }
+    document.getElementById(`supply-${id}`).remove();
+    updateBadgesAndSummary();
+  }
+
+  // 商品追加ボタン
+  document.getElementById('addSupplyBtn').onclick = addSupplyItem;
+
+  // ===== バッジとサマリーの更新 =====
+  function updateBadgesAndSummary() {
+    const checkedCustomers = getCheckedCustomers();
+    const validSupplies    = getValidSupplies();
+    const totalRecords     = checkedCustomers.length * validSupplies.length;
+
+    // 利用者バッジ
+    document.getElementById('customerBadge').textContent = `${checkedCustomers.length}名選択中`;
+
+    // 提供品バッジ
+    document.getElementById('supplyBadge').textContent = `${validSupplies.length}品`;
+
+    // サマリー表示
+    document.getElementById('summaryCount').textContent = `合計 ${totalRecords}件 登録されます`;
+    if (checkedCustomers.length > 0 && validSupplies.length > 0) {
+      const supplyNames = validSupplies.map(s =>
+        s.product === 'その他' ? `${s.otherProduct}×${s.count}` : `${s.product}×${s.count}`
+      ).join('・');
+      document.getElementById('summaryDetail').textContent =
+        `${checkedCustomers.length}名 × ${validSupplies.length}商品（${supplyNames}）`;
+    } else {
+      document.getElementById('summaryDetail').textContent = '利用者と商品を選択してください';
+    }
+
+    // フッターのカウント
+    document.getElementById('footerCount').textContent = `${totalRecords}件`;
+
+    // 送信ボタンの有効/無効（利用者・商品が両方選択済みかつ提供日があれば有効）
+    const dateOk = !!document.getElementById('dateInput').value;
+    document.getElementById('submitBtn').disabled = !(totalRecords > 0 && dateOk);
+  }
+
+  // ===== 選択中利用者リストを取得 =====
+  function getCheckedCustomers() {
+    return [...document.querySelectorAll('#customerList .customer-item.checked')]
+      .map(el => el.dataset.name);
+  }
+
+  // ===== 有効な提供品リストを取得 =====
+  function getValidSupplies() {
+    const items = document.querySelectorAll('#supplyList .supply-item');
+    const result = [];
+    items.forEach(item => {
+      const id      = item.id.replace('supply-', '');
+      const sel     = item.querySelector('.supply-select');
+      const product = sel.value;
+      if (!product) return; // 未選択はスキップ
+      const count   = parseInt(document.getElementById(`count-${id}`).textContent) || 1;
+      const otherEl = document.getElementById(`other-${id}`);
+      const otherProduct = otherEl ? otherEl.value.trim() : '';
+      // 「その他」でテキスト未入力の場合はスキップする
+      if (product === 'その他' && !otherProduct) return;
+      result.push({ product, otherProduct, count });
+    });
+    return result;
+  }
+
+  // ===== 登録処理 =====
+  document.getElementById('submitBtn').onclick = async () => {
+    const date      = document.getElementById('dateInput').value;
+    const customers = getCheckedCustomers();
+    const supplies  = getValidSupplies();
+
+    if (!date || !customers.length || !supplies.length) return;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> 登録中...';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/records`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ date, office: activeOffice, customers, supplies }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      showToast(`${data.count}件を登録しました`, 'success');
+
+      // 登録後に利用者選択と提供品をリセットする
+      document.querySelectorAll('#customerList .customer-item').forEach(el => el.classList.remove('checked'));
+      document.getElementById('supplyList').innerHTML = '';
+      supplyIdCounter = 0;
+      addSupplyItem();
+      updateBadgesAndSummary();
+
+    } catch (err) {
+      showToast(`登録失敗: ${err.message}`, 'error');
+    } finally {
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> まとめて登録する';
+      updateBadgesAndSummary();
+    }
+  };
+
+  // ===== トースト表示 =====
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = `toast ${type}`;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // 提供日変更でボタン有効性を再評価する
+  document.getElementById('dateInput').onchange = updateBadgesAndSummary;
+
+  init();
+</script>
+</body>
+</html>
