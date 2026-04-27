@@ -479,17 +479,9 @@
           <input type="date" id="input-date" required>
         </div>
         <div class="form-group">
-          <label>事業所 <span style="color:#e63946">*</span></label>
-          <select id="input-office" required>
-            <option value="">選択してください</option>
-            <option value="大浦家">大浦家</option>
-            <option value="上津役家">上津役家</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>氏名 <span style="color:#e63946">*</span></label>
           <select id="input-name" required>
-            <option value="">先に事業所を選択してください</option>
+            <option value="">氏名を選択してください</option>
           </select>
         </div>
         <!-- テーブル固有フィールド（JSで動的生成） -->
@@ -604,7 +596,6 @@
     const modalTitle     = document.getElementById('modal-title');
     const addForm        = document.getElementById('add-form');
     const inputDate      = document.getElementById('input-date');
-    const inputOffice    = document.getElementById('input-office');
     const inputName      = document.getElementById('input-name');
     const dynamicFields  = document.getElementById('dynamic-fields');
     const submitBtn      = document.getElementById('submit-btn');
@@ -784,8 +775,7 @@
       const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
       modalTitle.textContent = `${label}を登録`;
 
-      // 現在の事業所選択をモーダルへ引き継ぐ
-      inputOffice.value = currentOffice;
+      // 上部タブで選択中の事業所で氏名リストを更新する（フォームに事業所選択欄はない）
       updateNameOptions(currentOffice, inputName);
       // 氏名セレクトの選択もあれば引き継ぐ
       if (selName.value) inputName.value = selName.value;
@@ -794,11 +784,6 @@
       formMsg.textContent = '';
       formMsg.className   = 'form-msg';
       openModal(addModal);
-    });
-
-    // 登録モーダル内の事業所変更で氏名リストを更新する
-    inputOffice.addEventListener('change', () => {
-      updateNameOptions(inputOffice.value, inputName);
     });
 
     closeAddModal.addEventListener('click', () => closeModal(addModal));
@@ -840,11 +825,11 @@
     addForm.addEventListener('submit', async e => {
       e.preventDefault();
       const date   = inputDate.value;
-      const office = inputOffice.value;
+      const office = currentOffice; // 上部タブで選択中の事業所を使用する
       const name   = inputName.value;
 
       if (!date || !office || !name) {
-        formMsg.textContent = '日付・事業所・氏名は必須です。';
+        formMsg.textContent = '日付・氏名は必須です。';
         formMsg.className   = 'form-msg err';
         return;
       }
