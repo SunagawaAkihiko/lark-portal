@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>レク報告</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 7rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== 事業所タブ ===== */
+    .office-tabs {
+      position: sticky; top: 0; z-index: 15;
+      display: flex; flex-wrap: wrap;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem; gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%; color: white;
+      font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .office-tab {
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* ===== ローディング ===== */
+    .loading-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4rem 1rem; gap: 1rem; color: var(--text-muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+
+    /* ===== フォームカード ===== */
+    .form-card {
+      background: white; border: 1px solid var(--border-color);
+      border-radius: 14px; overflow: hidden;
+    }
+    .form-card-head {
+      background: var(--primary-light); padding: 0.65rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .form-card-title { font-size: 0.85rem; font-weight: 700; color: var(--primary-color); }
+    .form-card-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ===== フィールド共通 ===== */
+    .field-label {
+      font-size: 0.82rem; font-weight: 700;
+      color: var(--text-muted); margin-bottom: 0.4rem;
+    }
+    .field-label .required { color: var(--primary-color); margin-left: 0.3rem; }
+    .field-input, .field-select, .field-textarea {
+      width: 100%; padding: 0.7rem 0.9rem;
+      border: 1.5px solid var(--border-color); border-radius: 10px;
+      font-family: inherit; font-size: 1rem; color: var(--text-color); background: white;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .field-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center; padding-right: 2.5rem;
+    }
+    .field-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+    /* ===== 費用入力 ===== */
+    .cost-wrap { position: relative; }
+    .cost-prefix {
+      position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%);
+      font-size: 1rem; color: var(--text-muted); font-weight: 700; pointer-events: none;
+    }
+    .cost-wrap .field-input { padding-left: 1.8rem; }
+
+    /* ===== 参加利用者チェックリスト ===== */
+    .select-all-btn {
+      width: 100%; padding: 0.5rem;
+      background: none; border: 1px dashed var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
+      margin-bottom: 0.4rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+    .participant-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 0.5rem; border-radius: 10px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .participant-item:active { background: var(--bg-color); }
+    .participant-item + .participant-item { border-top: 1px solid var(--bg-color); }
+    .p-checkbox {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid var(--border-color);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; color: transparent; flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .participant-item.checked .p-checkbox {
+      background: var(--primary-color); border-color: var(--primary-color); color: white;
+    }
+    .p-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; color: var(--primary-color); flex-shrink: 0;
+    }
+    .p-name { font-size: 0.95rem; font-weight: 700; }
+
+    /* ===== 送信ボタン ===== */
+    .submit-btn {
+      width: 100%; padding: 1rem;
+      background: var(--primary-color); color: white;
+      border: none; border-radius: 12px;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(231,111,81,0.35); transition: opacity 0.2s;
+    }
+    .submit-btn:active  { opacity: 0.8; }
+    .submit-btn:disabled {
+      background: var(--border-color); box-shadow: none;
+      cursor: not-allowed; opacity: 1;
+    }
+
+    /* ===== トースト ===== */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: #333; color: white;
+      padding: 0.75rem 1.5rem; border-radius: 24px;
+      font-size: 0.9rem; font-weight: 700; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 100;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .toast.show    { opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .office-tabs { padding: 0 0.8rem 0.5rem; gap: 0.4rem; }
+      .office-tabs-label { padding: 0.5rem 0 0.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 事業所タブ -->
+<div class="office-tabs" id="tabBar">
+  <span class="office-tabs-label">
+    <i class="fa-solid fa-users"></i> レク報告
+  </span>
+</div>
+
+<!-- ローディング -->
+<div id="loadingScreen" class="loading-screen">
+  <div class="spinner"></div>
+  <p>読み込み中...</p>
+</div>
+
+<!-- メインコンテンツ -->
+<div id="mainContent" class="main-content hidden">
+
+  <div class="form-card">
+    <div class="form-card-head">
+      <i class="fa-solid fa-users" style="color:var(--primary-color)"></i>
+      <span class="form-card-title">レクリエーション報告を登録</span>
+    </div>
+    <div class="form-card-body">
+
+      <!-- 報告日 -->
+      <div>
+        <div class="field-label">報告日<span class="required">＊</span></div>
+        <input type="date" class="field-input" id="fieldReportDate">
+      </div>
+
+      <!-- レク実施日 -->
+      <div>
+        <div class="field-label">レク実施日<span class="required">＊</span></div>
+        <input type="date" class="field-input" id="fieldRecDate">
+      </div>
+
+      <!-- 報告者 -->
+      <div>
+        <div class="field-label">報告者<span class="required">＊</span></div>
+        <select class="field-select" id="fieldReporter">
+          <option value="">-- 選択してください --</option>
+        </select>
+      </div>
+
+      <!-- レク内容 -->
+      <div>
+        <div class="field-label">レク内容<span class="required">＊</span></div>
+        <textarea class="field-textarea" id="fieldContent"
+          placeholder="実施したレクリエーションの内容を入力してください"></textarea>
+      </div>
+
+      <!-- 費用 -->
+      <div>
+        <div class="field-label">費用</div>
+        <div class="cost-wrap">
+          <span class="cost-prefix">¥</span>
+          <input type="number" class="field-input" id="fieldCost" placeholder="0" min="0">
+        </div>
+      </div>
+
+      <!-- 参加利用者 -->
+      <div>
+        <div class="field-label">参加利用者</div>
+        <button class="select-all-btn" id="selectAllBtn">
+          <i class="fa-solid fa-check-double"></i> 全員選択
+        </button>
+        <div id="participantList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="submitReport()">
+    <i class="fa-solid fa-paper-plane"></i> 報 告 す る
+  </button>
+
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // APIベースURLをローカル開発と本番Renderで切り替える
+  const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+  const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // ===== 状態管理 =====
+  let allStaff     = [];  // 全スタッフデータ { name, offices[] }
+  let allCustomers = [];  // 全利用者データ { name, office, status }
+  let offices      = [];  // 事業所リスト
+  let activeOffice = '';  // 選択中の事業所
+
+  // ===== 初期化 =====
+  async function init() {
+    // 報告日・レク実施日を今日にセットする
+    const today = new Date();
+    const yyyy  = today.getFullYear();
+    const mm    = String(today.getMonth() + 1).padStart(2, '0');
+    const dd    = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('fieldReportDate').value = todayStr;
+    document.getElementById('fieldRecDate').value    = todayStr;
+
+    try {
+      // スタッフ・事業所データと利用者データを並行取得する
+      const [metaRes, custRes] = await Promise.all([
+        fetch(`${API_BASE}/api/purchase-request/meta`),
+        fetch(`${API_BASE}/api/customers/get`),
+      ]);
+      const [metaData, custData] = await Promise.all([metaRes.json(), custRes.json()]);
+
+      if (!metaData.ok) throw new Error(metaData.error);
+      if (!custData.ok) throw new Error(custData.error);
+
+      allStaff     = metaData.staffList;
+      offices      = metaData.officeOptions;
+      // 契約終了以外の利用者のみ保持する
+      allCustomers = custData.data.filter(c => c.status !== '終了' && c.name);
+
+      buildTabs();
+      if (offices.length > 0) switchOffice(offices[0]);
+
+      // 全員選択ボタンの動作を設定する
+      document.getElementById('selectAllBtn').onclick = toggleSelectAll;
+
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('loadingScreen').innerHTML =
+        `<div style="color:#c1121f;text-align:center"><i class="fa-solid fa-circle-exclamation"></i> 読み込みに失敗しました<br><small>${err.message}</small></div>`;
+    }
+  }
+
+  // ===== タブ生成 =====
+  function buildTabs() {
+    const bar = document.getElementById('tabBar');
+    bar.innerHTML = '<span class="office-tabs-label"><i class="fa-solid fa-users"></i> レク報告</span>';
+    offices.forEach(office => {
+      const btn = document.createElement('button');
+      btn.className   = 'office-tab';
+      btn.textContent = office;
+      btn.onclick = () => switchOffice(office);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ===== 事業所切り替え =====
+  function switchOffice(office) {
+    activeOffice = office;
+    document.querySelectorAll('.office-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.trim() === office);
+    });
+    renderReporterSelect();
+    renderParticipantList();
+  }
+
+  // ===== 報告者セレクト描画（選択中事業所のスタッフのみ） =====
+  function renderReporterSelect() {
+    const sel  = document.getElementById('fieldReporter');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">-- 選択してください --</option>';
+    allStaff
+      .filter(s => s.offices.includes(activeOffice))
+      .forEach(s => {
+        const opt = document.createElement('option');
+        opt.value       = s.name;
+        opt.textContent = s.name;
+        sel.appendChild(opt);
+      });
+    // 切り替え前の選択値が引き続き存在すれば維持する
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  }
+
+  // ===== 参加利用者チェックリスト描画（選択中事業所の利用者のみ） =====
+  function renderParticipantList() {
+    const list     = document.getElementById('participantList');
+    const filtered = allCustomers.filter(c => c.office === activeOffice);
+    list.innerHTML = '';
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem;font-size:0.85rem">この事業所の利用者がいません</div>';
+      return;
+    }
+
+    filtered.forEach(c => {
+      const item = document.createElement('div');
+      item.className     = 'participant-item';
+      item.dataset.name  = c.name;
+      item.innerHTML = `
+        <div class="p-checkbox"><i class="fa-solid fa-check"></i></div>
+        <div class="p-avatar"><i class="fa-solid fa-user"></i></div>
+        <span class="p-name">${c.name}</span>
+      `;
+      item.onclick = () => item.classList.toggle('checked');
+      list.appendChild(item);
+    });
+  }
+
+  // ===== 全員選択 / 全解除トグル =====
+  function toggleSelectAll() {
+    const items     = document.querySelectorAll('#participantList .participant-item');
+    const allChecked = [...items].every(i => i.classList.contains('checked'));
+    items.forEach(i => i.classList.toggle('checked', !allChecked));
+  }
+
+  // ===== 送信 =====
+  async function submitReport() {
+    const reportDate = document.getElementById('fieldReportDate').value;
+    const recDate    = document.getElementById('fieldRecDate').value;
+    const reporter   = document.getElementById('fieldReporter').value;
+    const content    = document.getElementById('fieldContent').value.trim();
+    const costRaw    = document.getElementById('fieldCost').value;
+
+    if (!reportDate || !recDate || !reporter || !content) {
+      showToast('報告日・レク実施日・報告者・レク内容は必須です', 'error');
+      return;
+    }
+
+    // チェック済みの参加利用者名を配列で取得する
+    const participants = [...document.querySelectorAll('#participantList .participant-item.checked')]
+      .map(i => i.dataset.name);
+
+    const cost = costRaw !== '' ? Number(costRaw) : null;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送信中...';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/rec/report`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          office: activeOffice,
+          reportDate,
+          recDate,
+          reporter,
+          content,
+          cost,
+          participants,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      showToast('報告しました', 'success');
+
+      // フォームをリセットして次の入力に備える
+      document.getElementById('fieldContent').value = '';
+      document.getElementById('fieldCost').value    = '';
+      document.getElementById('fieldReporter').value = '';
+      document.querySelectorAll('#participantList .participant-item')
+        .forEach(i => i.classList.remove('checked'));
+
+    } catch (err) {
+      showToast(`エラー: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 報 告 す る';
+    }
+  }
+
+  // ===== トースト表示 =====
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = 'toast show' + (type ? ' ' + type : '');
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>

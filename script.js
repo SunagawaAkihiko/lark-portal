@@ -47,7 +47,7 @@ const portalLinks = [
         title: "レク報告",
         description: "レクリエーションの報告",
         icon: "fa-users",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgez78XnMNJq1dsE"
+        url: "rec-report.html"
     },
     {
         title: "薬手帳登録",
