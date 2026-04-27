@@ -332,7 +332,7 @@
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  let allCustomers = [];  // 全利用者データ
+  let allStaff     = [];  // 全スタッフデータ { name, offices[] }
   let offices      = [];  // 事業所リスト
   let activeOffice = '';  // 選択中の事業所
   let selectedFile = null; // 選択済み写真ファイル
@@ -340,16 +340,13 @@
   // ===== 初期化 =====
   async function init() {
     try {
-      const res  = await fetch(`${API_BASE}/api/customers/get`);
+      // 物品購入申請と同じエンドポイントからスタッフ・事業所データを取得する
+      const res  = await fetch(`${API_BASE}/api/purchase-request/meta`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      // 契約終了以外の利用者のみ保持する
-      allCustomers = data.data.filter(c => c.status !== '終了' && c.name);
-
-      // 利用者データから事業所リストを重複なしで生成する
-      const officeSet = new Set(allCustomers.map(c => c.office).filter(Boolean));
-      offices = [...officeSet];
+      allStaff = data.staffList;
+      offices  = data.officeOptions;
 
       buildTabs();
       if (offices.length > 0) switchOffice(offices[0]);
@@ -385,24 +382,22 @@
     updateNameOptions();
   }
 
-  // ===== 氏名セレクト更新 =====
+  // ===== 氏名セレクト更新（選択中事業所に所属するスタッフのみ表示） =====
   function updateNameOptions() {
     const sel      = document.getElementById('nameSelect');
     const prevVal  = sel.value;
-    const filtered = allCustomers.filter(c => c.office === activeOffice);
+    const filtered = allStaff.filter(s => s.offices.includes(activeOffice));
 
     sel.innerHTML = '<option value="">選択してください</option>';
-    filtered.forEach(c => {
-      const opt   = document.createElement('option');
-      opt.value   = c.name;
-      opt.textContent = c.name;
+    filtered.forEach(s => {
+      const opt       = document.createElement('option');
+      opt.value       = s.name;
+      opt.textContent = s.name;
       sel.appendChild(opt);
     });
 
-    // 以前の選択値が引き続き存在すれば維持する
-    if (prevVal && filtered.some(c => c.name === prevVal)) {
-      sel.value = prevVal;
-    }
+    // 以前の選択値がフィルタ後も存在する場合は維持する
+    if (prevVal && filtered.some(s => s.name === prevVal)) sel.value = prevVal;
   }
 
   // ===== 写真選択 =====
