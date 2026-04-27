@@ -56,11 +56,9 @@
     .office-tab.active { background: var(--primary-color); color: white; }
     /* 氏名タブ（横スクロール） */
     .name-tabs {
-      display: flex; gap: 0.4rem;
-      overflow-x: auto; padding-bottom: 0.75rem;
-      scrollbar-width: none;
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      padding-bottom: 0.75rem;
     }
-    .name-tabs::-webkit-scrollbar { display: none; }
     .name-tab {
       flex-shrink: 0; padding: 0.38rem 0.9rem; border: none; border-radius: 7px;
       font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
