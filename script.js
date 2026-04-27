@@ -99,7 +99,7 @@ const portalLinks = [
         title: "利用者情報",
         description: "利用者の基本情報や詳細なデータを閲覧できます",
         icon: "fa-address-card",
-        url: "https://ejprp394joad.jp.larksuite.com/app/E9sJbXoLmaqpTusfzeVjTdqVpRd?pageId=pge5TTlTrwAWssp8"
+        url: "customer-info.html"
     },
     {
         title: "各種マニュアル",

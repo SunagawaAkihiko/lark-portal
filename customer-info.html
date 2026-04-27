@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>利用者情報</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --border-color:  #dcbfa6;
+      --card-bg:       #fff0e3;
+      --green:         #2a9d8f;
+      --green-light:   #e6f7f5;
+      --blue:          #457b9d;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 4rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== スティッキーコンテナ（3段ヘッダー＋詳細タブを一体でスティッキーにする） ===== */
+    .sticky-wrap {
+      position: sticky; top: 0; z-index: 15;
+    }
+
+    /* ===== 3段ヘッダー ===== */
+    .page-header {
+      background: var(--text-color);
+      padding: 0 1rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .page-header-label {
+      color: white; font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    /* 事業所タブ */
+    .office-tabs { display: flex; gap: 0.5rem; }
+    .office-tab {
+      flex: 1; padding: 0.5rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s;
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+    /* 氏名タブ（横スクロール） */
+    .name-tabs {
+      display: flex; gap: 0.4rem;
+      overflow-x: auto; padding-bottom: 0.75rem;
+      scrollbar-width: none;
+    }
+    .name-tabs::-webkit-scrollbar { display: none; }
+    .name-tab {
+      flex-shrink: 0; padding: 0.38rem 0.9rem; border: none; border-radius: 7px;
+      font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
+      white-space: nowrap; transition: background 0.2s, color 0.2s;
+    }
+    .name-tab.active { background: rgba(255,255,255,0.9); color: var(--text-color); }
+    .name-tab.ended  { opacity: 0.6; }
+
+    /* ===== 詳細タブ ===== */
+    .detail-tabs-wrap {
+      background: white;
+      border-bottom: 2px solid var(--border-color);
+      padding: 0 0.5rem;
+      display: flex; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .detail-tabs-wrap::-webkit-scrollbar { display: none; }
+    .detail-tab {
+      flex-shrink: 0; padding: 0.7rem 0.8rem; border: none;
+      background: none; font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      color: var(--text-muted); cursor: pointer; white-space: nowrap;
+      border-bottom: 2.5px solid transparent; margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .detail-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+    /* ===== ローディング ===== */
+    .loading-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4rem 1rem; gap: 1rem; color: var(--text-muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== コンテンツ ===== */
+    .tab-content {
+      padding: 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+
+    /* セクションカード */
+    .section-card {
+      background: white; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden;
+    }
+    .section-head {
+      background: var(--primary-light); padding: 0.6rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-head-title { font-size: 0.82rem; font-weight: 700; color: var(--primary-color); }
+    .section-body { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* フィールド行 */
+    .info-row {
+      display: flex; gap: 0.5rem;
+      padding: 0.45rem 0; border-bottom: 1px solid var(--bg-color);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+      font-size: 0.75rem; color: var(--text-muted); font-weight: 700;
+      width: 7rem; flex-shrink: 0; padding-top: 0.1rem;
+    }
+    .info-value { font-size: 0.9rem; flex: 1; word-break: break-all; }
+
+    /* バッジ */
+    .badge {
+      display: inline-block; padding: 0.18rem 0.55rem; border-radius: 5px;
+      font-size: 0.68rem; font-weight: 700;
+    }
+    .badge-care  { background: var(--primary-light); color: var(--primary-color); }
+    .badge-on    { background: var(--green-light);   color: var(--green); }
+    .badge-off   { background: #f0e0e0; color: #9b2226; }
+
+    /* 既往歴リスト */
+    .history-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+    .history-item {
+      padding: 0.55rem 0.75rem; background: var(--bg-color); border-radius: 8px;
+      font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .history-num {
+      font-size: 0.7rem; font-weight: 700; color: white;
+      background: var(--primary-color); border-radius: 4px;
+      padding: 0.1rem 0.4rem; flex-shrink: 0;
+    }
+
+    /* 関係先 */
+    .relation-card {
+      background: var(--bg-color); border-radius: 10px; padding: 0.75rem;
+      display: flex; flex-direction: column; gap: 0.3rem;
+    }
+    .relation-name { font-size: 0.95rem; font-weight: 700; }
+    .relation-meta { font-size: 0.78rem; color: var(--text-muted); }
+    .relation-tel {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.85rem; color: var(--blue); font-weight: 700;
+      text-decoration: none;
+    }
+    .relation-fax {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+
+    /* 薬手帳：画像グリッド */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+    .photo-thumb {
+      aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+      background: var(--card-bg); cursor: pointer;
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* 画像ライトボックス */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.9);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lightbox img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+    .lightbox-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: rgba(255,255,255,0.15); border: none; border-radius: 50%;
+      color: white; width: 40px; height: 40px; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* 資料ファイルリスト */
+    .file-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem; background: var(--bg-color); border-radius: 10px;
+    }
+    .file-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: #e63946; color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+    }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 0.88rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-size { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .file-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .file-btn {
+      width: 34px; height: 34px; border-radius: 8px; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .file-btn-view { background: var(--blue-light, #e8f0f7); color: var(--blue); }
+    .file-btn-dl   { background: var(--primary-light); color: var(--primary-color); }
+
+    /* 空データ表示 */
+    .empty-msg {
+      text-align: center; padding: 2.5rem 1rem;
+      color: var(--text-muted); font-size: 0.88rem;
+    }
+    .empty-msg i { display: block; font-size: 1.8rem; margin-bottom: 0.4rem; color: var(--border-color); }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .page-header { padding: 0 0.8rem; gap: 0.35rem; }
+      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+      .name-tabs { padding-bottom: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== スティッキーコンテナ ===== -->
+<div class="sticky-wrap">
+  <!-- 3段ヘッダー -->
+  <div class="page-header">
+    <div class="page-header-label"><i class="fa-solid fa-address-card"></i> 利用者情報</div>
+    <div class="office-tabs" id="officeTabs"></div>
+    <div class="name-tabs"   id="nameTabs"></div>
+  </div>
+  <!-- 詳細タブ -->
+  <div class="detail-tabs-wrap" id="detailTabsWrap">
+    <button class="detail-tab active" data-tab="basic"    onclick="switchDetailTab('basic',this)">基本情報</button>
+    <button class="detail-tab"        data-tab="history"  onclick="switchDetailTab('history',this)">既往歴</button>
+    <button class="detail-tab"        data-tab="relation" onclick="switchDetailTab('relation',this)">関係先</button>
+    <button class="detail-tab"        data-tab="medicine" onclick="switchDetailTab('medicine',this)">薬手帳</button>
+    <button class="detail-tab"        data-tab="doc"      onclick="switchDetailTab('doc',this)">フェイスシート・退院時資料</button>
+  </div>
+</div>
+
+<!-- ===== ローディング（初期） ===== -->
+<div class="loading-screen" id="initLoading">
+  <div class="spinner"></div>
+  <span>読み込み中...</span>
+</div>
+
+<!-- ===== 詳細ローディング（利用者切り替え時） ===== -->
+<div class="loading-screen hidden" id="detailLoading">
+  <div class="spinner"></div>
+  <span>情報を取得中...</span>
+</div>
+
+<!-- ===== コンテンツパネル ===== -->
+<div id="paneBasic"    class="tab-content hidden"></div>
+<div id="paneHistory"  class="tab-content hidden"></div>
+<div id="paneRelation" class="tab-content hidden"></div>
+<div id="paneMedicine" class="tab-content hidden"></div>
+<div id="paneDoc"      class="tab-content hidden"></div>
+
+<!-- ===== 画像ライトボックス ===== -->
+<div class="lightbox hidden" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+  // APIベースURL（ローカル開発と本番Renderで切り替える）
+  const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+  const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // ===== 状態管理 =====
+  let allCustomers  = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
+  let offices       = [];   // 事業所一覧（ソート済み）
+  let activeOffice  = '';   // 選択中の事業所
+  let activeRecordId = '';  // 選択中の利用者 recordId
+  let activeDetailTab = 'basic'; // 選択中の詳細タブ
+  const detailCache = {};   // 詳細データのキャッシュ { [recordId]: detailData }
+
+  // ===== 日付フォーマット（ミリ秒タイムスタンプ → 年月日） =====
+  function fmtDate(ts) {
+    if (!ts) return '―';
+    const d = new Date(Number(ts));
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+
+  // ===== ファイルサイズフォーマット =====
+  function fmtSize(bytes) {
+    if (!bytes) return '';
+    if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    return Math.round(bytes / 1024) + ' KB';
+  }
+
+  // ===== ファイルプロキシURLを生成する =====
+  function proxyUrl(url, opts = {}) {
+    const base = `${API_BASE}/api/file-proxy?url=${encodeURIComponent(url)}`;
+    if (opts.download && opts.name) {
+      return `${base}&download=1&name=${encodeURIComponent(opts.name)}`;
+    }
+    return base;
+  }
+
+  // ===== 初期化 =====
+  async function init() {
+    try {
+      const res  = await fetch(`${API_BASE}/api/customer-info/list`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      allCustomers = data.customers;
+      offices      = data.offices;
+
+      buildOfficeTabs();
+      // 最初の事業所を選択する
+      if (offices.length > 0) switchOffice(offices[0], /* noAutoSelect */ false);
+
+      document.getElementById('initLoading').classList.add('hidden');
+      document.getElementById('detailTabsWrap').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('initLoading').innerHTML =
+        `<div style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 読み込みに失敗しました<br><small>${err.message}</small></div>`;
+    }
+  }
+
+  // ===== 事業所タブを生成する =====
+  function buildOfficeTabs() {
+    const bar = document.getElementById('officeTabs');
+    bar.innerHTML = '';
+    offices.forEach(office => {
+      const btn = document.createElement('button');
+      btn.className   = 'office-tab';
+      btn.textContent = office;
+      btn.onclick     = () => switchOffice(office, false);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ===== 事業所を切り替える =====
+  function switchOffice(office, skipAutoSelect) {
+    activeOffice = office;
+    document.querySelectorAll('.office-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.trim() === office);
+    });
+    buildNameTabs();
+    // 最初の利用者を自動選択する
+    const officeCustomers = getOfficeCustomers();
+    if (!skipAutoSelect && officeCustomers.length > 0) {
+      switchCustomer(officeCustomers[0].recordId);
+    }
+  }
+
+  // ===== 選択中の事業所の利用者一覧を返す（フリガナ順） =====
+  function getOfficeCustomers() {
+    return allCustomers
+      .filter(c => c.office === activeOffice)
+      .sort((a, b) => {
+        const ka = (a.lastNameKana + a.firstNameKana) || (a.lastName + a.firstName);
+        const kb = (b.lastNameKana + b.firstNameKana) || (b.lastName + b.firstName);
+        return ka.localeCompare(kb, 'ja');
+      });
+  }
+
+  // ===== 氏名タブを再生成する =====
+  function buildNameTabs() {
+    const bar       = document.getElementById('nameTabs');
+    bar.innerHTML   = '';
+    const customers = getOfficeCustomers();
+
+    customers.forEach(c => {
+      const btn = document.createElement('button');
+      // 契約終了の利用者は視覚的に区別する
+      btn.className   = 'name-tab' + (c.status === '終了' ? ' ended' : '');
+      btn.textContent = `${c.lastName} ${c.firstName}`.trim() || c.name;
+      btn.dataset.recordId = c.recordId;
+      btn.onclick = () => switchCustomer(c.recordId);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ===== 利用者を切り替える =====
+  async function switchCustomer(recordId) {
+    activeRecordId = recordId;
+
+    // 氏名タブのアクティブ状態を更新する
+    document.querySelectorAll('.name-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.recordId === recordId);
+    });
+
+    // キャッシュ済みなら即座に描画する
+    if (detailCache[recordId]) {
+      renderAllPanes(detailCache[recordId]);
+      return;
+    }
+
+    // 未取得の場合はAPIから取得する
+    showDetailLoading(true);
+    try {
+      const res  = await fetch(`${API_BASE}/api/customer-info/detail?recordId=${encodeURIComponent(recordId)}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      detailCache[recordId] = data;
+      renderAllPanes(data);
+
+    } catch (err) {
+      showDetailLoading(false);
+      document.getElementById('paneBasic').classList.remove('hidden');
+      document.getElementById('paneBasic').innerHTML =
+        `<div class="empty-msg"><i class="fa-solid fa-circle-exclamation"></i>取得に失敗しました<br><small>${err.message}</small></div>`;
+    }
+  }
+
+  // ===== ローディング表示切り替え =====
+  function showDetailLoading(show) {
+    const PANES = ['basic','history','relation','medicine','doc'];
+    PANES.forEach(p => document.getElementById('pane' + capitalize(p)).classList.add('hidden'));
+    document.getElementById('detailLoading').classList.toggle('hidden', !show);
+  }
+
+  // ===== 全パネルを描画して現在タブを表示する =====
+  function renderAllPanes(data) {
+    document.getElementById('detailLoading').classList.add('hidden');
+    renderBasic(data.customer);
+    renderHistory(data.history);
+    renderRelations(data.relations);
+    renderMedicine(data.medicinePhotos);
+    renderDocs(data.faceSheets, data.dischargeFiles);
+    // 現在タブのパネルだけ表示する
+    showPane(activeDetailTab);
+  }
+
+  // ===== 基本情報パネルを描画する =====
+  function renderBasic(c) {
+    const statusBadge = c.status === '終了'
+      ? `<span class="badge badge-off">契約終了</span>`
+      : `<span class="badge badge-on">在籍中</span>`;
+
+    // 家族①の入力がある場合のみセクションを描画する
+    const hasFam1 = c.fam1LastName || c.fam1FirstName;
+    const hasFam2 = c.fam2LastName || c.fam2FirstName;
+
+    const fam1Html = hasFam1 ? `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-users" style="color:var(--primary-color)"></i><span class="section-head-title">家族①</span></div>
+        <div class="section-body">
+          ${row('氏名',    `${c.fam1LastName} ${c.fam1FirstName}`.trim())}
+          ${row('フリガナ', `${c.fam1LastNameKana} ${c.fam1FirstNameKana}`.trim())}
+          ${row('続柄',    c.fam1Relationship)}
+          ${row('電話番号', c.fam1Phone)}
+          ${row('住所',    c.fam1Address)}
+        </div>
+      </div>` : '';
+
+    const fam2Html = hasFam2 ? `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-users" style="color:var(--primary-color)"></i><span class="section-head-title">家族②</span></div>
+        <div class="section-body">
+          ${row('氏名',    `${c.fam2LastName} ${c.fam2FirstName}`.trim())}
+          ${row('フリガナ', `${c.fam2LastNameKana} ${c.fam2FirstNameKana}`.trim())}
+          ${row('続柄',    c.fam2Relationship)}
+          ${row('電話番号', c.fam2Phone)}
+        </div>
+      </div>` : '';
+
+    document.getElementById('paneBasic').innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-user" style="color:var(--primary-color)"></i><span class="section-head-title">本人基本情報</span></div>
+        <div class="section-body">
+          ${row('氏名',    `${c.displayName} ${statusBadge}`)}
+          ${row('フリガナ', c.kana)}
+          ${row('生年月日', fmtDate(c.birthDate))}
+          ${row('介護度',  c.careLevel ? `<span class="badge badge-care">${c.careLevel}</span>` : '―')}
+          ${row('入居日',  fmtDate(c.nyukyoDate))}
+          ${row('事業所',  c.office)}
+          ${row('本人住所', c.address)}
+        </div>
+      </div>
+      ${fam1Html}
+      ${fam2Html}
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-envelope" style="color:var(--primary-color)"></i><span class="section-head-title">連絡先・郵便物</span></div>
+        <div class="section-body">
+          ${row('報告アドレス',  c.reportEmail)}
+          ${row('郵便物送付先', c.mailAddress)}
+        </div>
+      </div>`;
+  }
+
+  // ===== info-row のHTML断片を生成するヘルパー =====
+  function row(label, value) {
+    const v = value && String(value).trim() ? value : '―';
+    return `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${v}</span></div>`;
+  }
+
+  // ===== 既往歴パネルを描画する =====
+  function renderHistory(history) {
+    const pane = document.getElementById('paneHistory');
+    if (!history || history.length === 0) {
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-file-medical"></i>既往歴の登録はありません</div>`;
+      return;
+    }
+    const items = history.map((h, i) =>
+      `<li class="history-item"><span class="history-num">${i + 1}</span>${escHtml(h)}</li>`
+    ).join('');
+    pane.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-file-medical" style="color:var(--primary-color)"></i><span class="section-head-title">既往歴</span></div>
+        <div class="section-body"><ul class="history-list">${items}</ul></div>
+      </div>`;
+  }
+
+  // ===== 関係先パネルを描画する =====
+  function renderRelations(relations) {
+    const pane = document.getElementById('paneRelation');
+    if (!relations || relations.length === 0) {
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-hospital"></i>関係先の登録はありません</div>`;
+      return;
+    }
+    const cards = relations.map(r => {
+      const telHtml = r.tel
+        ? `<a class="relation-tel" href="tel:${r.tel}"><i class="fa-solid fa-phone"></i>${escHtml(r.tel)}</a>` : '';
+      const faxHtml = r.fax
+        ? `<span class="relation-fax"><i class="fa-solid fa-fax"></i>${escHtml(r.fax)}</span>` : '';
+      const meta = [r.relation, r.person ? `担当：${r.person}` : ''].filter(Boolean).join(' ／ ');
+      return `
+        <div class="relation-card">
+          <div class="relation-name">${escHtml(r.officeName)}</div>
+          ${meta ? `<div class="relation-meta">${escHtml(meta)}</div>` : ''}
+          ${telHtml}${faxHtml}
+        </div>`;
+    }).join('');
+    pane.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-hospital" style="color:var(--primary-color)"></i><span class="section-head-title">関係先</span></div>
+        <div class="section-body">${cards}</div>
+      </div>`;
+  }
+
+  // ===== 薬手帳パネルを描画する =====
+  function renderMedicine(photos) {
+    const pane = document.getElementById('paneMedicine');
+    if (!photos || photos.length === 0) {
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-pills"></i>薬手帳写真の登録はありません</div>`;
+      return;
+    }
+    const thumbs = photos.map((p, i) => {
+      const src = proxyUrl(p.url);
+      return `<div class="photo-thumb" onclick="openLightbox('${src}')">
+        <img src="${src}" alt="薬手帳${i+1}" loading="lazy">
+      </div>`;
+    }).join('');
+    pane.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><i class="fa-solid fa-pills" style="color:var(--primary-color)"></i><span class="section-head-title">薬手帳写真（${photos.length}枚）</span></div>
+        <div class="section-body"><div class="photo-grid">${thumbs}</div></div>
+      </div>`;
+  }
+
+  // ===== 資料パネルを描画する =====
+  function renderDocs(faceSheets, dischargeFiles) {
+    const pane = document.getElementById('paneDoc');
+
+    function fileHtml(files, sectionTitle, icon) {
+      if (!files || files.length === 0) return '';
+      const items = files.map(f => {
+        const viewHref = proxyUrl(f.url);
+        const dlHref   = proxyUrl(f.url, { download: true, name: f.name });
+        return `
+          <div class="file-item">
+            <div class="file-icon">PDF</div>
+            <div class="file-info">
+              <div class="file-name">${escHtml(f.name)}</div>
+              <div class="file-size">${fmtSize(f.size)}</div>
+            </div>
+            <div class="file-actions">
+              <a class="file-btn file-btn-view" href="${viewHref}" target="_blank" title="開く">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <a class="file-btn file-btn-dl" href="${dlHref}" download="${escHtml(f.name)}" title="ダウンロード">
+                <i class="fa-solid fa-download"></i>
+              </a>
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="section-card">
+          <div class="section-head"><i class="${icon}" style="color:var(--primary-color)"></i><span class="section-head-title">${sectionTitle}</span></div>
+          <div class="section-body">${items}</div>
+        </div>`;
+    }
+
+    const fsHtml  = fileHtml(faceSheets,    'フェイスシート', 'fa-solid fa-file-pdf');
+    const disHtml = fileHtml(dischargeFiles, '退院時資料',    'fa-solid fa-file-medical');
+
+    if (!fsHtml && !disHtml) {
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-file-pdf"></i>資料の登録はありません</div>`;
+    } else {
+      pane.innerHTML = fsHtml + disHtml;
+    }
+  }
+
+  // ===== 詳細タブを切り替える =====
+  function switchDetailTab(name, btn) {
+    activeDetailTab = name;
+    document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    showPane(name);
+  }
+
+  // ===== 指定タブのパネルのみ表示する =====
+  function showPane(name) {
+    const TABS = ['basic','history','relation','medicine','doc'];
+    TABS.forEach(t => document.getElementById('pane' + capitalize(t)).classList.add('hidden'));
+    document.getElementById('pane' + capitalize(name)).classList.remove('hidden');
+  }
+
+  // ===== ライトボックスを開く =====
+  function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.remove('hidden');
+  }
+
+  // ===== ライトボックスを閉じる =====
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.add('hidden');
+    document.getElementById('lightboxImg').src = '';
+  }
+
+  // ===== HTMLエスケープ =====
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ===== 先頭文字を大文字にする =====
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
