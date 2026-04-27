@@ -45,8 +45,27 @@ document.addEventListener('DOMContentLoaded', () => {
     initDateTimeSelectors();
 
     // 登録モーダルを開くとき、選択中の事業所で氏名リストを更新する
-    addEventFab.addEventListener('click', () => {
+    // 氏名フィールドはLarkの単一選択なので、フィールド選択肢が未取得の場合は
+    // 再取得してから開く（Renderコールドスタートで取得失敗した場合への対策）
+    addEventFab.addEventListener('click', async () => {
         if (!currentOfficeFilter) return; // データ読み込み前はモーダルを開かない
+
+        // 氏名の選択肢が未取得の場合、再取得を試みる
+        if (!fieldOptions['氏名'] || fieldOptions['氏名'].length === 0) {
+            const origHTML = addEventFab.innerHTML;
+            addEventFab.disabled = true;
+            addEventFab.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            await fetchFieldOptions();
+            addEventFab.disabled = false;
+            addEventFab.innerHTML = origHTML;
+
+            // 再取得後も取得できていない場合はエラーを表示して中断する
+            if (!fieldOptions['氏名'] || fieldOptions['氏名'].length === 0) {
+                alert('データの読み込みに失敗しました。\nページを更新してから再度お試しください。');
+                return;
+            }
+        }
+
         updateNameSelectOptions(currentOfficeFilter);
         addModal.classList.remove('hidden');
     });
@@ -342,18 +361,19 @@ function initDateTimeSelectors() {
     mSel.addEventListener('change', updateDays);
     updateDays(); // 初回実行
 
-    // Hour
+    // Hour（fetchFieldOptionsが失敗した場合のフォールバック。値はLark予定時間フィールドと同じ"HH:00"形式にする）
     const hSelMitei = document.createElement('option');
     hSelMitei.value = ''; hSelMitei.textContent = '未定';
     hSel.appendChild(hSelMitei);
 
     for(let h = 0; h <= 23; h++) {
-        const val = String(h).padStart(2, '0');
+        const hh  = String(h).padStart(2, '0');
+        const val = `${hh}:00`; // Lark予定時間フィールドの選択肢と同じ形式
         const opt = document.createElement('option');
         opt.value = val; opt.textContent = val;
         hSel.appendChild(opt);
     }
-    hSel.value = String(now.getHours()).padStart(2, '0');
+    hSel.value = `${String(now.getHours()).padStart(2, '0')}:00`;
 
     // Minute (5分刻み)
     const mSelMitei = document.createElement('option');
