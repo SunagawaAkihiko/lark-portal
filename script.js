@@ -53,7 +53,7 @@ const portalLinks = [
         title: "薬手帳登録",
         description: "お薬手帳のデータを登録",
         icon: "fa-pills",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeoDQkSyq4tgibm"
+        url: "medicine-record.html"
     },
     {
         title: "登録ボタン一覧",
