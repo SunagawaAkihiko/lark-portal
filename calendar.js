@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 登録モーダルを開くとき、選択中の事業所で氏名リストを更新する
     addEventFab.addEventListener('click', () => {
+        if (!currentOfficeFilter) return; // データ読み込み前はモーダルを開かない
         updateNameSelectOptions(currentOfficeFilter);
         addModal.classList.remove('hidden');
     });
@@ -611,7 +612,11 @@ async function handleAddEvent(e) {
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error("登録エラー発生");
+        if (!res.ok) {
+            // サーバーのエラーレスポンスから実際のエラーメッセージを取得する
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `サーバーエラー (${res.status})`);
+        }
         
         alert("予定を登録しました！");
         addModal.classList.add('hidden');
