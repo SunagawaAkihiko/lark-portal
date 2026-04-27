@@ -24,7 +24,6 @@ const addEventFab = document.getElementById('add-event-fab');
 const addModal = document.getElementById('add-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const addEventForm = document.getElementById('add-event-form');
-const inputOffice = document.getElementById('input-office');
 const inputNameSelect = document.getElementById('input-name-select');
 
 // 削除モーダル関連のDOM要素
@@ -45,7 +44,11 @@ const selectedDayEvents = document.getElementById('selected-day-events');
 document.addEventListener('DOMContentLoaded', () => {
     initDateTimeSelectors();
 
-    addEventFab.addEventListener('click', () => addModal.classList.remove('hidden'));
+    // 登録モーダルを開くとき、選択中の事業所で氏名リストを更新する
+    addEventFab.addEventListener('click', () => {
+        updateNameSelectOptions(currentOfficeFilter);
+        addModal.classList.remove('hidden');
+    });
     closeModalBtn.addEventListener('click', () => addModal.classList.add('hidden'));
     addEventForm.addEventListener('submit', handleAddEvent);
 
@@ -56,12 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     prevMonthBtn.addEventListener('click', () => changeMonth(-1));
     nextMonthBtn.addEventListener('click', () => changeMonth(1));
 
-    // 事業所が選ばれたら利用者名リストを切り替える
-    inputOffice.addEventListener('change', (e) => {
-        updateNameSelectOptions(e.target.value);
-    });
-
-    // 事業所変更時だけでなく、初期設定時にも動作可能に
     fetchInitialData();
 });
 
@@ -217,9 +214,8 @@ function extractOffices(data) {
     });
 
     officeTabs.innerHTML = '';
-    inputOffice.innerHTML = '<option value="">選択してください</option>';
 
-    // 初期選択を最初の事業所に
+    // 初期選択を最初の事業所にする
     if (officeArray.length > 0 && !currentOfficeFilter) {
         currentOfficeFilter = officeArray[0];
     }
@@ -237,10 +233,6 @@ function extractOffices(data) {
         btn.dataset.office = off;
         btn.textContent = off;
         officeTabs.appendChild(btn);
-
-        const option = document.createElement('option');
-        option.value = off; option.textContent = off;
-        inputOffice.appendChild(option);
     });
 
     officeTabs.querySelectorAll('.office-tab').forEach(tab => {
@@ -598,7 +590,8 @@ async function handleAddEvent(e) {
 
     const payload = {
         date: dateStr,
-        office: document.getElementById('input-office').value,
+        // 事業所はフォームではなく選択中のタブから取得する
+        office: currentOfficeFilter,
         name: inputNameSelect.value,
         time: timeStr,
         type: document.getElementById('input-type').value,
