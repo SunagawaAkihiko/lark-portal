@@ -41,7 +41,7 @@ const portalLinks = [
         title: "物品購入申請",
         description: "新しい物品の購入を提案・申請します",
         icon: "fa-file-invoice-dollar",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgejDtWnJJCy6txS"
+        url: "purchase-request.html"
     },
     {
         title: "レク報告",
