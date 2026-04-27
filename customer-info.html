@@ -174,9 +174,30 @@
     .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
     .photo-thumb {
       aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-      background: var(--card-bg);
+      background: var(--card-bg); cursor: pointer;
     }
     .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* 画像ライトボックス */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.92);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lightbox img {
+      max-width: 100%; max-height: 100vh; object-fit: contain;
+      /* 長押し保存・ドラッグを無効化する */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      pointer-events: none;
+    }
+    .lightbox-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: rgba(255,255,255,0.15); border: none; border-radius: 50%;
+      color: white; width: 40px; height: 40px; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
 
     /* 資料ファイルリスト */
     .file-item {
@@ -257,6 +278,13 @@
 <div id="paneRelation" class="tab-content hidden"></div>
 <div id="paneMedicine" class="tab-content hidden"></div>
 <div id="paneDoc"      class="tab-content hidden"></div>
+
+<!-- ===== 画像ライトボックス ===== -->
+<div class="lightbox hidden" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+  <!-- oncontextmenu で右クリックメニューを無効化する -->
+  <img id="lightboxImg" src="" alt="" draggable="false" oncontextmenu="return false">
+</div>
 
 <script>
   // APIベースURL（ローカル開発と本番Renderで切り替える）
@@ -540,7 +568,7 @@
     }
     const thumbs = photos.map((p, i) => {
       const src = proxyUrl(p.url);
-      return `<div class="photo-thumb">
+      return `<div class="photo-thumb" onclick="openLightbox('${src}')">
         <img src="${src}" alt="薬手帳${i+1}" loading="lazy">
       </div>`;
     }).join('');
@@ -607,6 +635,18 @@
     const TABS = ['basic','history','relation','medicine','doc'];
     TABS.forEach(t => document.getElementById('pane' + capitalize(t)).classList.add('hidden'));
     document.getElementById('pane' + capitalize(name)).classList.remove('hidden');
+  }
+
+  // ===== ライトボックスを開く =====
+  function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.remove('hidden');
+  }
+
+  // ===== ライトボックスを閉じる =====
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.add('hidden');
+    document.getElementById('lightboxImg').src = '';
   }
 
   // ===== HTMLエスケープ =====
