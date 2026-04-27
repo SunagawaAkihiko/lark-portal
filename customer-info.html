@@ -29,67 +29,66 @@
     }
     .hidden { display: none !important; }
 
-    /* ===== スティッキーコンテナ（3段ヘッダー＋詳細タブを一体でスティッキーにする） ===== */
-    .sticky-wrap {
-      position: sticky; top: 0; z-index: 15;
+    /* ===== 固定ヘッダーラッパー（各種データと同一） ===== */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 21;
+      box-shadow: 0 2px 6px rgba(139,115,95,0.12);
     }
 
-    /* ===== 3段ヘッダー ===== */
-    .page-header {
+    /* ===== 1段目：事業所タブ ===== */
+    .office-tabs {
+      display: flex; flex-wrap: wrap;
       background: var(--text-color);
-      padding: 0 1rem;
-      display: flex; flex-direction: column; gap: 0.5rem;
+      padding: 0 1rem 0.75rem; gap: 0.5rem;
     }
-    .page-header-label {
-      color: white; font-size: 1.25rem; font-weight: 700;
+    .office-tabs-label {
+      width: 100%; color: white;
+      font-size: 1.05rem; font-weight: 700;
       padding: 0.75rem 0 0.1rem;
       display: flex; align-items: center; gap: 0.4rem;
     }
-    /* 事業所タブ */
-    .office-tabs { display: flex; gap: 0.5rem; }
     .office-tab {
-      flex: 1; padding: 0.5rem 0; border: none; border-radius: 8px;
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
       font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
       background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
-      transition: background 0.2s;
+      transition: background 0.2s, color 0.2s;
     }
     .office-tab.active { background: var(--primary-color); color: white; }
-    /* 氏名タブ（折り返し・事業所タブと視覚的に分離する） */
-    .name-tabs {
-      display: flex; flex-wrap: wrap; gap: 0.4rem;
-      padding: 0.55rem 0 0.75rem;
-      border-top: 1px solid rgba(255,255,255,0.15);
-      margin-top: 0.1rem;
-    }
-    .name-tab {
-      flex-shrink: 0; padding: 0.38rem 0.9rem; border: none; border-radius: 7px;
-      font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-      background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.85);
-      white-space: nowrap; transition: background 0.2s, color 0.2s;
-    }
-    .name-tab.active {
-      background: white; color: var(--primary-color);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
-    .name-tab.ended  { opacity: 0.55; }
 
-    /* ===== 詳細タブ ===== */
-    .detail-tabs-wrap {
-      background: white;
-      border-bottom: 2px solid var(--border-color);
-      padding: 0 0.5rem;
-      display: flex; overflow-x: auto;
-      scrollbar-width: none;
+    /* ===== 2段目：詳細タブ（各種データのtab-barと同一スタイル） ===== */
+    .tab-bar {
+      display: flex; flex-wrap: wrap;
+      background: #ede0d4;
+      padding: 0.45rem 0.7rem; gap: 0.4rem;
+      border-bottom: 2px solid #c9a98a;
     }
-    .detail-tabs-wrap::-webkit-scrollbar { display: none; }
-    .detail-tab {
-      flex-shrink: 0; padding: 0.7rem 0.8rem; border: none;
-      background: none; font-family: inherit; font-size: 0.82rem; font-weight: 700;
-      color: var(--text-muted); cursor: pointer; white-space: nowrap;
-      border-bottom: 2.5px solid transparent; margin-bottom: -2px;
-      transition: color 0.15s, border-color 0.15s;
+    .tab-btn {
+      white-space: nowrap;
+      padding: 0.35rem 0.75rem; border-radius: 6px;
+      border: 1.5px solid #9a7a6b;
+      background: #f5ebe0; color: #6b4f3a;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: all 0.18s;
     }
-    .detail-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .tab-btn.active { background: #6b4f3a; color: white; border-color: #6b4f3a; }
+
+    /* ===== 3段目：氏名セレクト ===== */
+    .name-bar {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 1rem;
+      background: var(--bg-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .name-bar select {
+      flex: 1; padding: 0.6rem 0.5rem;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      background: var(--card-bg); font-family: inherit;
+      font-size: 0.95rem; color: var(--text-color);
+      -webkit-appearance: none; appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="5"><path fill="%23888" d="M0 0l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat; background-position: right 0.6rem center;
+      background-size: 10px 5px; background-color: var(--card-bg);
+    }
 
     /* ===== ローディング ===== */
     .loading-screen {
@@ -235,30 +234,33 @@
 
     /* ===== 横画面 ===== */
     @media (orientation: landscape) {
-      .page-header { padding: 0 0.8rem; gap: 0.35rem; }
-      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
+      .office-tabs { padding: 0 0.8rem 0.5rem; }
+      .office-tabs-label { padding: 0.5rem 0 0.1rem; font-size: 1rem; }
       .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
-      .name-tabs { padding-bottom: 0.5rem; }
+      .tab-bar { padding: 0.35rem 0.7rem; }
+      .name-bar { padding: 0.45rem 0.8rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ===== スティッキーコンテナ ===== -->
-<div class="sticky-wrap">
-  <!-- 3段ヘッダー -->
-  <div class="page-header">
-    <div class="page-header-label"><i class="fa-solid fa-address-card"></i> 利用者情報</div>
-    <div class="office-tabs" id="officeTabs"></div>
-    <div class="name-tabs"   id="nameTabs"></div>
-  </div>
-  <!-- 詳細タブ -->
-  <div class="detail-tabs-wrap" id="detailTabsWrap">
-    <button class="detail-tab active" data-tab="basic"    onclick="switchDetailTab('basic',this)">基本情報</button>
-    <button class="detail-tab"        data-tab="history"  onclick="switchDetailTab('history',this)">既往歴</button>
-    <button class="detail-tab"        data-tab="relation" onclick="switchDetailTab('relation',this)">関係先</button>
-    <button class="detail-tab"        data-tab="medicine" onclick="switchDetailTab('medicine',this)">薬手帳</button>
-    <button class="detail-tab"        data-tab="doc"      onclick="switchDetailTab('doc',this)">フェイスシート・退院時資料</button>
+<!-- ===== スティッキーコンテナ（各種データと同一3段構成） ===== -->
+<div class="sticky-header">
+  <!-- 1段目：事業所タブ（ラベル＋タブボタンをJSで生成） -->
+  <div class="office-tabs" id="officeTabs"></div>
+  <!-- 2段目：詳細タブ -->
+  <nav class="tab-bar hidden" id="detailTabsWrap">
+    <button class="tab-btn active" data-tab="basic"    onclick="switchDetailTab('basic',this)">基本情報</button>
+    <button class="tab-btn"        data-tab="history"  onclick="switchDetailTab('history',this)">既往歴</button>
+    <button class="tab-btn"        data-tab="relation" onclick="switchDetailTab('relation',this)">関係先</button>
+    <button class="tab-btn"        data-tab="medicine" onclick="switchDetailTab('medicine',this)">薬手帳</button>
+    <button class="tab-btn"        data-tab="doc"      onclick="switchDetailTab('doc',this)">フェイスシート・退院時資料</button>
+  </nav>
+  <!-- 3段目：氏名セレクト -->
+  <div class="name-bar hidden" id="nameBarWrap">
+    <select id="nameSelect" onchange="onNameSelectChange()">
+      <option value="">氏名を選択</option>
+    </select>
   </div>
 </div>
 
@@ -340,6 +342,7 @@
 
       document.getElementById('initLoading').classList.add('hidden');
       document.getElementById('detailTabsWrap').classList.remove('hidden');
+      document.getElementById('nameBarWrap').classList.remove('hidden');
 
     } catch (err) {
       document.getElementById('initLoading').innerHTML =
@@ -347,10 +350,15 @@
     }
   }
 
-  // ===== 事業所タブを生成する =====
+  // ===== 事業所タブを生成する（ラベル＋タブボタン） =====
   function buildOfficeTabs() {
     const bar = document.getElementById('officeTabs');
     bar.innerHTML = '';
+    // セクションラベルを先頭に追加する
+    const label = document.createElement('span');
+    label.className = 'office-tabs-label';
+    label.innerHTML = '<i class="fa-solid fa-address-card"></i> 利用者情報';
+    bar.appendChild(label);
     offices.forEach(office => {
       const btn = document.createElement('button');
       btn.className   = 'office-tab';
@@ -366,7 +374,7 @@
     document.querySelectorAll('.office-tab').forEach(btn => {
       btn.classList.toggle('active', btn.textContent.trim() === office);
     });
-    buildNameTabs();
+    buildNameSelect();
     // 最初の利用者を自動選択する
     const officeCustomers = getOfficeCustomers();
     if (!skipAutoSelect && officeCustomers.length > 0) {
@@ -385,31 +393,35 @@
       });
   }
 
-  // ===== 氏名タブを再生成する =====
-  function buildNameTabs() {
-    const bar       = document.getElementById('nameTabs');
-    bar.innerHTML   = '';
+  // ===== 氏名セレクトを再生成する =====
+  function buildNameSelect() {
+    const sel       = document.getElementById('nameSelect');
+    sel.innerHTML   = '<option value="">氏名を選択</option>';
     const customers = getOfficeCustomers();
 
     customers.forEach(c => {
-      const btn = document.createElement('button');
-      // 契約終了の利用者は視覚的に区別する
-      btn.className   = 'name-tab' + (c.status === '終了' ? ' ended' : '');
-      btn.textContent = `${c.lastName} ${c.firstName}`.trim() || c.name;
-      btn.dataset.recordId = c.recordId;
-      btn.onclick = () => switchCustomer(c.recordId);
-      bar.appendChild(btn);
+      const opt = document.createElement('option');
+      opt.value       = c.recordId;
+      const dispName  = `${c.lastName} ${c.firstName}`.trim() || c.name;
+      // 契約終了の利用者は視覚的に区別するため括弧付きで表示する
+      opt.textContent = c.status === '終了' ? `${dispName}（終了）` : dispName;
+      sel.appendChild(opt);
     });
+  }
+
+  // ===== 氏名セレクト変更時のハンドラ =====
+  function onNameSelectChange() {
+    const recordId = document.getElementById('nameSelect').value;
+    if (recordId) switchCustomer(recordId);
   }
 
   // ===== 利用者を切り替える =====
   async function switchCustomer(recordId) {
     activeRecordId = recordId;
 
-    // 氏名タブのアクティブ状態を更新する
-    document.querySelectorAll('.name-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.recordId === recordId);
-    });
+    // セレクトボックスの選択状態を更新する
+    const sel = document.getElementById('nameSelect');
+    if (sel) sel.value = recordId;
 
     // キャッシュ済みなら即座に描画する
     if (detailCache[recordId]) {
@@ -621,7 +633,7 @@
   // ===== 詳細タブを切り替える =====
   function switchDetailTab(name, btn) {
     activeDetailTab = name;
-    document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     showPane(name);
   }
