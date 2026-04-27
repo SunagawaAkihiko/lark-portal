@@ -652,9 +652,7 @@ async function handleAddEvent(e) {
         fetchCalendarData();
 
     } catch (err) {
-        // デバッグ用：送信内容と共にエラーを表示する（確認後に削除）
-        alert("登録に失敗しました: " + err.message
-            + "\n\n送信データ:\n" + JSON.stringify(payload, null, 2));
+        alert("登録に失敗しました: " + err.message);
     } finally {
         submitBtn.classList.remove('hidden');
         submitLoading.classList.add('hidden');
