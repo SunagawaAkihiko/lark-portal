@@ -65,7 +65,7 @@ const portalLinks = [
         title: "入金確認",
         description: "利用料入金の登録・確認",
         icon: "fa-yen-sign",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeK1XX36156LOSx"
+        url: "payment-confirm.html"
     },
     {
         title: "新規顧客登録",
