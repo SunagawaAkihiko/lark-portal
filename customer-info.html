@@ -252,6 +252,81 @@
     }
     .empty-msg i { display: block; font-size: 1.8rem; margin-bottom: 0.4rem; color: var(--border-color); }
 
+    /* ===== アクションボタン（追加・編集・削除） ===== */
+    .section-actions {
+      display: flex; gap: 0.4rem; margin-bottom: 0.5rem; justify-content: flex-end;
+    }
+    .btn-act {
+      padding: 0.28rem 0.65rem; border-radius: 5px; border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.72rem; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .btn-act-add    { background: var(--primary-light); color: var(--primary-color); }
+    .btn-act-edit   { background: #e8f0f7; color: var(--blue); }
+    .btn-act-delete { background: #fee2e2; color: #c1121f; }
+
+    /* ===== 汎用モーダル（底部シート） ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: flex-end;
+    }
+    .modal-sheet {
+      width: 100%; max-height: 88vh;
+      background: white; border-radius: 20px 20px 0 0;
+      display: flex; flex-direction: column;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.2rem 0.85rem; border-bottom: 1px solid var(--border-color);
+      font-weight: 700; font-size: 1rem; flex-shrink: 0;
+    }
+    .modal-close-btn {
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: var(--bg-color); color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-body { flex: 1; overflow-y: auto; padding: 1rem; }
+    .modal-footer {
+      display: flex; gap: 0.6rem; padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border-color); flex-shrink: 0;
+    }
+    .btn-modal-cancel {
+      flex: 1; padding: 0.75rem; border: 1.5px solid var(--border-color);
+      border-radius: 10px; background: white; font-family: inherit;
+      font-size: 0.9rem; cursor: pointer; color: var(--text-color);
+    }
+    .btn-modal-save {
+      flex: 2; padding: 0.75rem; border: none;
+      border-radius: 10px; background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-modal-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== フォーム部品 ===== */
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .form-label { font-size: 0.77rem; font-weight: 700; color: var(--text-muted); }
+    .form-input {
+      padding: 0.6rem 0.75rem; border: 1.5px solid var(--border-color);
+      border-radius: 8px; font-family: inherit; font-size: 0.9rem;
+      color: var(--text-color); background: var(--card-bg); width: 100%; box-sizing: border-box;
+    }
+    .form-section-title {
+      font-size: 0.82rem; font-weight: 700; color: var(--primary-color);
+      margin: 1rem 0 0.5rem; padding-bottom: 0.3rem;
+      border-bottom: 1px solid var(--primary-light);
+    }
+
+    /* ===== ファイルアップロードボタン ===== */
+    .file-add-btn {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0.9rem; border-radius: 8px; border: 1.5px dashed var(--border-color);
+      background: var(--bg-color); color: var(--text-muted);
+      font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; width: 100%; justify-content: center; margin-bottom: 0.5rem;
+    }
+
     /* ===== 横画面 ===== */
     @media (orientation: landscape) {
       .office-tabs { padding: 0 0.8rem 0.5rem; }
@@ -303,6 +378,21 @@
 <div id="paneMedicine" class="tab-content hidden"></div>
 <div id="paneDoc"      class="tab-content hidden"></div>
 
+<!-- ===== 汎用モーダル（底部シート） ===== -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span id="modalTitle"></span>
+      <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-modal-save"   id="modalSaveBtn" onclick="execModalSubmit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 画像ライトボックス ===== -->
 <div class="lightbox hidden" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
@@ -321,14 +411,19 @@
   const IS_ADMIN = new URLSearchParams(location.search).get('mode') === 'admin';
 
   // ===== 状態管理 =====
-  let allCustomers   = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
-  let offices        = [];   // 事業所一覧（ソート済み）
-  let activeOffice   = '';   // 選択中の事業所
-  let activeRecordId = '';   // 選択中の利用者 recordId
+  let allCustomers    = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
+  let offices         = [];   // 事業所一覧（ソート済み）
+  let activeOffice    = '';   // 選択中の事業所
+  let activeRecordId  = '';   // 選択中の利用者 recordId（= 顧客テーブルの record_id）
   let activeDetailTab = 'basic'; // 選択中の詳細タブ
-  const detailCache  = {};   // 詳細データのキャッシュ { [recordId]: detailData }
-  // 薬手帳レコードID（写真追加・削除操作で使用する。利用者切り替え時に更新する）
-  let activeYakuRecordId = null;
+  const detailCache   = {};   // 詳細データのキャッシュ { [recordId]: detailData }
+  // サブテーブルのレコードID（追加・編集・削除操作で使用する。利用者切り替え時に更新する）
+  let activeYakuRecordId  = null; // 薬手帳
+  let activeKiouRecordId  = null; // 既往歴
+  let activeFaceRecordId  = null; // フェイスシート・退院時資料
+  let activeCustomerName  = '';   // 選択中利用者の氏名（関係先・既往歴の新規作成時に使用する）
+  // モーダルの保存ボタンに割り当てるコールバック関数
+  let modalSubmitFn = null;
 
   // ===== 日付フォーマット（ミリ秒タイムスタンプ → 年月日） =====
   function fmtDate(ts) {
@@ -484,8 +579,15 @@
   // ===== 全パネルを描画して現在タブを表示する =====
   function renderAllPanes(data) {
     document.getElementById('detailLoading').classList.add('hidden');
-    // 薬手帳レコードIDをグローバルに保持して追加・削除操作で参照する
-    activeYakuRecordId = data.yakuRecordId || null;
+    // サブテーブルのレコードIDをグローバルに保持して追加・編集・削除操作で参照する
+    activeYakuRecordId = data.yakuRecordId  || null;
+    activeKiouRecordId = data.kiouRecordId  || null;
+    activeFaceRecordId = data.faceRecordId  || null;
+    // 選択中利用者の氏名を保持する（新規レコード作成時に使用する）
+    const cust = allCustomers.find(c => c.recordId === activeRecordId);
+    activeCustomerName = cust
+      ? (`${cust.lastName} ${cust.firstName}`.trim() || cust.name)
+      : '';
     renderBasic(data.customer);
     renderHistory(data.history);
     renderRelations(data.relations);
@@ -528,7 +630,15 @@
         </div>
       </div>` : '';
 
+    const editBtn = IS_ADMIN
+      ? `<div class="section-actions">
+           <button class="btn-act btn-act-edit" onclick="openEditBasicModal()">
+             <i class="fa-solid fa-pen"></i> 編集
+           </button>
+         </div>` : '';
+
     document.getElementById('paneBasic').innerHTML = `
+      ${editBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-user" style="color:var(--primary-color)"></i><span class="section-head-title">本人基本情報</span></div>
         <div class="section-body">
@@ -560,15 +670,32 @@
 
   // ===== 既往歴パネルを描画する =====
   function renderHistory(history) {
-    const pane = document.getElementById('paneHistory');
+    const pane   = document.getElementById('paneHistory');
+    const addBtn = IS_ADMIN
+      ? `<div class="section-actions">
+           <button class="btn-act btn-act-add" onclick="openAddHistoryModal()">
+             <i class="fa-solid fa-plus"></i> 追加
+           </button>
+         </div>` : '';
+
     if (!history || history.length === 0) {
-      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-file-medical"></i>既往歴の登録はありません</div>`;
+      pane.innerHTML = `${addBtn}<div class="empty-msg"><i class="fa-solid fa-file-medical"></i>既往歴の登録はありません</div>`;
       return;
     }
-    const items = history.map((h, i) =>
-      `<li class="history-item"><span class="history-num">${i + 1}</span>${escHtml(h)}</li>`
-    ).join('');
+    const items = history.map((h, i) => {
+      const delBtn = IS_ADMIN
+        ? `<button class="btn-act btn-act-delete" style="flex-shrink:0"
+                   onclick="deleteHistoryItem(${i})">
+             <i class="fa-solid fa-trash"></i>
+           </button>` : '';
+      return `<li class="history-item">
+        <span class="history-num">${i + 1}</span>
+        <span style="flex:1">${escHtml(h)}</span>
+        ${delBtn}
+      </li>`;
+    }).join('');
     pane.innerHTML = `
+      ${addBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-file-medical" style="color:var(--primary-color)"></i><span class="section-head-title">既往歴</span></div>
         <div class="section-body"><ul class="history-list">${items}</ul></div>
@@ -577,9 +704,16 @@
 
   // ===== 関係先パネルを描画する =====
   function renderRelations(relations) {
-    const pane = document.getElementById('paneRelation');
+    const pane   = document.getElementById('paneRelation');
+    const addBtn = IS_ADMIN
+      ? `<div class="section-actions">
+           <button class="btn-act btn-act-add" onclick="openAddRelationModal()">
+             <i class="fa-solid fa-plus"></i> 追加
+           </button>
+         </div>` : '';
+
     if (!relations || relations.length === 0) {
-      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-hospital"></i>関係先の登録はありません</div>`;
+      pane.innerHTML = `${addBtn}<div class="empty-msg"><i class="fa-solid fa-hospital"></i>関係先の登録はありません</div>`;
       return;
     }
     const cards = relations.map(r => {
@@ -588,14 +722,28 @@
       const faxHtml = r.fax
         ? `<span class="relation-fax"><i class="fa-solid fa-fax"></i>${escHtml(r.fax)}</span>` : '';
       const meta = [r.relation, r.person ? `担当：${r.person}` : ''].filter(Boolean).join(' ／ ');
+      // 編集・削除ボタンは管理者のみ表示する
+      const actionBtns = IS_ADMIN ? `
+        <div style="display:flex;gap:0.4rem;margin-top:0.4rem">
+          <button class="btn-act btn-act-edit"
+                  onclick='openEditRelationModal(${JSON.stringify(r)})'>
+            <i class="fa-solid fa-pen"></i> 編集
+          </button>
+          <button class="btn-act btn-act-delete"
+                  onclick="deleteRelation('${escHtml(r.recordId)}')">
+            <i class="fa-solid fa-trash"></i> 削除
+          </button>
+        </div>` : '';
       return `
         <div class="relation-card">
           <div class="relation-name">${escHtml(r.officeName)}</div>
           ${meta ? `<div class="relation-meta">${escHtml(meta)}</div>` : ''}
           ${telHtml}${faxHtml}
+          ${actionBtns}
         </div>`;
     }).join('');
     pane.innerHTML = `
+      ${addBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-hospital" style="color:var(--primary-color)"></i><span class="section-head-title">関係先</span></div>
         <div class="section-body">${cards}</div>
@@ -725,10 +873,23 @@
   function renderDocs(faceSheets, dischargeFiles) {
     const pane = document.getElementById('paneDoc');
 
-    function fileHtml(files, sectionTitle, icon) {
-      if (!files || files.length === 0) return '';
-      const items = files.map(f => {
+    // ファイルセクション（フェイスシート または 退院時資料）のHTMLを生成する
+    function sectionHtml(files, sectionTitle, icon, fieldName) {
+      const inputId  = fieldName === 'フェイスシート' ? 'fsFileInput' : 'disFileInput';
+      const addBtnHtml = IS_ADMIN ? `
+        <button class="file-add-btn" onclick="document.getElementById('${inputId}').click()">
+          <i class="fa-solid fa-file-arrow-up"></i> ファイルを追加
+        </button>
+        <input type="file" id="${inputId}" accept=".pdf,image/*" style="display:none"
+               onchange="onFacesheetFileSelected(this,'${fieldName}')">` : '';
+
+      const items = (files || []).map(f => {
         const viewHref = proxyUrl(f.url);
+        const delBtn   = IS_ADMIN
+          ? `<button class="btn-act btn-act-delete" style="flex-shrink:0"
+                     onclick="deleteFacesheetFile('${escHtml(f.fileToken)}','${fieldName}')">
+               <i class="fa-solid fa-trash"></i>
+             </button>` : '';
         return `
           <div class="file-item">
             <div class="file-icon">PDF</div>
@@ -739,22 +900,343 @@
             <a class="file-view-btn" href="${viewHref}" target="_blank" title="開く">
               <i class="fa-solid fa-eye"></i>
             </a>
+            ${delBtn}
           </div>`;
       }).join('');
+
       return `
         <div class="section-card">
-          <div class="section-head"><i class="${icon}" style="color:var(--primary-color)"></i><span class="section-head-title">${sectionTitle}</span></div>
-          <div class="section-body">${items}</div>
+          <div class="section-head">
+            <i class="${icon}" style="color:var(--primary-color)"></i>
+            <span class="section-head-title">${sectionTitle}</span>
+          </div>
+          <div class="section-body">
+            ${addBtnHtml}
+            ${items || `<div class="empty-msg" style="padding:1rem 0"><i class="fa-solid fa-file-pdf"></i>登録はありません</div>`}
+          </div>
         </div>`;
     }
 
-    const fsHtml  = fileHtml(faceSheets,    'フェイスシート', 'fa-solid fa-file-pdf');
-    const disHtml = fileHtml(dischargeFiles, '退院時資料',    'fa-solid fa-file-medical');
+    pane.innerHTML =
+      sectionHtml(faceSheets,    'フェイスシート', 'fa-solid fa-file-pdf',     'フェイスシート') +
+      sectionHtml(dischargeFiles, '退院時資料',    'fa-solid fa-file-medical', '退院時資料');
+  }
 
-    if (!fsHtml && !disHtml) {
-      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-file-pdf"></i>資料の登録はありません</div>`;
-    } else {
-      pane.innerHTML = fsHtml + disHtml;
+  // ============================================================
+  // モーダル共通
+  // ============================================================
+
+  // モーダルを開く（title: 見出し文字列, bodyHtml: 本文HTML, submitFn: 保存ボタンのコールバック）
+  function openModal(title, bodyHtml, submitFn) {
+    document.getElementById('modalTitle').textContent   = title;
+    document.getElementById('modalBody').innerHTML      = bodyHtml;
+    document.getElementById('modalSaveBtn').disabled    = false;
+    document.getElementById('modalSaveBtn').textContent = '保存';
+    modalSubmitFn = submitFn;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.add('hidden');
+    modalSubmitFn = null;
+  }
+
+  // モーダルの保存ボタンから呼び出される
+  function execModalSubmit() {
+    if (modalSubmitFn) modalSubmitFn();
+  }
+
+  // 保存中の状態にする（API呼び出し中にボタンを無効化する）
+  function setModalSaving(saving) {
+    const btn = document.getElementById('modalSaveBtn');
+    btn.disabled    = saving;
+    btn.textContent = saving ? '保存中...' : '保存';
+  }
+
+  // ============================================================
+  // 基本情報 編集
+  // ============================================================
+
+  // タイムスタンプを date input 用の YYYY-MM-DD 文字列に変換する
+  function tsToDateStr(ts) {
+    if (!ts) return '';
+    const d = new Date(Number(ts));
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function inp(id, label, value, type='text') {
+    return `<div class="form-group">
+      <label class="form-label">${label}</label>
+      <input type="${type}" id="${id}" class="form-input" value="${escHtml(value || '')}">
+    </div>`;
+  }
+
+  function sel(id, label, value, options) {
+    const opts = options.map(o =>
+      `<option value="${escHtml(o)}" ${o === value ? 'selected' : ''}>${escHtml(o)}</option>`
+    ).join('');
+    return `<div class="form-group">
+      <label class="form-label">${label}</label>
+      <select id="${id}" class="form-input"><option value=""></option>${opts}</select>
+    </div>`;
+  }
+
+  function openEditBasicModal() {
+    const data = detailCache[activeRecordId];
+    if (!data) return;
+    const c = data.customer;
+    const CARE_LEVELS = ['自立','要支援1','要支援2','要介護1','要介護2','要介護3','要介護4','要介護5'];
+    const STATUSES    = ['在籍中','終了'];
+
+    const bodyHtml = `
+      <div class="form-section-title">本人基本情報</div>
+      ${inp('editLastName',      '姓',          c.lastName)}
+      ${inp('editFirstName',     '名',          c.firstName)}
+      ${inp('editLastNameKana',  'フリガナ(姓)', c.lastNameKana)}
+      ${inp('editFirstNameKana', 'フリガナ(名)', c.firstNameKana)}
+      ${inp('editBirthDate',     '生年月日',     tsToDateStr(c.birthDate), 'date')}
+      ${inp('editNyukyoDate',    '入居日',       tsToDateStr(c.nyukyoDate), 'date')}
+      ${sel('editCareLevel',    '介護度',       c.careLevel, CARE_LEVELS)}
+      ${sel('editStatus',       '契約状態',     c.status,    STATUSES)}
+      ${inp('editAddress',       '本人住所',     c.address)}
+      <div class="form-section-title">家族①</div>
+      ${inp('editFam1LastName',      '姓',          c.fam1LastName)}
+      ${inp('editFam1FirstName',     '名',          c.fam1FirstName)}
+      ${inp('editFam1LastNameKana',  'フリガナ(姓)', c.fam1LastNameKana)}
+      ${inp('editFam1FirstNameKana', 'フリガナ(名)', c.fam1FirstNameKana)}
+      ${inp('editFam1Relationship',  '続柄',         c.fam1Relationship)}
+      ${inp('editFam1Phone',         '電話番号',     c.fam1Phone, 'tel')}
+      ${inp('editFam1Address',       '住所',         c.fam1Address)}
+      <div class="form-section-title">家族②</div>
+      ${inp('editFam2LastName',      '姓',          c.fam2LastName)}
+      ${inp('editFam2FirstName',     '名',          c.fam2FirstName)}
+      ${inp('editFam2LastNameKana',  'フリガナ(姓)', c.fam2LastNameKana)}
+      ${inp('editFam2FirstNameKana', 'フリガナ(名)', c.fam2FirstNameKana)}
+      ${inp('editFam2Relationship',  '続柄',         c.fam2Relationship)}
+      ${inp('editFam2Phone',         '電話番号',     c.fam2Phone, 'tel')}
+      <div class="form-section-title">連絡先・郵便物</div>
+      ${inp('editReportEmail',  '報告アドレス',     c.reportEmail, 'email')}
+      ${inp('editMailAddress',  '郵便物送付先住所', c.mailAddress)}`;
+
+    openModal('基本情報を編集', bodyHtml, submitEditBasic);
+  }
+
+  async function submitEditBasic() {
+    setModalSaving(true);
+    const g = id => document.getElementById(id)?.value || '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/customer-info/update-basic`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recordId:       activeRecordId,
+          lastName:       g('editLastName'),      firstName:       g('editFirstName'),
+          lastNameKana:   g('editLastNameKana'),  firstNameKana:   g('editFirstNameKana'),
+          birthDate:      g('editBirthDate'),     nyukyoDate:      g('editNyukyoDate'),
+          careLevel:      g('editCareLevel'),     status:          g('editStatus'),
+          address:        g('editAddress'),
+          fam1LastName:   g('editFam1LastName'),  fam1FirstName:   g('editFam1FirstName'),
+          fam1LastNameKana: g('editFam1LastNameKana'), fam1FirstNameKana: g('editFam1FirstNameKana'),
+          fam1Relationship: g('editFam1Relationship'), fam1Phone:   g('editFam1Phone'),
+          fam1Address:    g('editFam1Address'),
+          fam2LastName:   g('editFam2LastName'),  fam2FirstName:   g('editFam2FirstName'),
+          fam2LastNameKana: g('editFam2LastNameKana'), fam2FirstNameKana: g('editFam2FirstNameKana'),
+          fam2Relationship: g('editFam2Relationship'), fam2Phone:   g('editFam2Phone'),
+          reportEmail:    g('editReportEmail'),   mailAddress:     g('editMailAddress'),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      delete detailCache[activeRecordId];
+      closeModal();
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`保存に失敗しました\n${err.message}`);
+      setModalSaving(false);
+    }
+  }
+
+  // ============================================================
+  // 既往歴 追加・削除
+  // ============================================================
+
+  function openAddHistoryModal() {
+    openModal('既往歴を追加', `
+      <div class="form-group">
+        <label class="form-label">病名・診断名</label>
+        <input type="text" id="historyInput" class="form-input" placeholder="例：高血圧、糖尿病">
+      </div>`, submitAddHistory);
+  }
+
+  async function submitAddHistory() {
+    const val = document.getElementById('historyInput')?.value.trim();
+    if (!val) return alert('入力してください');
+    const current = (detailCache[activeRecordId]?.history || []);
+    if (current.length >= 15) return alert('既往歴は最大15件です');
+    await saveHistoryList([...current, val]);
+  }
+
+  async function deleteHistoryItem(index) {
+    if (!confirm('この既往歴を削除しますか？')) return;
+    const newList = (detailCache[activeRecordId]?.history || []).filter((_, i) => i !== index);
+    await saveHistoryList(newList);
+  }
+
+  async function saveHistoryList(historyList) {
+    setModalSaving(true);
+    try {
+      const res  = await fetch(`${API_BASE}/api/kiou/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kiouRecordId: activeKiouRecordId, customerName: activeCustomerName, historyList }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      if (data.kiouRecordId) activeKiouRecordId = data.kiouRecordId;
+      delete detailCache[activeRecordId];
+      closeModal();
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`保存に失敗しました\n${err.message}`);
+      setModalSaving(false);
+    }
+  }
+
+  // ============================================================
+  // 関係先 追加・編集・削除
+  // ============================================================
+
+  function relationFormHtml(r = {}) {
+    return `
+      ${inp('relOfficeName', '事業所名・施設名', r.officeName || '')}
+      ${inp('relRelation',   '関係性（例：主治医、ケアマネ）', r.relation || '')}
+      ${inp('relPerson',     '担当者名', r.person || '')}
+      ${inp('relTel',        '電話番号', r.tel || '', 'tel')}
+      ${inp('relFax',        'FAX番号',  r.fax || '', 'tel')}`;
+  }
+
+  function openAddRelationModal() {
+    openModal('関係先を追加', relationFormHtml(), submitAddRelation);
+  }
+
+  function openEditRelationModal(r) {
+    openModal('関係先を編集', relationFormHtml(r), () => submitEditRelation(r.recordId));
+  }
+
+  async function submitAddRelation() {
+    setModalSaving(true);
+    const g = id => document.getElementById(id)?.value || '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/kankei/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: activeCustomerName,
+          officeName: g('relOfficeName'), relation: g('relRelation'),
+          person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      delete detailCache[activeRecordId];
+      closeModal();
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`保存に失敗しました\n${err.message}`);
+      setModalSaving(false);
+    }
+  }
+
+  async function submitEditRelation(recordId) {
+    setModalSaving(true);
+    const g = id => document.getElementById(id)?.value || '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/kankei/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recordId,
+          officeName: g('relOfficeName'), relation: g('relRelation'),
+          person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      delete detailCache[activeRecordId];
+      closeModal();
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`保存に失敗しました\n${err.message}`);
+      setModalSaving(false);
+    }
+  }
+
+  async function deleteRelation(recordId) {
+    if (!confirm('この関係先を削除しますか？')) return;
+    try {
+      const res  = await fetch(`${API_BASE}/api/kankei/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      delete detailCache[activeRecordId];
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`削除に失敗しました\n${err.message}`);
+    }
+  }
+
+  // ============================================================
+  // フェイスシート・退院時資料 ファイル追加・削除
+  // ============================================================
+
+  async function onFacesheetFileSelected(input, fieldName) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res  = await fetch(`${API_BASE}/api/facesheet/add-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          faceRecordId: activeFaceRecordId,
+          customerName: activeCustomerName,
+          fileBase64: base64,
+          fieldName,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      if (data.faceRecordId) activeFaceRecordId = data.faceRecordId;
+      delete detailCache[activeRecordId];
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`ファイルの追加に失敗しました\n${err.message}`);
+    }
+  }
+
+  async function deleteFacesheetFile(fileToken, fieldName) {
+    if (!confirm('このファイルを削除しますか？')) return;
+    try {
+      const res  = await fetch(`${API_BASE}/api/facesheet/delete-file`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ faceRecordId: activeFaceRecordId, fileToken, fieldName }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      delete detailCache[activeRecordId];
+      await switchCustomer(activeRecordId);
+    } catch (err) {
+      alert(`削除に失敗しました\n${err.message}`);
     }
   }
 
