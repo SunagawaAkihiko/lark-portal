@@ -878,11 +878,11 @@
       }
       // コンパクトな行形式で表示する（1行に日付・氏名・勤務区分・サブ情報・操作ボタンを配置）
       list.innerHTML = records.map(r => {
-        // サブ情報：スタッフ / 作業項目 をまとめてコンパクトに表示する
+        // サブ情報：スタッフ / 作業項目 / 提供時間 をコンパクトに1行表示する（サービス略称・勤務区分は非表示）
         const subParts = [];
-        if (r.スタッフ)    subParts.push(r.スタッフ);
-        if (r.作業項目)    subParts.push(r.作業項目);
-        if (r.サービス略称 && r.サービス略称 !== r.作業項目) subParts.push(r.サービス略称);
+        if (r.スタッフ)   subParts.push(r.スタッフ);
+        if (r.作業項目)   subParts.push(r.作業項目);
+        if (r.提供時間)   subParts.push(r.提供時間);
         const sub = subParts.map(s => escHtml(s)).join(' / ');
 
         return `
@@ -892,7 +892,6 @@
               <div class="row-name">${escHtml(r.氏名 || '（氏名未設定）')}</div>
               ${sub ? `<div class="row-sub">${sub}</div>` : ''}
             </div>
-            ${kinmuBadge(r.勤務区分)}
             <div class="row-actions">
               <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
                 <i class="fa-solid fa-pen"></i>
