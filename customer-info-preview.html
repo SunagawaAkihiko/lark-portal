@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>利用者情報（プレビュー）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --border-color:  #dcbfa6;
+      --card-bg:       #fff0e3;
+      --green:         #2a9d8f;
+      --green-light:   #e6f7f5;
+      --blue:          #457b9d;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 4rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== 3段固定ヘッダー ===== */
+    .page-header {
+      position: sticky; top: 0; z-index: 15;
+      background: var(--text-color);
+      padding: 0 1rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+
+    /* 1段目：ページタイトル */
+    .page-header-label {
+      color: white; font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    /* 2段目：事業所タブ（等幅） */
+    .office-tabs {
+      display: flex; gap: 0.5rem;
+    }
+    .office-tab {
+      flex: 1; padding: 0.5rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s;
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* 3段目：氏名タブ（横スクロール） */
+    .name-tabs {
+      display: flex; gap: 0.4rem;
+      overflow-x: auto; padding-bottom: 0.75rem;
+      scrollbar-width: none;
+    }
+    .name-tabs::-webkit-scrollbar { display: none; }
+    .name-tab {
+      flex-shrink: 0; padding: 0.38rem 0.9rem; border: none; border-radius: 7px;
+      font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
+      white-space: nowrap; transition: background 0.2s;
+    }
+    .name-tab.active { background: rgba(255,255,255,0.9); color: var(--text-color); }
+
+    /* ===== 詳細タブ（コンテンツ上部） ===== */
+    .detail-tabs-wrap {
+      background: white;
+      border-bottom: 2px solid var(--border-color);
+      padding: 0 0.75rem;
+      display: flex; gap: 0; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .detail-tabs-wrap::-webkit-scrollbar { display: none; }
+    .detail-tab {
+      flex-shrink: 0; padding: 0.7rem 0.85rem; border: none;
+      background: none; font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      color: var(--text-muted); cursor: pointer; white-space: nowrap;
+      border-bottom: 2.5px solid transparent; margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .detail-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+    /* ===== コンテンツ ===== */
+    .tab-content {
+      padding: 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+
+    /* セクションカード */
+    .section-card {
+      background: white; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden;
+    }
+    .section-head {
+      background: var(--primary-light); padding: 0.6rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-head-title { font-size: 0.82rem; font-weight: 700; color: var(--primary-color); }
+    .section-body { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* フィールド行 */
+    .info-row {
+      display: flex; gap: 0.5rem;
+      padding: 0.45rem 0; border-bottom: 1px solid var(--bg-color);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+      font-size: 0.75rem; color: var(--text-muted); font-weight: 700;
+      width: 7rem; flex-shrink: 0; padding-top: 0.1rem;
+    }
+    .info-value { font-size: 0.9rem; flex: 1; word-break: break-all; }
+
+    /* バッジ */
+    .badge {
+      display: inline-block; padding: 0.18rem 0.55rem; border-radius: 5px;
+      font-size: 0.68rem; font-weight: 700;
+    }
+    .badge-care   { background: var(--primary-light); color: var(--primary-color); }
+    .badge-active { background: var(--green-light);   color: var(--green); }
+
+    /* 既往歴 */
+    .history-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+    .history-item {
+      padding: 0.55rem 0.75rem; background: var(--bg-color); border-radius: 8px;
+      font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .history-num {
+      font-size: 0.7rem; font-weight: 700; color: white;
+      background: var(--primary-color); border-radius: 4px;
+      padding: 0.1rem 0.4rem; flex-shrink: 0;
+    }
+
+    /* 関係先 */
+    .relation-card {
+      background: var(--bg-color); border-radius: 10px; padding: 0.75rem;
+      display: flex; flex-direction: column; gap: 0.35rem;
+    }
+    .relation-name { font-size: 0.95rem; font-weight: 700; }
+    .relation-meta { font-size: 0.78rem; color: var(--text-muted); }
+    .relation-phone {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.85rem; color: var(--blue); font-weight: 700;
+    }
+
+    /* 薬手帳：画像グリッド */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+    .photo-thumb {
+      aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+      background: var(--card-bg); cursor: pointer;
+    }
+    .photo-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--border-color); font-size: 1.5rem;
+    }
+
+    /* 資料：PDFリスト */
+    .file-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem; background: var(--bg-color); border-radius: 10px;
+      cursor: pointer; text-decoration: none; color: var(--text-color);
+    }
+    .file-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: #e63946; color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 700; flex-shrink: 0;
+    }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 0.88rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-size { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .file-dl { color: var(--blue); font-size: 0.8rem; }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .page-header { padding: 0 0.8rem; gap: 0.35rem; }
+      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+      .name-tabs { padding-bottom: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== 3段固定ヘッダー ===== -->
+<div class="page-header">
+  <!-- 1段目：タイトル -->
+  <div class="page-header-label"><i class="fa-solid fa-address-card"></i> 利用者情報</div>
+
+  <!-- 2段目：事業所タブ -->
+  <div class="office-tabs">
+    <button class="office-tab active">大浦家</button>
+    <button class="office-tab">上津役家</button>
+  </div>
+
+  <!-- 3段目：氏名タブ（横スクロール） -->
+  <div class="name-tabs" id="nameTabs">
+    <button class="name-tab active" onclick="switchName(this)">髙田トミヱ</button>
+    <button class="name-tab" onclick="switchName(this)">山田太郎</button>
+    <button class="name-tab" onclick="switchName(this)">田中花子</button>
+    <button class="name-tab" onclick="switchName(this)">鈴木一郎</button>
+    <button class="name-tab" onclick="switchName(this)">佐藤みよ</button>
+  </div>
+</div>
+
+<!-- ===== 詳細タブ ===== -->
+<div class="detail-tabs-wrap">
+  <button class="detail-tab active" onclick="switchDetail('basic',this)">基本情報</button>
+  <button class="detail-tab" onclick="switchDetail('history',this)">既往歴</button>
+  <button class="detail-tab" onclick="switchDetail('relation',this)">関係先</button>
+  <button class="detail-tab" onclick="switchDetail('medicine',this)">薬手帳</button>
+  <button class="detail-tab" onclick="switchDetail('doc',this)">フェイスシート・退院時資料</button>
+</div>
+
+<!-- ===== 基本情報 ===== -->
+<div id="paneBasic" class="tab-content">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-user" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">本人基本情報</span>
+    </div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-label">氏名</span><span class="info-value">髙田 トミヱ <span class="badge badge-active">在籍中</span></span></div>
+      <div class="info-row"><span class="info-label">フリガナ</span><span class="info-value">タカダ トミヱ</span></div>
+      <div class="info-row"><span class="info-label">生年月日</span><span class="info-value">1935年3月12日</span></div>
+      <div class="info-row"><span class="info-label">介護度</span><span class="info-value"><span class="badge badge-care">要介護5</span></span></div>
+      <div class="info-row"><span class="info-label">入居日</span><span class="info-value">2022年4月1日</span></div>
+      <div class="info-row"><span class="info-label">事業所</span><span class="info-value">大浦家</span></div>
+      <div class="info-row"><span class="info-label">本人住所</span><span class="info-value">〒8080000 福岡県北九州市八幡西区大浦1-2-3</span></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-users" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">家族①</span>
+    </div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-label">氏名</span><span class="info-value">髙田 一郎</span></div>
+      <div class="info-row"><span class="info-label">フリガナ</span><span class="info-value">タカダ イチロウ</span></div>
+      <div class="info-row"><span class="info-label">続柄</span><span class="info-value">長男</span></div>
+      <div class="info-row"><span class="info-label">電話番号</span><span class="info-value">090-1234-5678</span></div>
+      <div class="info-row"><span class="info-label">住所</span><span class="info-value">〒8080000 福岡県北九州市八幡西区大浦1-2-3</span></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-users" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">家族②</span>
+    </div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-label">氏名</span><span class="info-value">髙田 花子</span></div>
+      <div class="info-row"><span class="info-label">フリガナ</span><span class="info-value">タカダ ハナコ</span></div>
+      <div class="info-row"><span class="info-label">続柄</span><span class="info-value">長女</span></div>
+      <div class="info-row"><span class="info-label">電話番号</span><span class="info-value">080-9876-5432</span></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-envelope" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">連絡先・郵便物</span>
+    </div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-label">報告アドレス</span><span class="info-value">takada@example.com</span></div>
+      <div class="info-row"><span class="info-label">郵便物送付先</span><span class="info-value">〒8080000 福岡県北九州市八幡西区大浦1-2-3</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 既往歴 ===== -->
+<div id="paneHistory" class="tab-content hidden">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-file-medical" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">既往歴</span>
+    </div>
+    <div class="section-body">
+      <ul class="history-list">
+        <li class="history-item"><span class="history-num">1</span>高血圧</li>
+        <li class="history-item"><span class="history-num">2</span>糖尿病</li>
+        <li class="history-item"><span class="history-num">3</span>心房細動</li>
+        <li class="history-item"><span class="history-num">4</span>慢性腎不全</li>
+        <li class="history-item"><span class="history-num">5</span>脳梗塞後遺症</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 関係先 ===== -->
+<div id="paneRelation" class="tab-content hidden">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-hospital" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">関係先</span>
+    </div>
+    <div class="section-body">
+      <div class="relation-card">
+        <div class="relation-name">北九州中央病院</div>
+        <div class="relation-meta">かかりつけ医 ／ 担当：田村 先生</div>
+        <div class="relation-phone"><i class="fa-solid fa-phone"></i>093-123-4567</div>
+      </div>
+      <div class="relation-card">
+        <div class="relation-name">大浦調剤薬局</div>
+        <div class="relation-meta">薬局 ／ 担当：山本 様</div>
+        <div class="relation-phone"><i class="fa-solid fa-phone"></i>093-234-5678</div>
+      </div>
+      <div class="relation-card">
+        <div class="relation-name">北九州居宅介護支援事業所</div>
+        <div class="relation-meta">ケアマネ事業所 ／ 担当：佐藤 様</div>
+        <div class="relation-phone"><i class="fa-solid fa-phone"></i>093-345-6789</div>
+        <div class="relation-phone" style="color:var(--text-muted);font-weight:400">
+          <i class="fa-solid fa-fax"></i>093-345-6780
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 薬手帳 ===== -->
+<div id="paneMedicine" class="tab-content hidden">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-pills" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">薬手帳写真</span>
+    </div>
+    <div class="section-body">
+      <div class="photo-grid">
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+        <div class="photo-thumb"><div class="photo-placeholder"><i class="fa-solid fa-image"></i></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 資料 ===== -->
+<div id="paneDoc" class="tab-content hidden">
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-file-pdf" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">フェイスシート</span>
+    </div>
+    <div class="section-body">
+      <a class="file-item" href="#">
+        <div class="file-icon">PDF</div>
+        <div class="file-info">
+          <div class="file-name">高田.pdf</div>
+          <div class="file-size">669 KB</div>
+        </div>
+        <i class="fa-solid fa-download file-dl"></i>
+      </a>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-file-medical" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">退院時資料</span>
+    </div>
+    <div class="section-body">
+      <a class="file-item" href="#">
+        <div class="file-icon">PDF</div>
+        <div class="file-info">
+          <div class="file-name">2026.4.21退院時サマリー.pdf</div>
+          <div class="file-size">797 KB</div>
+        </div>
+        <i class="fa-solid fa-download file-dl"></i>
+      </a>
+      <a class="file-item" href="#">
+        <div class="file-icon">PDF</div>
+        <div class="file-info">
+          <div class="file-name">2022.3.14退院.pdf</div>
+          <div class="file-size">308 KB</div>
+        </div>
+        <i class="fa-solid fa-download file-dl"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PANES = ['basic','history','relation','medicine','doc'];
+
+  function switchName(btn) {
+    document.querySelectorAll('.name-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function switchDetail(name, btn) {
+    PANES.forEach(p => {
+      document.getElementById('pane' + p.charAt(0).toUpperCase() + p.slice(1)).classList.add('hidden');
+    });
+    document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('pane' + name.charAt(0).toUpperCase() + name.slice(1)).classList.remove('hidden');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

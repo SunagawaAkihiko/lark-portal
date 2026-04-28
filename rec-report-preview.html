@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>レク報告（プレビュー）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 7rem;
+    }
+
+    /* ===== 事業所タブ ===== */
+    .office-tabs {
+      position: sticky; top: 0; z-index: 15;
+      display: flex; flex-wrap: wrap;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem; gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%; color: white;
+      font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .office-tab {
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+
+    /* ===== フォームカード ===== */
+    .form-card {
+      background: white; border: 1px solid var(--border-color);
+      border-radius: 14px; overflow: hidden;
+    }
+    .form-card-head {
+      background: var(--primary-light); padding: 0.65rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .form-card-title { font-size: 0.85rem; font-weight: 700; color: var(--primary-color); }
+    .form-card-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ===== フィールド ===== */
+    .field-label {
+      font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem;
+    }
+    .field-label .required { color: var(--primary-color); margin-left: 0.3rem; }
+    .field-input, .field-select, .field-textarea {
+      width: 100%; padding: 0.7rem 0.9rem;
+      border: 1.5px solid var(--border-color); border-radius: 10px;
+      font-family: inherit; font-size: 1rem; color: var(--text-color);
+      background: white;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .field-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center; padding-right: 2.5rem;
+    }
+    .field-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+    /* ===== 費用入力 ===== */
+    .cost-wrap { position: relative; }
+    .cost-prefix {
+      position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%);
+      font-size: 1rem; color: var(--text-muted); font-weight: 700; pointer-events: none;
+    }
+    .cost-wrap .field-input { padding-left: 1.8rem; }
+
+    /* ===== 参加利用者 チェックリスト ===== */
+    .participants-list { display: flex; flex-direction: column; gap: 0.3rem; }
+    .participant-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 0.5rem; border-radius: 10px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .participant-item:active { background: var(--bg-color); }
+    .participant-item + .participant-item { border-top: 1px solid var(--bg-color); }
+    .p-checkbox {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid var(--border-color);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; color: transparent; flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .participant-item.checked .p-checkbox {
+      background: var(--primary-color); border-color: var(--primary-color); color: white;
+    }
+    .p-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; color: var(--primary-color); flex-shrink: 0;
+    }
+    .p-name { font-size: 0.95rem; font-weight: 700; }
+    .select-all-btn {
+      width: 100%; padding: 0.5rem;
+      background: none; border: 1px dashed var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
+      margin-bottom: 0.4rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+
+    /* ===== 送信ボタン ===== */
+    .submit-btn {
+      width: 100%; padding: 1rem;
+      background: var(--primary-color); color: white; border: none; border-radius: 12px;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(231,111,81,0.35);
+    }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .office-tabs { padding: 0 0.8rem 0.5rem; gap: 0.4rem; }
+      .office-tabs-label { padding: 0.5rem 0 0.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 事業所タブ -->
+<div class="office-tabs">
+  <span class="office-tabs-label"><i class="fa-solid fa-users"></i> レク報告</span>
+  <button class="office-tab active">大浦家</button>
+  <button class="office-tab">上津役家</button>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main-content">
+
+  <div class="form-card">
+    <div class="form-card-head">
+      <i class="fa-solid fa-users" style="color:var(--primary-color)"></i>
+      <span class="form-card-title">レクリエーション報告を登録</span>
+    </div>
+    <div class="form-card-body">
+
+      <!-- 報告日 -->
+      <div>
+        <div class="field-label">報告日<span class="required">＊</span></div>
+        <input type="date" class="field-input" value="2026-04-27">
+      </div>
+
+      <!-- レク実施日 -->
+      <div>
+        <div class="field-label">レク実施日<span class="required">＊</span></div>
+        <input type="date" class="field-input" value="2026-04-27">
+      </div>
+
+      <!-- 報告者 -->
+      <div>
+        <div class="field-label">報告者<span class="required">＊</span></div>
+        <select class="field-select">
+          <option>-- 選択してください --</option>
+          <option>田中 花子</option>
+          <option>山田 太郎</option>
+        </select>
+      </div>
+
+      <!-- レク内容 -->
+      <div>
+        <div class="field-label">レク内容<span class="required">＊</span></div>
+        <textarea class="field-textarea" placeholder="実施したレクリエーションの内容を入力してください"></textarea>
+      </div>
+
+      <!-- 費用 -->
+      <div>
+        <div class="field-label">費用</div>
+        <div class="cost-wrap">
+          <span class="cost-prefix">¥</span>
+          <input type="number" class="field-input" placeholder="0" min="0">
+        </div>
+      </div>
+
+      <!-- 参加利用者 -->
+      <div>
+        <div class="field-label">参加利用者</div>
+        <div class="participants-list">
+          <button class="select-all-btn"><i class="fa-solid fa-check-double"></i> 全員選択</button>
+          <div class="participant-item checked" onclick="this.classList.toggle('checked')">
+            <div class="p-checkbox"><i class="fa-solid fa-check"></i></div>
+            <div class="p-avatar"><i class="fa-solid fa-user"></i></div>
+            <span class="p-name">山田 太郎</span>
+          </div>
+          <div class="participant-item" onclick="this.classList.toggle('checked')">
+            <div class="p-checkbox"><i class="fa-solid fa-check"></i></div>
+            <div class="p-avatar"><i class="fa-solid fa-user"></i></div>
+            <span class="p-name">田中 花子</span>
+          </div>
+          <div class="participant-item checked" onclick="this.classList.toggle('checked')">
+            <div class="p-checkbox"><i class="fa-solid fa-check"></i></div>
+            <div class="p-avatar"><i class="fa-solid fa-user"></i></div>
+            <span class="p-name">鈴木 一郎</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <button class="submit-btn">
+    <i class="fa-solid fa-paper-plane"></i> 報 告 す る
+  </button>
+
+</div>
+</body>
+</html>

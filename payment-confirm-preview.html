@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>入金確認（プレビュー）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+      --green:         #2a9d8f;
+      --green-light:   #e6f7f5;
+      --yellow:        #e9c46a;
+      --yellow-light:  #fdf5e0;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 7rem;
+    }
+
+    /* ===== ヘッダー（事業所タブ＋ステータスタブ） ===== */
+    .page-header {
+      position: sticky; top: 0; z-index: 15;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .page-header-label {
+      width: 100%; color: white;
+      font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    /* 事業所タブ（1行目） */
+    .office-tab {
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s, color 0.2s;
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+
+    /* ===== 月フィルター ===== */
+    .month-filter-wrap {
+      padding: 0.75rem 1rem 0;
+      max-width: 600px; margin: 0 auto;
+    }
+    .month-filter {
+      width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.9rem;
+      border: 1.5px solid var(--border-color); border-radius: 10px;
+      font-family: inherit; font-size: 0.95rem; color: var(--text-color);
+      background: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center;
+    }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 0.75rem 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 0.6rem;
+    }
+
+    /* ===== 件数サマリー ===== */
+    .summary-bar {
+      display: flex; align-items: center;
+      padding: 0.3rem 0.2rem;
+    }
+    .summary-count {
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+    .summary-count strong { color: var(--text-color); font-size: 1rem; }
+
+    /* ===== 入金カード ===== */
+    .payment-card {
+      background: white; border: 1.5px solid var(--border-color);
+      border-radius: 14px; overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .payment-card:active { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+    /* 未入金カードの左ボーダー */
+    .payment-card { border-left: 4px solid var(--yellow); }
+
+    .payment-card-body {
+      padding: 0.85rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+
+    /* 未入金バッジ */
+    .status-badge {
+      flex-shrink: 0;
+      padding: 0.28rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.72rem; font-weight: 700;
+      background: var(--yellow-light); color: #b07b00;
+    }
+
+    /* カード左側：氏名・月 */
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 1rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-month {
+      font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;
+    }
+
+    /* カード右側：金額 */
+    .card-amount {
+      flex-shrink: 0; text-align: right;
+    }
+    .card-amount-label { font-size: 0.7rem; color: var(--text-muted); }
+    .card-amount-value { font-size: 1.05rem; font-weight: 700; color: var(--text-color); }
+
+    /* 入金済み追加情報（日付・受取スタッフ） */
+    .card-paid-info {
+      padding: 0 1rem 0.7rem;
+      display: flex; gap: 1rem; flex-wrap: wrap;
+    }
+    .card-paid-info-item {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.75rem; color: var(--text-muted);
+    }
+    .card-paid-info-item i { font-size: 0.7rem; }
+
+    /* ===== 入金処理モーダル ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(74,63,53,0.45);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      width: 100%; max-width: 600px;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 2.5rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .modal-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--border-color); margin: 0 auto 0.25rem;
+    }
+    .modal-title {
+      font-size: 1.05rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* モーダル内の対象者情報 */
+    .modal-target {
+      background: var(--bg-color); border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-target-name { font-size: 1rem; font-weight: 700; }
+    .modal-target-sub  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .modal-target-amount { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); }
+
+    /* モーダル内フィールド */
+    .field-label {
+      font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem;
+    }
+    .field-label .required { color: var(--primary-color); margin-left: 0.3rem; }
+    .field-input, .field-select {
+      width: 100%; padding: 0.7rem 0.9rem;
+      border: 1.5px solid var(--border-color); border-radius: 10px;
+      font-family: inherit; font-size: 1rem; color: var(--text-color);
+      background: white;
+    }
+    .field-input:focus, .field-select:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .field-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center; padding-right: 2.5rem;
+    }
+
+    /* 確定ボタン */
+    .confirm-btn {
+      width: 100%; padding: 1rem;
+      background: var(--green); color: white; border: none; border-radius: 12px;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(42,157,143,0.35);
+    }
+    .cancel-btn {
+      width: 100%; padding: 0.7rem;
+      background: none; color: var(--text-muted); border: 1px solid var(--border-color);
+      border-radius: 10px; font-family: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .page-header { padding: 0 0.8rem 0.5rem; }
+      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+      .status-tab { padding: 0.25rem 0; font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ページヘッダー：事業所タブ（1行目）＋ステータスタブ（2行目） -->
+<div class="page-header">
+  <span class="page-header-label">
+    <i class="fa-solid fa-yen-sign"></i> 入金確認
+  </span>
+  <!-- 事業所タブ -->
+  <button class="office-tab active" onclick="switchOffice(this)">大浦家</button>
+  <button class="office-tab" onclick="switchOffice(this)">上津役家</button>
+</div>
+
+<!-- 月フィルター -->
+<div class="month-filter-wrap">
+  <select class="month-filter">
+    <option>すべての月</option>
+    <option selected>2026年3月分</option>
+    <option>2026年2月分</option>
+    <option>2026年1月分</option>
+  </select>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main-content">
+
+  <!-- 件数サマリー -->
+  <div class="summary-bar">
+    <span class="summary-count">未入金 <strong>3</strong> 件（大浦家）</span>
+  </div>
+
+  <!-- 未入金カード（大浦家の利用者のみ表示） -->
+  <div class="payment-card" onclick="document.getElementById('modal').style.display='flex'">
+    <div class="payment-card-body">
+      <span class="status-badge unpaid">未入金</span>
+      <div class="card-info">
+        <div class="card-name">髙田 トミヱ</div>
+        <div class="card-month">2026年3月分</div>
+      </div>
+      <div class="card-amount">
+        <div class="card-amount-label">請求金額</div>
+        <div class="card-amount-value">¥114,784</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-card">
+    <div class="payment-card-body">
+      <span class="status-badge unpaid">未入金</span>
+      <div class="card-info">
+        <div class="card-name">山田 太郎</div>
+        <div class="card-month">2026年3月分</div>
+      </div>
+      <div class="card-amount">
+        <div class="card-amount-label">請求金額</div>
+        <div class="card-amount-value">¥98,500</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-card">
+    <div class="payment-card-body">
+      <span class="status-badge unpaid">未入金</span>
+      <div class="card-info">
+        <div class="card-name">田中 花子</div>
+        <div class="card-month">2026年3月分</div>
+      </div>
+      <div class="card-amount">
+        <div class="card-amount-label">請求金額</div>
+        <div class="card-amount-value">¥76,200</div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- 入金処理モーダル：受取スタッフは選択した事業所のスタッフのみ表示 -->
+<div id="modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <i class="fa-solid fa-yen-sign" style="color:var(--green)"></i>
+      入金を記録する
+    </div>
+
+    <!-- 対象者情報 -->
+    <div class="modal-target">
+      <div>
+        <div class="modal-target-name">髙田 トミヱ</div>
+        <div class="modal-target-sub">2026年3月分</div>
+      </div>
+      <div class="modal-target-amount">¥114,784</div>
+    </div>
+
+    <!-- 入金日 -->
+    <div>
+      <div class="field-label">入金日<span class="required">＊</span></div>
+      <input type="date" class="field-input" value="2026-04-27">
+    </div>
+
+    <!-- 受取スタッフ：選択中事業所（大浦家）のスタッフのみ表示 -->
+    <div>
+      <div class="field-label">受取スタッフ<span class="required">＊</span></div>
+      <select class="field-select">
+        <option>-- 選択してください --</option>
+        <option>砂川 明彦（大浦家）</option>
+        <option>田中 友子（大浦家）</option>
+      </select>
+    </div>
+
+    <button class="confirm-btn">
+      <i class="fa-solid fa-circle-check"></i> 入金済にする
+    </button>
+    <button class="cancel-btn" onclick="document.getElementById('modal').style.display='none'">
+      キャンセル
+    </button>
+  </div>
+</div>
+
+<script>
+  // 事業所タブ切り替えのプレビュー用スクリプト
+  function switchOffice(btn) {
+    document.querySelectorAll('.office-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

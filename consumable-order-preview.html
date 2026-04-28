@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>消耗品発注（プレビュー）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 7rem;
+    }
+
+    /* ===== 事業所タブ ===== */
+    .office-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      display: flex;
+      flex-wrap: wrap;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%;
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .office-tab {
+      flex: 1;
+      padding: 0.55rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+    }
+    .office-tab.active {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ===== セクションカード ===== */
+    .section-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .section-head {
+      background: var(--primary-light);
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-head-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      flex: 1;
+    }
+    .section-body { padding: 0.75rem; }
+
+    /* ===== 発注日・発注者（横並び行） ===== */
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.75rem 1rem;
+    }
+    .field-row + .field-row {
+      border-top: 1px solid var(--bg-color);
+    }
+    .field-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 4.5rem;
+    }
+    .field-row input[type="date"] {
+      flex: 1;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    .field-row input[type="date"]:focus { outline: none; }
+    .field-select {
+      flex: 1;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.2rem center;
+      padding-right: 1.6rem;
+      cursor: pointer;
+    }
+    .field-select:focus { outline: none; }
+
+    /* ===== 発注品リスト ===== */
+    .order-item {
+      background: var(--bg-color);
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+    .order-item-body { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .supply-select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.2rem;
+    }
+    .supply-select:focus { outline: none; border-color: var(--primary-color); }
+    .supply-other-input {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+    }
+    .supply-other-input:focus { outline: none; border-color: var(--primary-color); }
+    .supply-count-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .supply-count-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .count-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      background: white;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .count-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      min-width: 2rem;
+      text-align: center;
+    }
+    .count-unit {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .remove-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: #fee2e2;
+      color: #e63946;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.2rem;
+    }
+    .add-order-btn {
+      width: 100%;
+      padding: 0.65rem;
+      background: none;
+      border: 1.5px dashed var(--primary-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    /* ===== 備考欄 ===== */
+    .notes-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .notes-textarea:focus { outline: none; border-color: var(--primary-color); }
+    .notes-textarea::placeholder { color: var(--text-muted); }
+
+    /* ===== サマリー ===== */
+    .summary-card {
+      background: var(--primary-light);
+      border: 1.5px solid var(--primary-color);
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .summary-icon { font-size: 1.5rem; color: var(--primary-color); }
+    .summary-text { flex: 1; }
+    .summary-count { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); }
+    .summary-detail { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    /* ===== 固定フッター ===== */
+    .footer-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 25;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .submit-btn {
+      flex: 1;
+      padding: 0.85rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .submit-btn:disabled {
+      background: var(--border-color);
+      color: var(--text-muted);
+    }
+    .order-count-chip {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .order-count-chip .num { font-size: 1.1rem; }
+
+    /* ===== 横画面レイアウト ===== */
+    @media (orientation: landscape) {
+      .office-tabs { padding: 0 0.8rem 0.5rem; gap: 0.4rem; }
+      .office-tabs-label { font-size: 0.88rem; padding: 0.5rem 0 0.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+          "meta    orders"
+          "meta    orders"
+          "summary summary";
+        max-height: calc(100vh - 72px);
+        overflow: hidden;
+        padding: 0.6rem;
+        gap: 0.6rem;
+      }
+      #section-meta    { grid-area: meta; overflow-y: auto; }
+      #section-orders  { grid-area: orders; overflow-y: auto; }
+      #section-summary { grid-area: summary; }
+
+      .footer-bar { padding: 0.45rem 0.8rem; gap: 0.5rem; }
+      .submit-btn { padding: 0.6rem; font-size: 0.88rem; }
+      .order-count-chip { padding: 0.35rem 0.55rem; font-size: 0.75rem; }
+      .order-count-chip .num { font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 事業所タブ -->
+<div class="office-tabs">
+  <span class="office-tabs-label"><i class="fa-solid fa-cart-shopping"></i> 消耗品発注</span>
+  <button class="office-tab active">大浦</button>
+  <button class="office-tab">上津役家</button>
+  <button class="office-tab">上津役デイ</button>
+</div>
+
+<div class="main-content">
+
+  <!-- ① 発注日・発注者（まとめて1カード） -->
+  <div class="section-card" id="section-meta">
+    <div class="field-row">
+      <label class="field-label"><i class="fa-solid fa-calendar-day" style="color:var(--primary-color)"></i> 発注日</label>
+      <input type="date" value="2026-04-25">
+    </div>
+    <div class="field-row">
+      <label class="field-label"><i class="fa-solid fa-user-tie" style="color:var(--primary-color)"></i> 発注者</label>
+      <select class="field-select">
+        <option>山本 美咲</option>
+        <option>田中 健太</option>
+        <option>鈴木 あゆみ</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ② 発注品リスト -->
+  <div class="section-card" id="section-orders">
+    <div class="section-head">
+      <i class="fa-solid fa-cart-shopping" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">発注する商品（複数可）</span>
+      <span class="section-head-badge" style="background:var(--primary-color);color:white;border-radius:20px;padding:0.15rem 0.6rem;font-size:0.75rem;font-weight:700;">2品</span>
+    </div>
+    <div class="section-body">
+
+      <!-- 商品1 -->
+      <div class="order-item">
+        <div class="order-item-body">
+          <select class="supply-select">
+            <option>オムツ（Mサイズ）</option>
+            <option>尿パッド</option>
+            <option>手袋</option>
+            <option>マスク</option>
+            <option>その他</option>
+          </select>
+          <div class="supply-count-row">
+            <span class="supply-count-label">数量</span>
+            <button class="count-btn">−</button>
+            <span class="count-value">3</span>
+            <button class="count-btn">＋</button>
+            <span class="count-unit">袋</span>
+          </div>
+        </div>
+        <button class="remove-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 商品2（その他選択時） -->
+      <div class="order-item">
+        <div class="order-item-body">
+          <select class="supply-select">
+            <option>オムツ（Mサイズ）</option>
+            <option selected>その他</option>
+          </select>
+          <input type="text" class="supply-other-input" placeholder="商品名を入力..." value="使い捨てエプロン">
+          <div class="supply-count-row">
+            <span class="supply-count-label">数量</span>
+            <button class="count-btn">−</button>
+            <span class="count-value">2</span>
+            <button class="count-btn">＋</button>
+            <span class="count-unit">袋</span>
+          </div>
+        </div>
+        <button class="remove-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 商品追加ボタン -->
+      <button class="add-order-btn">
+        <i class="fa-solid fa-plus"></i> 商品を追加
+      </button>
+    </div>
+  </div>
+
+  <!-- ③ 備考欄 -->
+  <div class="section-card">
+    <div class="section-head">
+      <i class="fa-solid fa-note-sticky" style="color:var(--primary-color)"></i>
+      <span class="section-head-title">備考（任意）</span>
+    </div>
+    <div class="section-body">
+      <textarea class="notes-textarea" placeholder="急ぎの場合や特記事項があれば記入...">在庫が残り少ないため早めにお願いします。</textarea>
+    </div>
+  </div>
+
+  <!-- ④ サマリー -->
+  <div class="summary-card" id="section-summary">
+    <div class="summary-icon"><i class="fa-solid fa-cart-flatbed"></i></div>
+    <div class="summary-text">
+      <div class="summary-count">2品を発注します</div>
+      <div class="summary-detail">大浦 / 山本 美咲 / オムツ（Mサイズ）×3・使い捨てエプロン×2</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 固定フッター -->
+<div class="footer-bar">
+  <div class="order-count-chip">
+    <div class="num">2品</div>
+    <div>発注</div>
+  </div>
+  <button class="submit-btn">
+    <i class="fa-solid fa-paper-plane"></i> 発注する
+  </button>
+</div>
+
+</body>
+</html>
