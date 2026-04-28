@@ -725,25 +725,32 @@
       document.getElementById('createDate').value = today;
     })();
 
-    // 起動時にメタ情報（事業所・スタッフ・利用者）を取得して初期化する
-    async function init() {
+    // 事業所リストは固定順で即座にタブを描画する（APIを待たない）
+    const OFFICE_ORDER = ['大浦家', '上津役家'];
+
+    function initOfficeTabs() {
+      officeList = [...OFFICE_ORDER];
+      renderOfficeTabs();
+
+      // 記録作成フォームの事業所セレクトにも即座に追加する
+      const createOffice = document.getElementById('createOffice');
+      officeList.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = o;
+        createOffice.appendChild(opt);
+      });
+    }
+
+    // スタッフ・利用者リストをAPIから非同期で取得してセレクトに追加する
+    // 事業所タブ描画後にバックグラウンドで実行するため、表示速度に影響しない
+    async function loadMeta() {
       try {
         const res  = await fetch(`${API_BASE}/api/helper/meta`);
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
-        // 事業所の表示順を固定する（大浦家→上津役家の順）
-        const OFFICE_ORDER = ['大浦家', '上津役家'];
-        officeList = (data.officeList || []).sort((a, b) => {
-          const ai = OFFICE_ORDER.indexOf(a);
-          const bi = OFFICE_ORDER.indexOf(b);
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-        });
         staffList    = data.staffList    || [];
         customerList = data.customerList || [];
-
-        // 事業所タブを描画する
-        renderOfficeTabs();
 
         // 利用者フィルターに選択肢を追加する
         const filterName = document.getElementById('filterName');
@@ -753,15 +760,7 @@
           filterName.appendChild(opt);
         });
 
-        // 記録作成の事業所セレクトに選択肢を追加する
-        const createOffice = document.getElementById('createOffice');
-        officeList.forEach(o => {
-          const opt = document.createElement('option');
-          opt.value = opt.textContent = o;
-          createOffice.appendChild(opt);
-        });
-
-        // スタッフセレクトに選択肢を追加する（記録作成・編集両方）
+        // スタッフセレクトに選択肢を追加する（記録作成・編集モーダル両方）
         [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
           sel.innerHTML = '<option value="">選択してください</option>';
           staffList.forEach(s => {
@@ -770,9 +769,8 @@
             sel.appendChild(opt);
           });
         });
-
       } catch (err) {
-        console.error('[init] メタ取得失敗:', err);
+        console.error('[loadMeta] スタッフ・利用者リスト取得失敗:', err);
       }
     }
 
@@ -1281,7 +1279,10 @@
       document.getElementById('pauseTabBtn').classList.remove('hidden');
     }
 
-    init();
+    // 事業所タブを即座に描画する（APIを待たないため画面表示が速い）
+    initOfficeTabs();
+    // スタッフ・利用者リストはバックグラウンドで非同期取得する
+    loadMeta();
   </script>
 </body>
 </html>
