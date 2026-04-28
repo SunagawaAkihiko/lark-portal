@@ -1102,33 +1102,97 @@
   // 関係先 追加・編集・削除
   // ============================================================
 
+  // 「関係性」選択肢（Larkから取得して更新する、初期値はフィールド定義の値）
+  let relationOptions = ['ケアマネ', 'かかりつけ医', '訪問歯科', '訪問看護', '薬局', '福祉用具', 'その他'];
+
+  // Larkから最新の選択肢を取得してキャッシュを更新する
+  async function fetchRelationOptions() {
+    try {
+      const res = await fetch(`${API_BASE}/api/kankei/relation-options`);
+      const data = await res.json();
+      if (data.ok && data.options.length > 0) relationOptions = data.options;
+    } catch (_) { /* 取得失敗時はキャッシュを使用する */ }
+  }
+
+  // 関係性プルダウン（「新しく追加...」選択時にテキスト入力欄を表示する）
+  function relationSelectHtml(currentValue = '') {
+    const opts = ['', ...relationOptions, '__new__']
+      .map(o => {
+        if (o === '__new__') return `<option value="__new__">＋ 新しく追加...</option>`;
+        return `<option value="${escHtml(o)}" ${o === currentValue ? 'selected' : ''}>${escHtml(o) || '（選択してください）'}</option>`;
+      }).join('');
+    return `
+      <div class="form-group">
+        <label class="form-label">関係性</label>
+        <select id="relRelation" class="form-input" onchange="onRelationSelectChange(this)">${opts}</select>
+      </div>
+      <div class="form-group hidden" id="relRelationNewGroup">
+        <label class="form-label">新しい関係性を入力</label>
+        <input type="text" id="relRelationNew" class="form-input" placeholder="例：訪問リハビリ">
+      </div>`;
+  }
+
+  // プルダウンで「新しく追加...」を選んだ時に入力欄を表示する
+  function onRelationSelectChange(sel) {
+    const newGroup = document.getElementById('relRelationNewGroup');
+    if (newGroup) newGroup.classList.toggle('hidden', sel.value !== '__new__');
+  }
+
+  // 関係性の値を取得する（「新しく追加...」の場合は入力欄の値を返す）
+  function getRelationValue() {
+    const sel = document.getElementById('relRelation');
+    if (!sel) return '';
+    if (sel.value === '__new__') return document.getElementById('relRelationNew')?.value?.trim() || '';
+    return sel.value;
+  }
+
   function relationFormHtml(r = {}) {
     return `
       ${inp('relOfficeName', '事業所名・施設名', r.officeName || '')}
-      ${inp('relRelation',   '関係性（例：主治医、ケアマネ）', r.relation || '')}
+      ${relationSelectHtml(r.relation || '')}
       ${inp('relPerson',     '担当者名', r.person || '')}
       ${inp('relTel',        '電話番号', r.tel || '', 'tel')}
       ${inp('relFax',        'FAX番号',  r.fax || '', 'tel')}`;
   }
 
-  function openAddRelationModal() {
+  async function openAddRelationModal() {
+    await fetchRelationOptions();
     openModal('関係先を追加', relationFormHtml(), submitAddRelation);
   }
 
-  function openEditRelationModal(r) {
+  async function openEditRelationModal(r) {
+    await fetchRelationOptions();
     openModal('関係先を編集', relationFormHtml(r), () => submitEditRelation(r.recordId));
+  }
+
+  // 「新しく追加...」が選ばれていた場合にLarkフィールドの選択肢を先に追加する
+  async function ensureRelationOption(relation) {
+    if (!relation) return;
+    const isNew = document.getElementById('relRelation')?.value === '__new__';
+    if (!isNew) return;
+    const res  = await fetch(`${API_BASE}/api/kankei/add-relation-option`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newOption: relation }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(`選択肢の追加に失敗しました: ${data.error}`);
+    // ローカルキャッシュも更新する
+    if (data.options) relationOptions = data.options;
   }
 
   async function submitAddRelation() {
     setModalSaving(true);
     const g = id => document.getElementById(id)?.value || '';
     try {
+      const relation = getRelationValue();
+      await ensureRelationOption(relation);
       const res  = await fetch(`${API_BASE}/api/kankei/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerName: activeCustomerName,
-          officeName: g('relOfficeName'), relation: g('relRelation'),
+          officeName: g('relOfficeName'), relation,
           person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
         }),
       });
@@ -1147,12 +1211,14 @@
     setModalSaving(true);
     const g = id => document.getElementById(id)?.value || '';
     try {
+      const relation = getRelationValue();
+      await ensureRelationOption(relation);
       const res  = await fetch(`${API_BASE}/api/kankei/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recordId,
-          officeName: g('relOfficeName'), relation: g('relRelation'),
+          officeName: g('relOfficeName'), relation,
           person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
         }),
       });
