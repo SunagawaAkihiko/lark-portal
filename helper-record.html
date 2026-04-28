@@ -111,48 +111,55 @@
       cursor: pointer;
     }
 
-    /* ===== レコードカード ===== */
-    .records-area { display: flex; flex-direction: column; gap: 0.6rem; }
-    .record-card {
+    /* ===== レコード一覧（コンパクト行形式） ===== */
+    .records-area {
       background: white;
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 0.85rem 1rem;
-      box-shadow: 0 1px 4px rgba(139,115,95,0.07);
+      border-radius: 10px;
+      overflow: hidden;
     }
-    .record-card-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      margin-bottom: 0.45rem;
+    .record-row {
+      display: flex; align-items: center;
+      padding: 0.42rem 0.75rem; gap: 0.5rem;
+      border-bottom: 1px solid #f0e4d6;
+      min-height: 2.6rem;
     }
-    .record-date {
-      font-size: 0.82rem; color: var(--text-muted); font-weight: 700;
+    .record-row:last-child { border-bottom: none; }
+    .record-row:active { background: var(--primary-light); }
+    /* 左カラム：日付 */
+    .row-date {
+      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+      white-space: nowrap; flex-shrink: 0; width: 4.8rem;
     }
-    .record-name {
-      font-size: 1rem; font-weight: 700; color: var(--text-color);
+    /* 中央カラム：氏名＋サブ情報 */
+    .row-main { flex: 1; min-width: 0; }
+    .row-name {
+      font-size: 0.88rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .row-sub {
+      font-size: 0.7rem; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* バッジ */
     .record-badge {
-      display: inline-block;
-      padding: 0.15rem 0.55rem; border-radius: 20px;
-      font-size: 0.72rem; font-weight: 700;
+      display: inline-flex; align-items: center;
+      padding: 0.1rem 0.4rem; border-radius: 4px;
+      font-size: 0.67rem; font-weight: 700; flex-shrink: 0;
     }
     .badge-nikkin  { background: #e8f4fd; color: #1565c0; }
     .badge-yakinha { background: #fdecea; color: #c62828; }
     .badge-yakinhb { background: #fce4ec; color: #880e4f; }
     .badge-other   { background: #f3e5f5; color: #6a1b9a; }
-    .record-meta {
-      font-size: 0.8rem; color: var(--text-muted);
-      display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.3rem;
-    }
-    .record-meta span { display: flex; align-items: center; gap: 0.25rem; }
-    .record-actions {
-      display: flex; gap: 0.4rem; margin-top: 0.6rem;
-    }
+    /* 右カラム：操作ボタン */
+    .row-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
     .btn-edit, .btn-delete {
-      padding: 0.3rem 0.8rem; border-radius: 6px; border: none;
-      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+      width: 2rem; height: 2rem; border-radius: 6px; border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; cursor: pointer; flex-shrink: 0;
     }
     .btn-edit   { background: var(--green-light); color: var(--green); }
-    .btn-delete { background: var(--red-light); color: var(--red); }
+    .btn-delete { background: var(--red-light);   color: var(--red); }
 
     /* ===== 空状態・ローディング ===== */
     .status-msg {
@@ -857,38 +864,47 @@
       }
     }
 
+    // タイムスタンプを "M/D(曜)" の短縮形式に変換する（一覧行用）
+    function fmtDateShort(ms) {
+      if (!ms) return '-';
+      const jst  = new Date(ms + 9 * 60 * 60 * 1000);
+      const days = ['日','月','火','水','木','金','土'];
+      return `${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${days[jst.getUTCDay()]})`;
+    }
+
     function renderRecords(records) {
       const list = document.getElementById('recordsList');
       if (records.length === 0) {
         list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-folder-open"></i>記録がありません</div>`;
         return;
       }
-      list.innerHTML = records.map(r => `
-        <div class="record-card">
-          <div class="record-card-header">
-            <div>
-              <div class="record-date">${fmtDate(r.実施日)}</div>
-              <div class="record-name">${escHtml(r.氏名 || '（氏名未設定）')}</div>
+      // コンパクトな行形式で表示する（1行に日付・氏名・勤務区分・サブ情報・操作ボタンを配置）
+      list.innerHTML = records.map(r => {
+        // サブ情報：スタッフ / 作業項目 をまとめてコンパクトに表示する
+        const subParts = [];
+        if (r.スタッフ)    subParts.push(r.スタッフ);
+        if (r.作業項目)    subParts.push(r.作業項目);
+        if (r.サービス略称 && r.サービス略称 !== r.作業項目) subParts.push(r.サービス略称);
+        const sub = subParts.map(s => escHtml(s)).join(' / ');
+
+        return `
+          <div class="record-row">
+            <div class="row-date">${fmtDateShort(r.実施日)}</div>
+            <div class="row-main">
+              <div class="row-name">${escHtml(r.氏名 || '（氏名未設定）')}</div>
+              ${sub ? `<div class="row-sub">${sub}</div>` : ''}
             </div>
             ${kinmuBadge(r.勤務区分)}
-          </div>
-          <div class="record-meta">
-            ${r.スタッフ    ? `<span><i class="fa-solid fa-user"></i>${escHtml(r.スタッフ)}</span>` : ''}
-            ${r.作業項目    ? `<span><i class="fa-solid fa-list-check"></i>${escHtml(r.作業項目)}</span>` : ''}
-            ${r.サービス略称 ? `<span><i class="fa-solid fa-tag"></i>${escHtml(r.サービス略称)}</span>` : ''}
-            ${r.記録タイプ  ? `<span><i class="fa-solid fa-layer-group"></i>${escHtml(r.記録タイプ)}</span>` : ''}
-          </div>
-          ${r.記録内容 ? `<div style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted);border-top:1px solid #f0e0d0;padding-top:0.4rem;">${escHtml(r.記録内容)}</div>` : ''}
-          <div class="record-actions">
-            <button class="btn-edit" onclick="openEditModal('${r.recordId}')">
-              <i class="fa-solid fa-pen"></i> 編集
-            </button>
-            <button class="btn-delete" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
-              <i class="fa-solid fa-trash"></i> 削除
-            </button>
-          </div>
-        </div>
-      `).join('');
+            <div class="row-actions">
+              <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>`;
+      }).join('');
     }
 
     // ============================================================
