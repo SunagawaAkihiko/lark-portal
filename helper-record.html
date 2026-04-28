@@ -149,7 +149,7 @@
     }
     .record-item-info { flex: 1; min-width: 0; }
     .record-item-line1 {
-      display: flex; align-items: baseline; gap: 0.65rem;
+      display: flex; align-items: baseline; gap: 1.1rem;
       flex-wrap: wrap;
     }
     .record-item-name {
@@ -810,9 +810,6 @@
         staffList    = data.staffList    || [];
         customerList = data.customerList || [];
 
-        // 利用者フィルターを再構築する（currentRecordsからの補完分もマージする）
-        refreshFilterNames();
-
         // スタッフセレクトに選択肢を追加する（記録作成・編集モーダル両方）
         [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
           sel.innerHTML = '<option value="">選択してください</option>';
@@ -930,13 +927,13 @@
       return (h || 0) * 60 + (m || 0);
     }
 
-    // 氏名フィルターの選択肢を customerList と currentRecords からマージして再構築する。
-    // loadMeta がサーバースリープで遅延・失敗した場合でも記録から補完できる。
+    // 氏名フィルターを currentRecords（事業所フィルター済み）から再構築する。
+    // customerList は全事業所の利用者を含むため使用しない（事業所絞り込みが崩れる）。
     function refreshFilterNames() {
       const sel = document.getElementById('filterName');
       const currentVal = sel.value; // 現在の選択値を保持する
-      // customerList（loadMeta取得分）と currentRecords の氏名を重複なく結合する
-      const names = new Set(customerList);
+      // ロード済みの記録から氏名のみ抽出する（事業所単位で自動絞り込み済み）
+      const names = new Set();
       currentRecords.forEach(r => { if (r.氏名) names.add(r.氏名); });
       sel.innerHTML = '<option value="">全員</option>';
       [...names].sort().forEach(n => {
