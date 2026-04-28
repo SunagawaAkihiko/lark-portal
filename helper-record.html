@@ -294,7 +294,53 @@
       font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
     }
 
-    /* ===== 一時停止日程設定サブエリア ===== */
+    /* ===== 一時停止管理：一括操作カード ===== */
+    .bulk-op-card {
+      background: white; border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 1rem;
+      display: flex; flex-direction: column; gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+    .bulk-op-title {
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.4rem;
+      color: var(--text-color);
+    }
+    .action-toggle {
+      display: flex; gap: 0.5rem;
+    }
+    .action-btn {
+      flex: 1; padding: 0.55rem 0; border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-color); color: var(--text-muted);
+      font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      transition: all 0.18s;
+    }
+    .action-btn.active.pause  { background: var(--red-light);   color: var(--red);   border-color: var(--red); }
+    .action-btn.active.resume { background: var(--green-light); color: var(--green); border-color: var(--green); }
+    .bulk-service-list {
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .bulk-svc-item {
+      display: flex; align-items: flex-start; gap: 0.65rem;
+      padding: 0.55rem 0.75rem; background: var(--bg-color);
+      border: 1px solid var(--border-color); border-radius: 8px;
+    }
+    .bulk-svc-item input[type=checkbox] {
+      width: 1.1rem; height: 1.1rem; margin-top: 0.15rem; flex-shrink: 0;
+      accent-color: var(--primary-color); cursor: pointer;
+    }
+    .bulk-svc-info { flex: 1; min-width: 0; }
+    .bulk-svc-name { font-size: 0.88rem; font-weight: 700; }
+    .bulk-svc-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .bulk-result {
+      border-radius: 10px; padding: 0.7rem 1rem;
+      font-size: 0.88rem; font-weight: 700; text-align: center;
+    }
+    .bulk-result.ok  { background: var(--green-light); color: var(--green); }
+    .bulk-result.err { background: var(--red-light);   color: var(--red); }
+
+    /* ===== 一時停止日程設定サブエリア（個別編集用） ===== */
     .pause-date-form {
       background: #fdf0eb; border: 1px solid var(--border-color);
       border-radius: 8px; padding: 0.65rem 0.85rem;
@@ -419,15 +465,74 @@
 
   <!-- ===== タブ③：一時停止管理 ===== -->
   <div id="tab-pause" class="tab-content hidden">
-    <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.6rem 0.85rem;background:var(--primary-light);border-radius:8px;margin-bottom:0.85rem;">
-      <i class="fa-solid fa-circle-info" style="color:var(--primary-color);"></i>
-      入院などで記録の自動作成を停止する場合は「停止」を、再開する場合は「再開」を押してください。
-      サービスごとに個別に停止・再開できます。
+
+    <!-- 一括操作カード -->
+    <div class="bulk-op-card">
+      <div class="bulk-op-title">
+        <i class="fa-solid fa-sliders"></i> 一括停止・再開
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">利用者 <span class="form-required">*</span></label>
+        <select id="bulkCustomer" class="form-select" onchange="onBulkCustomerChange()">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">日時 <span class="form-required">*</span></label>
+        <div style="display:flex;gap:0.5rem;">
+          <input type="date" id="bulkDate" class="form-input" style="flex:1;">
+          <input type="time" id="bulkTime" class="form-input" style="width:7.5rem;flex:none;">
+        </div>
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.2rem;">
+          停止: 指定時刻以前のサービスは記録する・以降は記録しない<br>
+          再開: 指定時刻以前のサービスは翌日から・以降はその日から記録する
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">操作 <span class="form-required">*</span></label>
+        <div class="action-toggle">
+          <button class="action-btn active pause" id="actionPauseBtn" onclick="setBulkAction('pause')">
+            <i class="fa-solid fa-pause"></i> 停止
+          </button>
+          <button class="action-btn resume" id="actionResumeBtn" onclick="setBulkAction('resume')">
+            <i class="fa-solid fa-play"></i> 再開
+          </button>
+        </div>
+      </div>
+
+      <!-- サービス選択（利用者選択後に表示） -->
+      <div id="bulkServiceArea" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <span style="font-size:0.82rem;font-weight:700;color:var(--text-muted);">
+            対象サービス
+          </span>
+          <div style="display:flex;gap:0.4rem;">
+            <button onclick="setAllBulkChecks(true)"  class="btn-set-date" style="font-size:0.72rem;padding:0.2rem 0.6rem;">全選択</button>
+            <button onclick="setAllBulkChecks(false)" class="btn-set-date" style="font-size:0.72rem;padding:0.2rem 0.6rem;">全解除</button>
+          </div>
+        </div>
+        <div id="bulkServiceList" class="bulk-service-list"></div>
+      </div>
+
+      <button class="create-btn" id="bulkApplyBtn" onclick="applyBulkOperation()">
+        <i class="fa-solid fa-check"></i> 適用する
+      </button>
+      <div id="bulkResult" class="hidden"></div>
     </div>
-    <div id="pauseList">
-      <div class="status-msg">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        読み込み中...
+
+    <!-- 設定一覧（現在の開始日・終了日の確認と個別編集） -->
+    <div>
+      <div style="font-size:0.88rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;padding-left:0.25rem;">
+        <i class="fa-solid fa-list"></i> 設定一覧
+      </div>
+      <div id="pauseList">
+        <div class="status-msg">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          読み込み中...
+        </div>
       </div>
     </div>
   </div>
@@ -928,9 +1033,13 @@
     }
 
     // ============================================================
+    // ============================================================
     // タブ③：一時停止管理
     // ============================================================
 
+    let bulkAction = 'pause'; // 現在の操作（'pause' or 'resume'）
+
+    // 設定一覧を取得して描画する（一括操作後・タブ切り替え時に呼ぶ）
     async function loadPauseSettings() {
       const container = document.getElementById('pauseList');
       container.innerHTML = `<div class="status-msg"><i class="fa-solid fa-spinner fa-spin"></i>読み込み中...</div>`;
@@ -942,12 +1051,26 @@
         if (!data.ok) throw new Error(data.error);
 
         pauseRecords = data.records || [];
+
+        // 一括操作の利用者ドロップダウンを更新する
+        const nameSet = new Set(pauseRecords.map(r => r.氏名).filter(Boolean));
+        const bulkSel = document.getElementById('bulkCustomer');
+        const curVal  = bulkSel.value;
+        bulkSel.innerHTML = '<option value="">選択してください</option>';
+        [...nameSet].sort((a, b) => a.localeCompare(b, 'ja')).forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = n;
+          bulkSel.appendChild(opt);
+        });
+        if (curVal) bulkSel.value = curVal;
+
         renderPauseList(pauseRecords);
       } catch (err) {
         container.innerHTML = `<div class="status-msg"><i class="fa-solid fa-triangle-exclamation"></i>${escHtml(err.message)}</div>`;
       }
     }
 
+    // 設定一覧を利用者別グループで描画する
     function renderPauseList(records) {
       const container = document.getElementById('pauseList');
       if (records.length === 0) {
@@ -967,7 +1090,6 @@
         const group = document.createElement('div');
         group.className = 'pause-customer-group';
 
-        // グループヘッダー（折りたたみ可能）
         const header = document.createElement('div');
         header.className = 'pause-customer-header';
         header.innerHTML = `
@@ -976,61 +1098,44 @@
           <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted);">${items.length} サービス</span>
           <i class="fa-solid fa-chevron-down chevron"></i>
         `;
+
+        const serviceList = document.createElement('div');
+        serviceList.className = 'pause-service-list';
+
         header.addEventListener('click', () => {
           header.classList.toggle('collapsed');
           serviceList.classList.toggle('hidden');
         });
 
-        // サービスリスト
-        const serviceList = document.createElement('div');
-        serviceList.className = 'pause-service-list';
-
         items.forEach(item => {
           const now = Date.now();
-          // 現在の状態を判定する
           const isPaused  = item.終了日 && item.終了日 < now;
-          const isWaiting = item.終了日 && item.終了日 >= now; // 将来の停止予定
-
+          const isWaiting = item.終了日 && item.終了日 >= now;
           let statusLabel, statusClass;
-          if (isPaused) {
-            statusLabel = '停止中'; statusClass = 'status-paused';
-          } else if (isWaiting) {
-            statusLabel = '停止予定'; statusClass = 'status-waiting';
-          } else {
-            statusLabel = '稼働中'; statusClass = 'status-active';
-          }
+          if (isPaused)       { statusLabel = '停止中';   statusClass = 'status-paused'; }
+          else if (isWaiting) { statusLabel = '停止予定'; statusClass = 'status-waiting'; }
+          else                { statusLabel = '稼働中';   statusClass = 'status-active'; }
 
-          const kinmuShort = (item.勤務区分 || '')
-            .replace('夜勤担当①', '夜勤①').replace('夜勤担当②', '夜勤②');
-          const yobi = item.提供曜日 ? `（${item.提供曜日}曜日）` : '';
+          const kinmuShort = (item.勤務区分 || '').replace('夜勤担当①','夜勤①').replace('夜勤担当②','夜勤②');
+          const yobi = item.提供曜日 ? `${item.提供曜日}曜日` : '';
+          const jikan = item.提供時間 ? ` ${item.提供時間}` : '';
 
           const itemEl = document.createElement('div');
           itemEl.className = 'pause-service-item';
-          itemEl.dataset.recordId = item.recordId;
           itemEl.innerHTML = `
             <div class="pause-service-title">
               <div class="pause-service-name">
                 ${escHtml(item.作業項目 || item.サービス略称 || '?')}
                 <span style="font-size:0.75rem;color:var(--text-muted);">
-                  ${escHtml(kinmuShort)}${escHtml(yobi)}
+                  ${escHtml(kinmuShort)}${yobi ? ` / ${escHtml(yobi)}` : ''}${escHtml(jikan)}
                 </span>
               </div>
               <span class="pause-status ${statusClass}">${statusLabel}</span>
             </div>
             <div class="pause-date-info">
               開始日: ${item.開始日 ? fmtDate(item.開始日) : '未設定'}
-              　終了日: ${item.終了日 ? fmtDate(item.終了日) : '未設定'}
-            </div>
-            <div class="pause-actions">
-              <button class="btn-pause"  onclick="showPauseForm(this, '${item.recordId}')">
-                <i class="fa-solid fa-pause"></i> 停止
-              </button>
-              <button class="btn-resume" onclick="resumeService('${item.recordId}', this)">
-                <i class="fa-solid fa-play"></i> 再開
-              </button>
-              <button class="btn-set-date" onclick="showStartDateForm(this, '${item.recordId}')">
-                <i class="fa-solid fa-calendar-plus"></i> 開始日変更
-              </button>
+              &nbsp;/&nbsp;
+              終了日: ${item.終了日 ? fmtDate(item.終了日) : '未設定'}
             </div>
           `;
           serviceList.appendChild(itemEl);
@@ -1042,79 +1147,112 @@
       });
     }
 
-    // 停止ボタンを押したときに日付入力フォームを表示する
-    function showPauseForm(btn, recordId) {
-      // 既存フォームがあれば削除する
-      const existing = btn.closest('.pause-actions').parentElement.querySelector('.pause-date-form');
-      if (existing) { existing.remove(); return; }
+    // ── 一括操作パネル ──
 
-      const today = msToInputDate(Date.now());
-      const form = document.createElement('div');
-      form.className = 'pause-date-form';
-      form.innerHTML = `
-        <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">停止（終了日を設定）</div>
-        <div class="pause-date-row">
-          <label>終了日</label>
-          <input type="date" class="pause-date-input" id="pauseEndDate_${recordId}" value="${today}">
-          <button class="pause-date-confirm" onclick="applyPause('${recordId}')">設定</button>
-        </div>
-      `;
-      btn.closest('.pause-service-item').appendChild(form);
+    // 停止/再開トグルを切り替える
+    function setBulkAction(action) {
+      bulkAction = action;
+      document.getElementById('actionPauseBtn') .classList.toggle('active', action === 'pause');
+      document.getElementById('actionResumeBtn').classList.toggle('active', action === 'resume');
     }
 
-    // 開始日変更フォームを表示する
-    function showStartDateForm(btn, recordId) {
-      const existing = btn.closest('.pause-actions').parentElement.querySelector('.pause-date-form');
-      if (existing) { existing.remove(); return; }
+    // 利用者を選択したときに対象サービスのチェックリストを表示する
+    function onBulkCustomerChange() {
+      const name = document.getElementById('bulkCustomer').value;
+      const area = document.getElementById('bulkServiceArea');
+      const list = document.getElementById('bulkServiceList');
 
-      const today = msToInputDate(Date.now());
-      const form = document.createElement('div');
-      form.className = 'pause-date-form';
-      form.innerHTML = `
-        <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">開始日の変更</div>
-        <div class="pause-date-row">
-          <label>開始日</label>
-          <input type="date" class="pause-date-input" id="pauseStartDate_${recordId}" value="${today}">
-          <button class="pause-date-confirm" onclick="applyStartDate('${recordId}')">設定</button>
-        </div>
-      `;
-      btn.closest('.pause-service-item').appendChild(form);
+      if (!name) { area.classList.add('hidden'); return; }
+
+      // 選択した利用者のサービスをチェックボックスで表示する
+      const svcs = pauseRecords.filter(r => r.氏名 === name);
+      list.innerHTML = '';
+      svcs.forEach(svc => {
+        const kinmuShort = (svc.勤務区分 || '').replace('夜勤担当①','夜勤①').replace('夜勤担当②','夜勤②');
+        const yobi  = svc.提供曜日 ? `${svc.提供曜日}曜日` : '';
+        const jikan = svc.提供時間 ? ` ${svc.提供時間}` : '';
+        const now   = Date.now();
+        const isPaused  = svc.終了日 && svc.終了日 < now;
+        const isWaiting = svc.終了日 && svc.終了日 >= now;
+        let stLabel = '稼働中', stClass = 'status-active';
+        if (isPaused)       { stLabel = '停止中';   stClass = 'status-paused'; }
+        else if (isWaiting) { stLabel = '停止予定'; stClass = 'status-waiting'; }
+
+        const item = document.createElement('label');
+        item.className = 'bulk-svc-item';
+        item.innerHTML = `
+          <input type="checkbox" checked data-record-id="${svc.recordId}" data-teikyo-mins="${svc.teikyoMins ?? 0}">
+          <div class="bulk-svc-info">
+            <div class="bulk-svc-name">${escHtml(svc.作業項目 || svc.サービス略称 || '?')}</div>
+            <div class="bulk-svc-meta">
+              ${escHtml(kinmuShort)}${yobi ? ` / ${escHtml(yobi)}` : ''}${escHtml(jikan)}
+              &nbsp;<span class="pause-status ${stClass}" style="font-size:0.7rem;">${stLabel}</span>
+            </div>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      area.classList.toggle('hidden', svcs.length === 0);
     }
 
-    // 終了日を設定してサービスを停止する
-    async function applyPause(recordId) {
-      const endDate = document.getElementById(`pauseEndDate_${recordId}`)?.value;
-      if (!endDate) { alert('終了日を入力してください。'); return; }
-      await updatePauseSetting(recordId, { 終了日: endDate });
+    // 全チェックボックスを選択/解除する
+    function setAllBulkChecks(checked) {
+      document.querySelectorAll('#bulkServiceList input[type=checkbox]')
+        .forEach(cb => cb.checked = checked);
     }
 
-    // 開始日を更新する
-    async function applyStartDate(recordId) {
-      const startDate = document.getElementById(`pauseStartDate_${recordId}`)?.value;
-      if (!startDate) { alert('開始日を入力してください。'); return; }
-      await updatePauseSetting(recordId, { 開始日: startDate });
-    }
+    // 一括操作を実行してサーバーに送信する
+    async function applyBulkOperation() {
+      const date = document.getElementById('bulkDate').value;
+      const time = document.getElementById('bulkTime').value;
+      const name = document.getElementById('bulkCustomer').value;
 
-    // 終了日をクリアしてサービスを再開する
-    async function resumeService(recordId, btn) {
-      if (!confirm('このサービスの停止を解除して再開しますか？')) return;
-      await updatePauseSetting(recordId, { clear終了日: true });
-    }
+      if (!name)  { alert('利用者を選択してください。'); return; }
+      if (!date)  { alert('日付を入力してください。');   return; }
+      if (!time)  { alert('時刻を入力してください。');   return; }
 
-    // 顧客別作業設定の開始日・終了日をサーバー経由で更新する
-    async function updatePauseSetting(recordId, body) {
+      // チェックされたサービスを収集する
+      const checked = [...document.querySelectorAll('#bulkServiceList input[type=checkbox]:checked')];
+      if (checked.length === 0) { alert('対象サービスを1つ以上選択してください。'); return; }
+
+      const services = checked.map(cb => ({
+        recordId:   cb.dataset.recordId,
+        teikyoMins: Number(cb.dataset.teikyoMins),
+      }));
+
+      const btn    = document.getElementById('bulkApplyBtn');
+      const result = document.getElementById('bulkResult');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 処理中...';
+      result.classList.add('hidden');
+
       try {
-        const res  = await fetch(`${API_BASE}/api/helper/pause-settings/${recordId}`, {
-          method: 'PUT',
+        const res  = await fetch(`${API_BASE}/api/helper/pause-settings/bulk`, {
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body:    JSON.stringify({ action: bulkAction, date, time, services }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        // 更新後に一覧を再取得して再描画する
+
+        result.className = 'bulk-result ok';
+        const label = bulkAction === 'pause' ? '停止' : '再開';
+        result.textContent = `✓ ${data.succeeded} 件のサービスを${label}しました`;
+        if (data.errors?.length) result.textContent += `（${data.errors.length} 件エラー）`;
+        result.classList.remove('hidden');
+
+        // 設定一覧を再取得して最新状態を反映する
         await loadPauseSettings();
+        // チェックリストも更新する
+        onBulkCustomerChange();
       } catch (err) {
-        alert('更新に失敗しました: ' + err.message);
+        result.className = 'bulk-result err';
+        result.textContent = '失敗しました: ' + err.message;
+        result.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> 適用する';
       }
     }
 
