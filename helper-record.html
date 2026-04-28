@@ -227,6 +227,10 @@
     .form-select:focus, .form-input:focus {
       outline: none; border-color: var(--primary-color);
     }
+    /* iOS Safari が input[type=date] に最小幅を強制するため !important で上書きする */
+    .form-input[type=date] {
+      width: 100% !important; min-width: 0 !important;
+    }
     .create-btn {
       width: 100%; padding: 0.8rem; border-radius: 10px; border: none;
       background: var(--primary-color); color: white;
