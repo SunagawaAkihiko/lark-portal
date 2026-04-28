@@ -50,12 +50,6 @@ const portalLinks = [
         url: "rec-report.html"
     },
     {
-        title: "薬手帳登録",
-        description: "お薬手帳のデータを登録",
-        icon: "fa-pills",
-        url: "medicine-record.html"
-    },
-    {
         title: "登録ボタン一覧",
         description: "登録関連のボタンへのリンク集です",
         icon: "fa-layer-group",
