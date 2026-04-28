@@ -164,7 +164,7 @@
     .relation-meta { font-size: 0.78rem; color: var(--text-muted); }
     .relation-tel {
       display: flex; align-items: center; gap: 0.4rem;
-      font-size: 0.85rem; color: var(--blue); font-weight: 700;
+      font-size: 1.05rem; color: var(--blue); font-weight: 700;
       text-decoration: none;
     }
     .relation-fax {
@@ -717,24 +717,26 @@
       const faxHtml = r.fax
         ? `<span class="relation-fax"><i class="fa-solid fa-fax"></i>${escHtml(r.fax)}</span>` : '';
       const meta = [r.relation, r.person ? `担当：${r.person}` : ''].filter(Boolean).join(' ／ ');
-      // 編集・削除ボタンは管理者のみ表示する
+      // 編集・削除ボタンは管理者のみ表示し、事業所名の右側に並べる
       const actionBtns = IS_ADMIN ? `
-        <div style="display:flex;gap:0.4rem;margin-top:0.4rem">
+        <div style="display:flex;gap:0.3rem;flex-shrink:0">
           <button class="btn-act btn-act-edit"
                   onclick='openEditRelationModal(${JSON.stringify(r)})'>
-            <i class="fa-solid fa-pen"></i> 編集
+            <i class="fa-solid fa-pen"></i>
           </button>
           <button class="btn-act btn-act-delete"
                   onclick="deleteRelation('${escHtml(r.recordId)}')">
-            <i class="fa-solid fa-trash"></i> 削除
+            <i class="fa-solid fa-trash"></i>
           </button>
         </div>` : '';
       return `
         <div class="relation-card">
-          <div class="relation-name">${escHtml(r.officeName)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+            <div class="relation-name">${escHtml(r.officeName)}</div>
+            ${actionBtns}
+          </div>
           ${meta ? `<div class="relation-meta">${escHtml(meta)}</div>` : ''}
           ${telHtml}${faxHtml}
-          ${actionBtns}
         </div>`;
     }).join('');
     pane.innerHTML = `
