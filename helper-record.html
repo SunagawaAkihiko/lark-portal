@@ -315,6 +315,17 @@
       background: var(--bg-color); color: var(--text-color);
     }
 
+    /* ===== 異常記録モーダル専用 ===== */
+    .ijo-section { display: flex; flex-direction: column; gap: 0.85rem; }
+    .check-group { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
+    .check-group label {
+      display: flex; align-items: center; gap: 0.35rem;
+      font-size: 0.88rem; cursor: pointer;
+    }
+    .check-group input[type=checkbox] {
+      accent-color: var(--primary-color); width: 1rem; height: 1rem; flex-shrink: 0;
+    }
+
     /* ===== 編集モーダル ===== */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 100;
@@ -602,6 +613,105 @@
           <i class="fa-solid fa-spinner fa-spin"></i>
           読み込み中...
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 異常記録モーダル ===== -->
+  <div id="ijoModal" class="modal-overlay hidden" onclick="closeIjoModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-triangle-exclamation" style="color:#ef6c00;"></i> 異常記録</span>
+        <button class="modal-close" onclick="document.getElementById('ijoModal').classList.add('hidden')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- ① 異常内容の選択 -->
+      <div class="form-row">
+        <label class="form-label">異常内容 <span class="form-required">*</span></label>
+        <select id="ijoType" class="form-select" onchange="onIjoTypeChange()">
+          <option value="">選択してください</option>
+          <option value="体調不良">体調不良</option>
+          <option value="転倒・怪我">転倒・怪我</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+
+      <!-- ② 体調不良のサブ質問 -->
+      <div id="ijoSection-taichou" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">症状（複数選択可）</label>
+          <div class="check-group">
+            <label><input type="checkbox" name="shoujou" value="発熱"> 発熱</label>
+            <label><input type="checkbox" name="shoujou" value="嘔吐・吐き気"> 嘔吐・吐き気</label>
+            <label><input type="checkbox" name="shoujou" value="下痢"> 下痢</label>
+            <label><input type="checkbox" name="shoujou" value="呼吸困難"> 呼吸困難</label>
+            <label><input type="checkbox" name="shoujou" value="意識障害"> 意識障害</label>
+            <label><input type="checkbox" name="shoujou" value="その他"> その他</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">体温（℃）</label>
+          <input type="number" id="ijoTaion" class="form-input" step="0.1" min="30" max="45" placeholder="例：38.5">
+        </div>
+      </div>
+
+      <!-- ② 転倒・怪我のサブ質問 -->
+      <div id="ijoSection-tento" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">発生場所</label>
+          <select id="ijoBasho" class="form-select">
+            <option value="">選択してください</option>
+            <option>居室</option><option>浴室</option><option>廊下</option>
+            <option>食堂</option><option>屋外</option><option>その他</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">受傷部位</label>
+          <input type="text" id="ijoBusho" class="form-input" placeholder="例：右膝">
+        </div>
+        <div class="form-row">
+          <label class="form-label">程度</label>
+          <select id="ijoTeido" class="form-select">
+            <option value="">選択してください</option>
+            <option>軽微</option><option>中程度</option><option>重症</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ② その他のサブ質問 -->
+      <div id="ijoSection-sonota" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">異常の概要 <span class="form-required">*</span></label>
+          <textarea id="ijoGaiyou" class="form-input" rows="2" placeholder="異常の内容を簡潔に記入してください"></textarea>
+        </div>
+      </div>
+
+      <!-- ③ 共通：対応内容・詳細メモ（異常内容選択後に表示） -->
+      <div id="ijoSection-taio" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">対応内容（複数選択可）</label>
+          <div class="check-group">
+            <label><input type="checkbox" name="taio" value="経過観察"> 経過観察</label>
+            <label><input type="checkbox" name="taio" value="家族連絡"> 家族連絡</label>
+            <label><input type="checkbox" name="taio" value="医療機関受診"> 医療機関受診</label>
+            <label><input type="checkbox" name="taio" value="救急搬送"> 救急搬送</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">詳細メモ</label>
+          <textarea id="ijoMemo" class="form-input" rows="3" placeholder="詳細を記入してください"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="ijoSaveBtn" class="btn-save" onclick="submitIjo()">
+          <i class="fa-solid fa-floppy-disk"></i> 保存する
+        </button>
+        <button class="btn-cancel" onclick="document.getElementById('ijoModal').classList.add('hidden')">
+          キャンセル
+        </button>
       </div>
     </div>
   </div>
@@ -1054,11 +1164,105 @@
       return currentRecords.find(r => r.recordId === selectedRecordId) || null;
     }
 
-    // 異常ボタン：編集モーダルを開いて記録内容・種別を修正できるようにする
+    // 異常ボタン：異常記録モーダルを開く
     function onIjo() {
+      if (!getSelectedRecord()) return;
+      openIjoModal();
+    }
+
+    // 異常記録モーダルを初期化して表示する
+    function openIjoModal() {
+      document.getElementById('ijoType').value = '';
+      document.querySelectorAll('#ijoModal input[type=checkbox]').forEach(cb => cb.checked = false);
+      document.getElementById('ijoTaion').value  = '';
+      document.getElementById('ijoBasho').value  = '';
+      document.getElementById('ijoBusho').value  = '';
+      document.getElementById('ijoTeido').value  = '';
+      document.getElementById('ijoGaiyou').value = '';
+      document.getElementById('ijoMemo').value   = '';
+      // サブセクションをすべて非表示にリセットする
+      ['taichou','tento','sonota','taio'].forEach(k =>
+        document.getElementById(`ijoSection-${k}`).classList.add('hidden')
+      );
+      document.getElementById('ijoModal').classList.remove('hidden');
+    }
+
+    function closeIjoModal(e) {
+      if (e && e.target !== document.getElementById('ijoModal')) return;
+      document.getElementById('ijoModal').classList.add('hidden');
+    }
+
+    // 異常内容の選択に応じてサブ質問セクションを切り替える
+    function onIjoTypeChange() {
+      const type = document.getElementById('ijoType').value;
+      // 種別固有セクションを全て隠してから選択中のものだけ表示する
+      ['taichou','tento','sonota'].forEach(k =>
+        document.getElementById(`ijoSection-${k}`).classList.add('hidden')
+      );
+      if (type === '体調不良')  document.getElementById('ijoSection-taichou').classList.remove('hidden');
+      if (type === '転倒・怪我') document.getElementById('ijoSection-tento').classList.remove('hidden');
+      if (type === 'その他')    document.getElementById('ijoSection-sonota').classList.remove('hidden');
+      // 対応内容・詳細メモは種別が選ばれたときのみ表示する
+      document.getElementById('ijoSection-taio').classList.toggle('hidden', !type);
+    }
+
+    // 異常記録を保存する：フォームの入力値を記録内容テキストに変換してPUTする
+    async function submitIjo() {
       const r = getSelectedRecord();
       if (!r) return;
-      openEditModal(r.recordId);
+      const type = document.getElementById('ijoType').value;
+      if (!type) { alert('異常内容を選択してください。'); return; }
+
+      // 各入力値を読み取って記録内容テキストを組み立てる
+      const parts = [`【異常内容】${type}`];
+
+      if (type === '体調不良') {
+        const symptoms = [...document.querySelectorAll('input[name=shoujou]:checked')].map(cb => cb.value);
+        if (symptoms.length) parts.push(`症状：${symptoms.join('・')}`);
+        const taion = document.getElementById('ijoTaion').value;
+        if (taion) parts.push(`体温：${taion}℃`);
+      } else if (type === '転倒・怪我') {
+        const basho = document.getElementById('ijoBasho').value;
+        if (basho) parts.push(`発生場所：${basho}`);
+        const busho = document.getElementById('ijoBusho').value.trim();
+        if (busho) parts.push(`受傷部位：${busho}`);
+        const teido = document.getElementById('ijoTeido').value;
+        if (teido) parts.push(`程度：${teido}`);
+      } else {
+        const gaiyou = document.getElementById('ijoGaiyou').value.trim();
+        if (!gaiyou) { alert('異常の概要を入力してください。'); return; }
+        parts.push(`概要：${gaiyou}`);
+      }
+
+      const taio = [...document.querySelectorAll('input[name=taio]:checked')].map(cb => cb.value);
+      if (taio.length) parts.push(`対応：${taio.join('・')}`);
+      const memo = document.getElementById('ijoMemo').value.trim();
+      if (memo) parts.push(`詳細：${memo}`);
+
+      const kirokuNaiyou = parts.join('　');
+
+      const btn = document.getElementById('ijoSaveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中...';
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 記録分類: '異常記録', 記録内容: kirokuNaiyou }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // ローカルの記録も更新する
+        const local = currentRecords.find(rec => rec.recordId === r.recordId);
+        if (local) { local.記録分類 = '異常記録'; local.記録内容 = kirokuNaiyou; }
+        document.getElementById('ijoModal').classList.add('hidden');
+        clearSelection();
+      } catch (err) {
+        alert('保存に失敗しました: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存する';
+      }
     }
 
     // 中止ボタン：確認後に記録タイプを「中止」に更新する
