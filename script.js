@@ -162,7 +162,7 @@ function createCard(link) {
             <i class="fa-solid ${link.icon}"></i>
         </div>
         <h2 class="card-title">${link.title}</h2>
-        <p class="card-desc">${link.description}</p>
+        ${link.description ? `<p class="card-desc">${link.description}</p>` : ''}
     `;
     return card;
 }
