@@ -26,14 +26,14 @@ const portalLinks = [
         url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgendY8NmFDDgyb5"
     },
     {
-        title: "消耗品提供",
+        title: "入居者物品提供",
         description: "入居者へ消耗品を提供した際に使用",
         icon: "fa-box-open",
         url: "consumable-record.html"
     },
     {
-        title: "消耗品発注",
-        description: "消耗品の発注登録（大浦・上津役共通）",
+        title: "消耗品注文",
+        description: "",
         icon: "fa-cart-shopping",
         url: "consumable-order.html"
     },
@@ -44,16 +44,10 @@ const portalLinks = [
         url: "purchase-request.html"
     },
     {
-        title: "レク報告",
-        description: "レクリエーションの報告",
+        title: "レクレーション報告",
+        description: "",
         icon: "fa-users",
         url: "rec-report.html"
-    },
-    {
-        title: "登録ボタン一覧",
-        description: "登録関連のボタンへのリンク集です",
-        icon: "fa-layer-group",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgeg9Ui3Wm1gTZod"
     },
     {
         title: "入金確認",
