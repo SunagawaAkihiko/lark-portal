@@ -327,15 +327,15 @@
       </div>
       <div id="officeTabs" style="display:flex;gap:0.5rem;width:100%;"></div>
     </div>
-    <!-- 2段目：機能タブ -->
+    <!-- 2段目：機能タブ（一時停止管理は管理者モード時のみ表示） -->
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="list">
-        <i class="fa-solid fa-list"></i> 記録一覧
+        <i class="fa-solid fa-list"></i> 記録履歴
       </button>
       <button class="tab-btn" data-tab="create">
         <i class="fa-solid fa-plus"></i> 記録作成
       </button>
-      <button class="tab-btn" data-tab="pause">
+      <button class="tab-btn hidden" id="pauseTabBtn" data-tab="pause">
         <i class="fa-solid fa-pause"></i> 一時停止管理
       </button>
     </div>
@@ -1121,6 +1121,12 @@
     // ============================================================
     // 起動
     // ============================================================
+
+    // 管理者モード（?mode=admin）のときのみ一時停止管理タブを表示する
+    if (isAdmin) {
+      document.getElementById('pauseTabBtn').classList.remove('hidden');
+    }
+
     init();
   </script>
 </body>
