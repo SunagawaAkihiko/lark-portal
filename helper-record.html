@@ -120,20 +120,20 @@
       border-radius: 10px;
       overflow: hidden;
     }
-    /* 日付グループのヘッダー帯 */
+    /* 日付グループのヘッダー帯：濃いブラウンで強調する */
     .date-group-header {
-      padding: 0.25rem 0.75rem;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
-      letter-spacing: 0.03em;
+      padding: 0.28rem 0.75rem;
+      background: #4a3f35;
+      border-bottom: 2px solid #2e2620;
+      font-size: 0.8rem; font-weight: 700; color: #ffffff;
+      letter-spacing: 0.05em;
     }
-    /* 氏名サブグループのヘッダー帯（日付帯の下に入る） */
+    /* 氏名サブグループのヘッダー帯：日付帯と明確に差別化したオレンジ系 */
     .name-group-header {
-      padding: 0.22rem 1rem;
-      background: #fdf0eb;
-      border-bottom: 1px solid #f0e4d6;
-      font-size: 0.82rem; font-weight: 700; color: var(--text-color);
+      padding: 0.22rem 1.1rem;
+      background: #e8a070;
+      border-bottom: 1px solid #c8784a;
+      font-size: 0.82rem; font-weight: 700; color: #fff;
     }
     /* 1レコード：2行レイアウト */
     .record-item {
@@ -881,6 +881,13 @@
       }
     }
 
+    // "H:MM" 形式の提供時間文字列を0時からの分数に変換する（時系列ソート用）
+    function teikyoToMins(str) {
+      if (!str) return 9999; // 時間未設定は最後に回す
+      const [h, m] = str.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    }
+
     // タイムスタンプを "M/D(曜)" の短縮形式に変換する（一覧行用）
     function fmtDateShort(ms) {
       if (!ms) return '-';
@@ -915,6 +922,8 @@
         for (const [name, recs] of nameMap) {
           // 氏名サブヘッダー帯（同日・同氏名の記録をまとめる）
           html += `<div class="name-group-header">${escHtml(name)}</div>`;
+          // 提供時間の昇順（時系列）で並べる
+          recs.sort((a, b) => teikyoToMins(a.提供時間) - teikyoToMins(b.提供時間));
           for (const r of recs) {
             // 1行目：作業項目・提供時間（氏名はサブヘッダーに出すため省略）
             const sagyouHtml  = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
