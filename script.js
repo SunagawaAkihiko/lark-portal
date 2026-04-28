@@ -97,7 +97,7 @@ const portalLinks = [
     },
     {
         title: "利用者情報",
-        description: "利用者の基本情報や詳細なデータを閲覧できます",
+        description: "利用者情報の閲覧・薬手帳の登録ができます",
         icon: "fa-address-card",
         url: "customer-info.html"
     },
