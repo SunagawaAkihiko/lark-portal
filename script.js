@@ -161,7 +161,12 @@ function buildDashboard() {
 function createCard(link) {
     const card = document.createElement('a');
     card.className = 'card';
-    card.href = link.url;
+    // 管理者モード（admin.html）からのリンクには ?mode=admin を付与して
+    // 遷移先ページで管理者権限を識別できるようにする
+    const url = window.ADMIN_MODE && link.url.endsWith('.html')
+        ? link.url + '?mode=admin'
+        : link.url;
+    card.href = url;
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
     card.innerHTML = `

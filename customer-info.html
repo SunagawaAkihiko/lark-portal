@@ -315,6 +315,11 @@
   const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
+  // URLパラメータ ?mode=admin が付いている場合は管理者モードとして扱う
+  // admin.html からのリンクにのみ付与されるため、スタッフが直接URLを書き換えない限り
+  // スタッフには編集系ボタンが表示されない
+  const IS_ADMIN = new URLSearchParams(location.search).get('mode') === 'admin';
+
   // ===== 状態管理 =====
   let allCustomers   = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
   let offices        = [];   // 事業所一覧（ソート済み）
@@ -601,13 +606,13 @@
   function renderMedicine(photos) {
     const pane = document.getElementById('paneMedicine');
 
-    // 写真追加ボタン（隠しfile inputをトリガーする）
-    const addBtnHtml = `
+    // 写真追加ボタンは管理者のみ表示する
+    const addBtnHtml = IS_ADMIN ? `
       <button class="medicine-add-btn" id="medicineAddBtn" onclick="triggerPhotoUpload()">
         <i class="fa-solid fa-camera"></i> 写真を追加
       </button>
       <input type="file" id="medicineFileInput" accept="image/*" style="display:none"
-             onchange="onMedicineFileSelected(this)">`;
+             onchange="onMedicineFileSelected(this)">` : '';
 
     if (!photos || photos.length === 0) {
       pane.innerHTML = `
@@ -620,14 +625,17 @@
 
     const thumbs = photos.map((p, i) => {
       const src = proxyUrl(p.url);
-      // onclick でライトボックスを開く。削除ボタンはeventバブリングを止めて発火する
+      // 削除ボタンは管理者のみ表示する
+      const deleteBtnHtml = IS_ADMIN
+        ? `<button class="photo-delete-btn" title="削除"
+                   onclick="deleteMedicinePhoto('${escHtml(p.fileToken)}',this)">
+             <i class="fa-solid fa-xmark"></i>
+           </button>`
+        : '';
       return `<div class="photo-thumb">
         <img src="${src}" alt="薬手帳${i+1}" loading="lazy"
              onclick="openLightbox('${src}')" draggable="false" oncontextmenu="return false">
-        <button class="photo-delete-btn" title="削除"
-                onclick="deleteMedicinePhoto('${escHtml(p.fileToken)}',this)">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+        ${deleteBtnHtml}
       </div>`;
     }).join('');
 
