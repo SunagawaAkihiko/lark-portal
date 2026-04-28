@@ -252,16 +252,24 @@
     }
     .empty-msg i { display: block; font-size: 1.8rem; margin-bottom: 0.4rem; color: var(--border-color); }
 
-    /* ===== アクションボタン（追加・編集・削除） ===== */
-    .section-actions {
-      display: flex; gap: 0.4rem; margin-bottom: 0.5rem; justify-content: flex-end;
+    /* ===== FABボタン（画面右下固定・カレンダーと同一スタイル） ===== */
+    .info-fab {
+      position: fixed; bottom: 2rem; right: 2rem;
+      padding: 1rem 1.5rem; border-radius: 30px;
+      background: var(--primary-color); color: white; border: none;
+      font-family: inherit; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+      z-index: 30; box-shadow: 0 4px 10px rgba(231,111,81,0.4);
+      transition: transform 0.2s;
     }
+    .info-fab:active { transform: scale(0.95); }
+
+    /* ===== インライン小ボタン（削除・編集のみ） ===== */
     .btn-act {
       padding: 0.28rem 0.65rem; border-radius: 5px; border: none; cursor: pointer;
       font-family: inherit; font-size: 0.72rem; font-weight: 700;
       display: inline-flex; align-items: center; gap: 0.3rem;
     }
-    .btn-act-add    { background: var(--primary-light); color: var(--primary-color); }
     .btn-act-edit   { background: #e8f0f7; color: var(--blue); }
     .btn-act-delete { background: #fee2e2; color: #c1121f; }
 
@@ -334,6 +342,7 @@
       .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
       .tab-bar { padding: 0.35rem 0.7rem; }
       .name-bar { padding: 0.45rem 0.8rem; }
+      .info-fab { padding: 0.65rem 1rem; font-size: 0.9rem; bottom: 0.8rem; right: 0.8rem; }
     }
   </style>
 </head>
@@ -377,6 +386,12 @@
 <div id="paneRelation" class="tab-content hidden"></div>
 <div id="paneMedicine" class="tab-content hidden"></div>
 <div id="paneDoc"      class="tab-content hidden"></div>
+
+<!-- ===== FABボタン（管理者のみ・タブに応じて動作が変わる） ===== -->
+<button class="info-fab hidden" id="infoFab" onclick="onInfoFabClick()">
+  <i id="infoFabIcon" class="fa-solid fa-pen"></i>
+  <span id="infoFabLabel">編集</span>
+</button>
 
 <!-- ===== 汎用モーダル（底部シート） ===== -->
 <div class="modal-overlay hidden" id="modalOverlay">
@@ -593,8 +608,9 @@
     renderRelations(data.relations);
     renderMedicine(data.medicinePhotos);
     renderDocs(data.faceSheets, data.dischargeFiles);
-    // 現在タブのパネルだけ表示する
+    // 現在タブのパネルだけ表示し、FABを更新する
     showPane(activeDetailTab);
+    updateInfoFab();
   }
 
   // ===== 基本情報パネルを描画する =====
@@ -630,15 +646,7 @@
         </div>
       </div>` : '';
 
-    const editBtn = IS_ADMIN
-      ? `<div class="section-actions">
-           <button class="btn-act btn-act-edit" onclick="openEditBasicModal()">
-             <i class="fa-solid fa-pen"></i> 編集
-           </button>
-         </div>` : '';
-
     document.getElementById('paneBasic').innerHTML = `
-      ${editBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-user" style="color:var(--primary-color)"></i><span class="section-head-title">本人基本情報</span></div>
         <div class="section-body">
@@ -670,16 +678,10 @@
 
   // ===== 既往歴パネルを描画する =====
   function renderHistory(history) {
-    const pane   = document.getElementById('paneHistory');
-    const addBtn = IS_ADMIN
-      ? `<div class="section-actions">
-           <button class="btn-act btn-act-add" onclick="openAddHistoryModal()">
-             <i class="fa-solid fa-plus"></i> 追加
-           </button>
-         </div>` : '';
+    const pane = document.getElementById('paneHistory');
 
     if (!history || history.length === 0) {
-      pane.innerHTML = `${addBtn}<div class="empty-msg"><i class="fa-solid fa-file-medical"></i>既往歴の登録はありません</div>`;
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-file-medical"></i>既往歴の登録はありません</div>`;
       return;
     }
     const items = history.map((h, i) => {
@@ -695,7 +697,6 @@
       </li>`;
     }).join('');
     pane.innerHTML = `
-      ${addBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-file-medical" style="color:var(--primary-color)"></i><span class="section-head-title">既往歴</span></div>
         <div class="section-body"><ul class="history-list">${items}</ul></div>
@@ -704,16 +705,10 @@
 
   // ===== 関係先パネルを描画する =====
   function renderRelations(relations) {
-    const pane   = document.getElementById('paneRelation');
-    const addBtn = IS_ADMIN
-      ? `<div class="section-actions">
-           <button class="btn-act btn-act-add" onclick="openAddRelationModal()">
-             <i class="fa-solid fa-plus"></i> 追加
-           </button>
-         </div>` : '';
+    const pane = document.getElementById('paneRelation');
 
     if (!relations || relations.length === 0) {
-      pane.innerHTML = `${addBtn}<div class="empty-msg"><i class="fa-solid fa-hospital"></i>関係先の登録はありません</div>`;
+      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-hospital"></i>関係先の登録はありません</div>`;
       return;
     }
     const cards = relations.map(r => {
@@ -743,7 +738,6 @@
         </div>`;
     }).join('');
     pane.innerHTML = `
-      ${addBtn}
       <div class="section-card">
         <div class="section-head"><i class="fa-solid fa-hospital" style="color:var(--primary-color)"></i><span class="section-head-title">関係先</span></div>
         <div class="section-body">${cards}</div>
@@ -1240,12 +1234,39 @@
     }
   }
 
+  // ===== FAB の表示・ラベル・アイコンをアクティブタブに合わせて更新する =====
+  function updateInfoFab() {
+    const fab = document.getElementById('infoFab');
+    if (!fab) return;
+    if (!IS_ADMIN) { fab.classList.add('hidden'); return; }
+
+    const icon  = document.getElementById('infoFabIcon');
+    const label = document.getElementById('infoFabLabel');
+    if (activeDetailTab === 'basic') {
+      fab.classList.remove('hidden');
+      icon.className = 'fa-solid fa-pen'; label.textContent = '編集';
+    } else if (activeDetailTab === 'history' || activeDetailTab === 'relation') {
+      fab.classList.remove('hidden');
+      icon.className = 'fa-solid fa-plus'; label.textContent = '追加';
+    } else {
+      fab.classList.add('hidden');
+    }
+  }
+
+  // ===== FAB クリック時に現在タブに応じたモーダルを開く =====
+  function onInfoFabClick() {
+    if (activeDetailTab === 'basic')    openEditBasicModal();
+    else if (activeDetailTab === 'history')  openAddHistoryModal();
+    else if (activeDetailTab === 'relation') openAddRelationModal();
+  }
+
   // ===== 詳細タブを切り替える =====
   function switchDetailTab(name, btn) {
     activeDetailTab = name;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     showPane(name);
+    updateInfoFab();
   }
 
   // ===== 指定タブのパネルのみ表示する =====
