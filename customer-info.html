@@ -172,13 +172,33 @@
       font-size: 0.82rem; color: var(--text-muted);
     }
 
+    /* 薬手帳：追加ボタン */
+    .medicine-add-btn {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1rem; border-radius: 8px; border: none;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; margin-bottom: 0.5rem; width: 100%;
+      justify-content: center;
+    }
+    .medicine-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* 薬手帳：画像グリッド */
     .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
     .photo-thumb {
       aspect-ratio: 1; border-radius: 8px; overflow: hidden;
       background: var(--card-bg); cursor: pointer;
+      position: relative;
     }
     .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* 削除ボタン（サムネイル右上） */
+    .photo-delete-btn {
+      position: absolute; top: 3px; right: 3px;
+      width: 22px; height: 22px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,0.55); color: white;
+      font-size: 0.7rem; cursor: pointer; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+    }
 
     /* 画像ライトボックス */
     .lightbox {
@@ -296,12 +316,14 @@
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  let allCustomers  = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
-  let offices       = [];   // 事業所一覧（ソート済み）
-  let activeOffice  = '';   // 選択中の事業所
-  let activeRecordId = '';  // 選択中の利用者 recordId
+  let allCustomers   = [];   // 全利用者 { recordId, office, name, lastName, firstName, ... }
+  let offices        = [];   // 事業所一覧（ソート済み）
+  let activeOffice   = '';   // 選択中の事業所
+  let activeRecordId = '';   // 選択中の利用者 recordId
   let activeDetailTab = 'basic'; // 選択中の詳細タブ
-  const detailCache = {};   // 詳細データのキャッシュ { [recordId]: detailData }
+  const detailCache  = {};   // 詳細データのキャッシュ { [recordId]: detailData }
+  // 薬手帳レコードID（写真追加・削除操作で使用する。利用者切り替え時に更新する）
+  let activeYakuRecordId = null;
 
   // ===== 日付フォーマット（ミリ秒タイムスタンプ → 年月日） =====
   function fmtDate(ts) {
@@ -457,6 +479,8 @@
   // ===== 全パネルを描画して現在タブを表示する =====
   function renderAllPanes(data) {
     document.getElementById('detailLoading').classList.add('hidden');
+    // 薬手帳レコードIDをグローバルに保持して追加・削除操作で参照する
+    activeYakuRecordId = data.yakuRecordId || null;
     renderBasic(data.customer);
     renderHistory(data.history);
     renderRelations(data.relations);
@@ -576,21 +600,119 @@
   // ===== 薬手帳パネルを描画する =====
   function renderMedicine(photos) {
     const pane = document.getElementById('paneMedicine');
+
+    // 写真追加ボタン（隠しfile inputをトリガーする）
+    const addBtnHtml = `
+      <button class="medicine-add-btn" id="medicineAddBtn" onclick="triggerPhotoUpload()">
+        <i class="fa-solid fa-camera"></i> 写真を追加
+      </button>
+      <input type="file" id="medicineFileInput" accept="image/*" style="display:none"
+             onchange="onMedicineFileSelected(this)">`;
+
     if (!photos || photos.length === 0) {
-      pane.innerHTML = `<div class="empty-msg"><i class="fa-solid fa-pills"></i>薬手帳写真の登録はありません</div>`;
+      pane.innerHTML = `
+        <div class="tab-content" style="padding:0">
+          ${addBtnHtml}
+          <div class="empty-msg"><i class="fa-solid fa-pills"></i>薬手帳写真の登録はありません</div>
+        </div>`;
       return;
     }
+
     const thumbs = photos.map((p, i) => {
       const src = proxyUrl(p.url);
-      return `<div class="photo-thumb" onclick="openLightbox('${src}')">
-        <img src="${src}" alt="薬手帳${i+1}" loading="lazy">
+      // onclick でライトボックスを開く。削除ボタンはeventバブリングを止めて発火する
+      return `<div class="photo-thumb">
+        <img src="${src}" alt="薬手帳${i+1}" loading="lazy"
+             onclick="openLightbox('${src}')" draggable="false" oncontextmenu="return false">
+        <button class="photo-delete-btn" title="削除"
+                onclick="deleteMedicinePhoto('${escHtml(p.fileToken)}',this)">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>`;
     }).join('');
+
     pane.innerHTML = `
       <div class="section-card">
-        <div class="section-head"><i class="fa-solid fa-pills" style="color:var(--primary-color)"></i><span class="section-head-title">薬手帳写真（${photos.length}枚）</span></div>
-        <div class="section-body"><div class="photo-grid">${thumbs}</div></div>
+        <div class="section-head">
+          <i class="fa-solid fa-pills" style="color:var(--primary-color)"></i>
+          <span class="section-head-title">薬手帳写真（${photos.length}枚）</span>
+        </div>
+        <div class="section-body">
+          ${addBtnHtml}
+          <div class="photo-grid">${thumbs}</div>
+        </div>
       </div>`;
+  }
+
+  // ===== ファイル選択ダイアログを開く =====
+  function triggerPhotoUpload() {
+    document.getElementById('medicineFileInput')?.click();
+  }
+
+  // ===== ファイル選択後に画像をアップロードする =====
+  async function onMedicineFileSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = ''; // 同じファイルを再選択できるようリセットする
+
+    const btn = document.getElementById('medicineAddBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送信中...'; }
+
+    try {
+      // FileReaderでbase64に変換する
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // 選択中の利用者名を取得する
+      const customer = allCustomers.find(c => c.recordId === activeRecordId);
+      const customerName = customer ? (`${customer.lastName} ${customer.firstName}`.trim() || customer.name) : '';
+
+      const res  = await fetch(`${API_BASE}/api/medicine/add-photo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yakuRecordId: activeYakuRecordId, customerName, photoBase64: base64 }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      // 新規作成の場合は取得したレコードIDを保持する
+      activeYakuRecordId = data.yakuRecordId;
+      // キャッシュを破棄して再取得・再描画する
+      delete detailCache[activeRecordId];
+      await switchCustomer(activeRecordId);
+
+    } catch (err) {
+      alert(`写真の追加に失敗しました\n${err.message}`);
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を追加'; }
+    }
+  }
+
+  // ===== 薬手帳写真を削除する =====
+  async function deleteMedicinePhoto(fileToken, btnEl) {
+    if (!confirm('この写真を削除しますか？')) return;
+    btnEl.disabled = true;
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/medicine/delete-photo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yakuRecordId: activeYakuRecordId, fileToken }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      // キャッシュを破棄して再取得・再描画する
+      delete detailCache[activeRecordId];
+      await switchCustomer(activeRecordId);
+
+    } catch (err) {
+      alert(`削除に失敗しました\n${err.message}`);
+      btnEl.disabled = false;
+    }
   }
 
   // ===== 資料パネルを描画する =====
