@@ -440,6 +440,19 @@
     </div>
   </div>
 
+  <!-- 記録選択時に表示される下部アクションバー（スクリプトより前に配置してDOMを確保する） -->
+  <div id="recordActionBar" class="record-action-bar hidden">
+    <button class="rab-btn rab-ijo"    onclick="onIjo()">
+      <i class="fa-solid fa-triangle-exclamation"></i> 異常
+    </button>
+    <button class="rab-btn rab-chushi" onclick="onChushi()">
+      <i class="fa-solid fa-ban"></i> 中止
+    </button>
+    <button class="rab-btn rab-delete" onclick="onFabDelete()">
+      <i class="fa-solid fa-trash"></i> 削除
+    </button>
+  </div>
+
   <!-- ===== タブ①：記録一覧 ===== -->
   <div id="tab-list" class="tab-content">
     <!-- フィルターエリア（1行コンパクト） -->
@@ -1018,7 +1031,8 @@
     function clearSelection() {
       selectedRecordId = null;
       document.querySelectorAll('.record-item.selected').forEach(e => e.classList.remove('selected'));
-      document.getElementById('recordActionBar').classList.add('hidden');
+      const bar = document.getElementById('recordActionBar');
+      if (bar) bar.classList.add('hidden');
     }
 
     // 記録行タップ：同じ行なら選択解除、別の行なら選択切り替え
@@ -1434,18 +1448,5 @@
     // スタッフ・利用者リストはバックグラウンドで非同期取得する
     loadMeta();
   </script>
-
-  <!-- 記録選択時に表示される下部アクションバー（異常・中止・削除） -->
-  <div id="recordActionBar" class="record-action-bar hidden">
-    <button class="rab-btn rab-ijo"    onclick="onIjo()">
-      <i class="fa-solid fa-triangle-exclamation"></i> 異常
-    </button>
-    <button class="rab-btn rab-chushi" onclick="onChushi()">
-      <i class="fa-solid fa-ban"></i> 中止
-    </button>
-    <button class="rab-btn rab-delete" onclick="onFabDelete()">
-      <i class="fa-solid fa-trash"></i> 削除
-    </button>
-  </div>
 </body>
 </html>
