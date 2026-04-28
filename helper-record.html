@@ -164,21 +164,34 @@
       font-size: 0.8rem; color: var(--text-color);
       white-space: nowrap; flex-shrink: 0;
     }
-    /* 2行目：記録内容 */
+    /* 2行目：記録内容（全文表示） */
     .record-item-content {
       font-size: 0.72rem; color: var(--text-muted);
       margin-top: 0.12rem;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      white-space: normal; line-height: 1.4;
     }
-    /* 右カラム：操作ボタン */
-    .row-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
-    .btn-edit, .btn-delete {
-      width: 2rem; height: 2rem; border-radius: 6px; border: none;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.78rem; cursor: pointer; flex-shrink: 0;
+    /* タップ選択時のハイライト */
+    .record-item { cursor: pointer; }
+    .record-item.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
+
+    /* ===== 下部アクションバー（記録選択時に表示） ===== */
+    .record-action-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      display: flex; z-index: 30;
+      border-top: 2px solid var(--border-color);
+      box-shadow: 0 -3px 14px rgba(0,0,0,0.15);
     }
-    .btn-edit   { background: var(--green-light); color: var(--green); }
-    .btn-delete { background: var(--red-light);   color: var(--red); }
+    .rab-btn {
+      flex: 1; padding: 1rem 0.4rem;
+      border: none; font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      transition: filter 0.12s;
+    }
+    .rab-btn:active { filter: brightness(0.88); }
+    /* 異常（左）・中止（中）・削除（右） */
+    .rab-ijo    { background: #fff3e0; color: #e65100; border-right: 1px solid var(--border-color); }
+    .rab-chushi { background: #f5f0eb; color: var(--text-muted); border-right: 1px solid var(--border-color); }
+    .rab-delete { background: #fdecea; color: #c62828; }
 
     /* ===== 空状態・ローディング ===== */
     .status-msg {
@@ -202,9 +215,10 @@
     }
     .form-required { color: var(--red); }
     .form-select, .form-input {
+      display: block; width: 100%; box-sizing: border-box;
       border: 1.5px solid var(--border-color); border-radius: 8px;
       padding: 0.6rem 0.75rem; font-family: inherit; font-size: 0.95rem;
-      background: var(--bg-color); color: var(--text-color); width: 100%;
+      background: var(--bg-color); color: var(--text-color);
     }
     .form-select:focus, .form-input:focus {
       outline: none; border-color: var(--primary-color);
@@ -719,13 +733,14 @@
     // 状態管理
     // ============================================================
 
-    let activeOffice   = '';     // 選択中の事業所
-    let officeList     = [];     // 事業所リスト
-    let staffList      = [];     // スタッフリスト
-    let customerList   = [];     // 利用者リスト
-    let currentRecords = [];     // 現在表示中の記録一覧
-    let pauseRecords   = [];     // 一時停止管理用の顧客別作業設定
-    let currentTab     = 'list'; // 現在のタブ
+    let activeOffice      = '';   // 選択中の事業所
+    let officeList        = [];   // 事業所リスト
+    let staffList         = [];   // スタッフリスト
+    let customerList      = [];   // 利用者リスト
+    let currentRecords    = [];   // 現在表示中の記録一覧
+    let pauseRecords      = [];   // 一時停止管理用の顧客別作業設定
+    let currentTab        = 'list'; // 現在のタブ
+    let selectedRecordId  = null; // 下部アクションバーで操作対象の記録ID
 
     // ============================================================
     // 初期化
@@ -825,7 +840,8 @@
       // 一時停止タブが表示中なら再読み込みする
       if (currentTab === 'pause') loadPauseSettings();
 
-      // 事業所切り替え時に記録履歴を自動で再取得する（初回表示も含む）
+      // 事業所切り替え時に選択をリセットして記録履歴を自動で再取得する（初回表示も含む）
+      clearSelection();
       loadRecords();
     }
 
@@ -932,19 +948,11 @@
             // 2行目：記録内容（空なら非表示）
             const contentHtml = r.記録内容 ? `<div class="record-item-content">${escHtml(r.記録内容)}</div>` : '';
             html += `
-              <div class="record-item">
+              <div class="record-item" onclick="selectRecord(this, '${r.recordId}')">
                 <div class="record-item-main">
                   <div class="record-item-info">
                     <div class="record-item-line1">${timeHtml}${sagyouHtml}</div>
                     ${contentHtml}
-                  </div>
-                  <div class="row-actions">
-                    <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
-                      <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
                   </div>
                 </div>
               </div>`;
@@ -968,9 +976,75 @@
         currentRecords = currentRecords.filter(r => r.recordId !== recordId);
         document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
         renderRecords(currentRecords);
+        // 削除後に選択状態とアクションバーをリセットする
+        clearSelection();
       } catch (err) {
         alert('削除に失敗しました: ' + err.message);
       }
+    }
+
+    // ============================================================
+    // 記録選択とアクションバー操作
+    // ============================================================
+
+    // 選択状態を解除してアクションバーを隠す
+    function clearSelection() {
+      selectedRecordId = null;
+      document.querySelectorAll('.record-item.selected').forEach(e => e.classList.remove('selected'));
+      document.getElementById('recordActionBar').classList.add('hidden');
+    }
+
+    // 記録行タップ：同じ行なら選択解除、別の行なら選択切り替え
+    function selectRecord(el, recordId) {
+      if (selectedRecordId === recordId) {
+        clearSelection();
+        return;
+      }
+      document.querySelectorAll('.record-item.selected').forEach(e => e.classList.remove('selected'));
+      selectedRecordId = recordId;
+      el.classList.add('selected');
+      document.getElementById('recordActionBar').classList.remove('hidden');
+    }
+
+    // 選択中の記録オブジェクトを返す
+    function getSelectedRecord() {
+      return currentRecords.find(r => r.recordId === selectedRecordId) || null;
+    }
+
+    // 異常ボタン：編集モーダルを開いて記録内容・種別を修正できるようにする
+    function onIjo() {
+      const r = getSelectedRecord();
+      if (!r) return;
+      openEditModal(r.recordId);
+    }
+
+    // 中止ボタン：確認後に記録タイプを「中止」に更新する
+    async function onChushi() {
+      const r = getSelectedRecord();
+      if (!r) return;
+      if (!confirm(`「${r.氏名}」の記録を中止にしますか？`)) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 記録タイプ: '中止' }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // ローカルの記録タイプも更新する
+        const local = currentRecords.find(rec => rec.recordId === r.recordId);
+        if (local) local.記録タイプ = '中止';
+        clearSelection();
+      } catch (err) {
+        alert('中止の設定に失敗しました: ' + err.message);
+      }
+    }
+
+    // 削除ボタン（アクションバー用）：選択中の記録を削除する
+    function onFabDelete() {
+      const r = getSelectedRecord();
+      if (!r) return;
+      deleteRecord(r.recordId, r.氏名);
     }
 
     // ============================================================
@@ -1333,5 +1407,18 @@
     // スタッフ・利用者リストはバックグラウンドで非同期取得する
     loadMeta();
   </script>
+
+  <!-- 記録選択時に表示される下部アクションバー（異常・中止・削除） -->
+  <div id="recordActionBar" class="record-action-bar hidden">
+    <button class="rab-btn rab-ijo"    onclick="onIjo()">
+      <i class="fa-solid fa-triangle-exclamation"></i> 異常
+    </button>
+    <button class="rab-btn rab-chushi" onclick="onChushi()">
+      <i class="fa-solid fa-ban"></i> 中止
+    </button>
+    <button class="rab-btn rab-delete" onclick="onFabDelete()">
+      <i class="fa-solid fa-trash"></i> 削除
+    </button>
+  </div>
 </body>
 </html>
