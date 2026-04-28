@@ -138,8 +138,9 @@
     /* 1レコード：2行レイアウト */
     .record-item {
       padding: 0.45rem 0.75rem;
-      border-bottom: 1px solid #f0e4d6;
+      border-bottom: 1px solid var(--border-color);
     }
+    /* 名前グループ内の最後のアイテムは下線不要（次が氏名帯か日付帯になるため） */
     .record-item:last-child { border-bottom: none; }
     .record-item:active { background: var(--primary-light); }
     /* 1行目：氏名・作業項目・提供時間 ＋ 操作ボタン */
