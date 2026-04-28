@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ヘルパー記録</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --border-color:  #dcbfa6;
+      --card-bg:       #fff0e3;
+      --green:         #2a9d8f;
+      --green-light:   #e6f7f5;
+      --blue:          #457b9d;
+      --red:           #e63946;
+      --red-light:     #fdecea;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 4rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== 固定ヘッダー ===== */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 21;
+      box-shadow: 0 2px 6px rgba(139,115,95,0.12);
+    }
+
+    /* ===== 1段目：事業所タブ ===== */
+    .office-tabs {
+      display: flex; flex-wrap: wrap;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem; gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%; color: white;
+      font-size: 1.05rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .office-tabs-label i { color: #f4a261; }
+    .office-tab {
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s, color 0.2s;
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* ===== 2段目：機能タブ ===== */
+    .tab-bar {
+      display: flex;
+      background: #ede0d4;
+      padding: 0.45rem 0.7rem; gap: 0.4rem;
+      border-bottom: 2px solid #c9a98a;
+    }
+    .tab-btn {
+      flex: 1; text-align: center;
+      padding: 0.4rem 0.5rem; border-radius: 6px;
+      border: 1.5px solid #9a7a6b;
+      background: #f5ebe0; color: #6b4f3a;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .tab-btn.active { background: #6b4f3a; color: white; border-color: #6b4f3a; }
+
+    /* ===== コンテンツ共通 ===== */
+    .tab-content { padding: 1rem; }
+
+    /* ===== フィルターエリア ===== */
+    .filter-area {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1rem;
+      display: flex; flex-direction: column; gap: 0.7rem;
+    }
+    .filter-row {
+      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+      width: 4.5rem; flex-shrink: 0;
+    }
+    .filter-select, .filter-input {
+      flex: 1; min-width: 0;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      padding: 0.45rem 0.65rem; font-family: inherit; font-size: 0.9rem;
+      background: var(--bg-color); color: var(--text-color);
+    }
+    .filter-select:focus, .filter-input:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .filter-btn {
+      padding: 0.45rem 1.2rem; border-radius: 8px; border: none;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ===== レコードカード ===== */
+    .records-area { display: flex; flex-direction: column; gap: 0.6rem; }
+    .record-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      box-shadow: 0 1px 4px rgba(139,115,95,0.07);
+    }
+    .record-card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 0.45rem;
+    }
+    .record-date {
+      font-size: 0.82rem; color: var(--text-muted); font-weight: 700;
+    }
+    .record-name {
+      font-size: 1rem; font-weight: 700; color: var(--text-color);
+    }
+    .record-badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .badge-nikkin  { background: #e8f4fd; color: #1565c0; }
+    .badge-yakinha { background: #fdecea; color: #c62828; }
+    .badge-yakinhb { background: #fce4ec; color: #880e4f; }
+    .badge-other   { background: #f3e5f5; color: #6a1b9a; }
+    .record-meta {
+      font-size: 0.8rem; color: var(--text-muted);
+      display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.3rem;
+    }
+    .record-meta span { display: flex; align-items: center; gap: 0.25rem; }
+    .record-actions {
+      display: flex; gap: 0.4rem; margin-top: 0.6rem;
+    }
+    .btn-edit, .btn-delete {
+      padding: 0.3rem 0.8rem; border-radius: 6px; border: none;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-edit   { background: var(--green-light); color: var(--green); }
+    .btn-delete { background: var(--red-light); color: var(--red); }
+
+    /* ===== 空状態・ローディング ===== */
+    .status-msg {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-muted); font-size: 0.95rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+    }
+    .status-msg i { font-size: 2rem; }
+
+    /* ===== 記録作成フォーム ===== */
+    .create-form {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    .form-row { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-label {
+      font-size: 0.82rem; font-weight: 700; color: var(--text-muted);
+    }
+    .form-required { color: var(--red); }
+    .form-select, .form-input {
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      padding: 0.6rem 0.75rem; font-family: inherit; font-size: 0.95rem;
+      background: var(--bg-color); color: var(--text-color); width: 100%;
+    }
+    .form-select:focus, .form-input:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .create-btn {
+      width: 100%; padding: 0.8rem; border-radius: 10px; border: none;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      transition: opacity 0.2s;
+    }
+    .create-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .create-result {
+      border-radius: 10px; padding: 0.8rem 1rem;
+      font-size: 0.9rem; font-weight: 700; text-align: center;
+    }
+    .create-result.ok  { background: var(--green-light); color: var(--green); }
+    .create-result.err { background: var(--red-light);   color: var(--red); }
+
+    /* ===== 一時停止管理 ===== */
+    .pause-customer-group {
+      margin-bottom: 1rem;
+    }
+    .pause-customer-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px 10px 0 0;
+      font-weight: 700; font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .pause-customer-header i { color: var(--text-muted); transition: transform 0.2s; }
+    .pause-customer-header.collapsed i.chevron { transform: rotate(-90deg); }
+    .pause-service-list {
+      border: 1px solid var(--border-color); border-top: none;
+      border-radius: 0 0 10px 10px; overflow: hidden;
+    }
+    .pause-service-item {
+      padding: 0.75rem 1rem;
+      background: white;
+      border-bottom: 1px solid #f0e0d0;
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .pause-service-item:last-child { border-bottom: none; }
+    .pause-service-title {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.4rem;
+    }
+    .pause-service-name { font-size: 0.88rem; font-weight: 700; }
+    .pause-status {
+      font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+    }
+    .status-active  { background: var(--green-light); color: var(--green); }
+    .status-paused  { background: var(--red-light);   color: var(--red); }
+    .status-waiting { background: #fff3cd; color: #7a5700; }
+    .pause-date-info { font-size: 0.78rem; color: var(--text-muted); }
+    .pause-actions {
+      display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.3rem;
+    }
+    .btn-pause, .btn-resume {
+      padding: 0.3rem 0.85rem; border-radius: 6px; border: none;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-pause  { background: var(--red-light);   color: var(--red); }
+    .btn-resume { background: var(--green-light); color: var(--green); }
+    .btn-set-date {
+      padding: 0.3rem 0.85rem; border-radius: 6px; border: none;
+      background: #e8f4fd; color: var(--blue);
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    }
+    .pause-date-input {
+      border: 1.5px solid var(--border-color); border-radius: 6px;
+      padding: 0.3rem 0.5rem; font-family: inherit; font-size: 0.85rem;
+      background: var(--bg-color); color: var(--text-color);
+    }
+
+    /* ===== 編集モーダル ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(74,63,53,0.55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .modal {
+      background: white; border-radius: 16px;
+      width: 100%; max-width: 480px; max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 0.85rem;
+    }
+    .modal-title {
+      font-size: 1.05rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-close {
+      background: none; border: none; cursor: pointer;
+      font-size: 1.2rem; color: var(--text-muted); padding: 0.2rem;
+    }
+    .modal-footer {
+      display: flex; gap: 0.5rem; margin-top: 0.5rem;
+    }
+    .btn-save {
+      flex: 1; padding: 0.7rem; border-radius: 8px; border: none;
+      background: var(--green); color: white;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-cancel {
+      padding: 0.7rem 1.2rem; border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      background: white; color: var(--text-muted);
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    }
+
+    /* ===== 一時停止日程設定サブエリア ===== */
+    .pause-date-form {
+      background: #fdf0eb; border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 0.65rem 0.85rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      margin-top: 0.3rem;
+    }
+    .pause-date-row {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .pause-date-row label {
+      font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+      width: 4rem; flex-shrink: 0;
+    }
+    .pause-date-confirm {
+      padding: 0.35rem 0.9rem; border-radius: 6px; border: none;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== 固定ヘッダー ===== -->
+  <div class="sticky-header">
+    <!-- 1段目：タイトル + 事業所タブ -->
+    <div class="office-tabs">
+      <div class="office-tabs-label">
+        <i class="fa-solid fa-clipboard-user"></i>
+        ヘルパー記録
+      </div>
+      <div id="officeTabs" style="display:flex;gap:0.5rem;width:100%;"></div>
+    </div>
+    <!-- 2段目：機能タブ -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="list">
+        <i class="fa-solid fa-list"></i> 記録一覧
+      </button>
+      <button class="tab-btn" data-tab="create">
+        <i class="fa-solid fa-plus"></i> 記録作成
+      </button>
+      <button class="tab-btn" data-tab="pause">
+        <i class="fa-solid fa-pause"></i> 一時停止管理
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== タブ①：記録一覧 ===== -->
+  <div id="tab-list" class="tab-content">
+    <!-- フィルターエリア -->
+    <div class="filter-area">
+      <div class="filter-row">
+        <span class="filter-label">年月</span>
+        <input type="month" id="filterMonth" class="filter-input" style="flex:none;width:9rem;">
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">氏名</span>
+        <select id="filterName" class="filter-select">
+          <option value="">全員</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">勤務区分</span>
+        <select id="filterKinmu" class="filter-select">
+          <option value="">全区分</option>
+          <option>日勤</option>
+          <option>夜勤担当①</option>
+          <option>夜勤担当②</option>
+        </select>
+      </div>
+      <div class="filter-row" style="justify-content:flex-end;">
+        <button class="filter-btn" id="searchBtn">
+          <i class="fa-solid fa-magnifying-glass"></i> 検索
+        </button>
+      </div>
+    </div>
+    <!-- 件数表示 -->
+    <div id="recordCount" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
+    <!-- レコードリスト -->
+    <div class="records-area" id="recordsList">
+      <div class="status-msg">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        検索してください
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== タブ②：記録作成 ===== -->
+  <div id="tab-create" class="tab-content hidden">
+    <div class="create-form">
+      <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.2rem 0.5rem;background:var(--primary-light);border-radius:8px;">
+        <i class="fa-solid fa-circle-info" style="color:var(--primary-color);"></i>
+        実施日・事業所・勤務区分を指定すると、対象の顧客別作業設定から記録を一括作成します。
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">実施日 <span class="form-required">*</span></label>
+        <input type="date" id="createDate" class="form-input">
+      </div>
+      <div class="form-row">
+        <label class="form-label">事業所 <span class="form-required">*</span></label>
+        <select id="createOffice" class="form-select">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">勤務区分 <span class="form-required">*</span></label>
+        <select id="createKinmu" class="form-select">
+          <option value="">選択してください</option>
+          <option>日勤</option>
+          <option>夜勤担当①</option>
+          <option>夜勤担当②</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">スタッフ <span class="form-required">*</span></label>
+        <select id="createStaff" class="form-select">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <button class="create-btn" id="createBtn" onclick="submitCreate()">
+        <i class="fa-solid fa-pen-to-square"></i>
+        記録を一括作成する
+      </button>
+      <div id="createResult" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== タブ③：一時停止管理 ===== -->
+  <div id="tab-pause" class="tab-content hidden">
+    <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.6rem 0.85rem;background:var(--primary-light);border-radius:8px;margin-bottom:0.85rem;">
+      <i class="fa-solid fa-circle-info" style="color:var(--primary-color);"></i>
+      入院などで記録の自動作成を停止する場合は「停止」を、再開する場合は「再開」を押してください。
+      サービスごとに個別に停止・再開できます。
+    </div>
+    <div id="pauseList">
+      <div class="status-msg">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        読み込み中...
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 編集モーダル ===== -->
+  <div id="editModal" class="modal-overlay hidden" onclick="closeEditModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-pen"></i> 記録を編集</span>
+        <button class="modal-close" onclick="closeEditModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="editRecordId">
+
+      <div class="form-row">
+        <label class="form-label">実施日</label>
+        <input type="date" id="editDate" class="form-input">
+      </div>
+      <div class="form-row">
+        <label class="form-label">氏名</label>
+        <input type="text" id="editName" class="form-input" readonly
+          style="background:#f0e0d0;color:var(--text-muted);">
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.2rem;">
+          ※ 氏名の変更はLarkで直接行ってください
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">勤務区分</label>
+        <select id="editKinmu" class="form-select">
+          <option>日勤</option>
+          <option>夜勤担当①</option>
+          <option>夜勤担当②</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">スタッフ</label>
+        <select id="editStaff" class="form-select"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">作業項目</label>
+        <input type="text" id="editSagyou" class="form-input">
+      </div>
+      <div class="form-row">
+        <label class="form-label">サービス略称</label>
+        <input type="text" id="editServiceName" class="form-input">
+      </div>
+      <div class="form-row">
+        <label class="form-label">記録内容</label>
+        <textarea id="editContent" class="form-input" rows="3"
+          style="resize:vertical;"></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeEditModal()">キャンセル</button>
+        <button class="btn-save" id="editSaveBtn" onclick="submitEdit()">
+          <i class="fa-solid fa-floppy-disk"></i> 保存する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // 設定・定数
+    // ============================================================
+
+    // APIベースURL（ローカル開発時とRenderデプロイ時で切り替える）
+    const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+    const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+    // URLパラメータから管理者モードを判定する
+    const isAdmin = new URLSearchParams(location.search).get('mode') === 'admin';
+
+    // 勤務区分に対応するバッジスタイルを返す
+    function kinmuBadge(kinmu) {
+      if (!kinmu) return `<span class="record-badge badge-other">-</span>`;
+      if (kinmu === '日勤')       return `<span class="record-badge badge-nikkin">日勤</span>`;
+      if (kinmu === '夜勤担当①') return `<span class="record-badge badge-yakinha">夜勤①</span>`;
+      if (kinmu === '夜勤担当②') return `<span class="record-badge badge-yakinhb">夜勤②</span>`;
+      return `<span class="record-badge badge-other">${escHtml(kinmu)}</span>`;
+    }
+
+    // タイムスタンプ(ms)を "YYYY/MM/DD (曜)" 形式に変換する
+    function fmtDate(ms) {
+      if (!ms) return '-';
+      const d = new Date(ms);
+      // JSTで表示するため +9h をオフセットする
+      const jst = new Date(ms + 9 * 60 * 60 * 1000);
+      const days = ['日','月','火','水','木','金','土'];
+      return `${jst.getUTCFullYear()}/${String(jst.getUTCMonth()+1).padStart(2,'0')}/${String(jst.getUTCDate()).padStart(2,'0')} (${days[jst.getUTCDay()]})`;
+    }
+
+    // ms → "YYYY-MM-DD" 形式（input[type=date]のvalue用）
+    function msToInputDate(ms) {
+      if (!ms) return '';
+      const jst = new Date(ms + 9 * 60 * 60 * 1000);
+      return `${jst.getUTCFullYear()}-${String(jst.getUTCMonth()+1).padStart(2,'0')}-${String(jst.getUTCDate()).padStart(2,'0')}`;
+    }
+
+    // HTMLエスケープ
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ============================================================
+    // 状態管理
+    // ============================================================
+
+    let activeOffice   = '';     // 選択中の事業所
+    let officeList     = [];     // 事業所リスト
+    let staffList      = [];     // スタッフリスト
+    let customerList   = [];     // 利用者リスト
+    let currentRecords = [];     // 現在表示中の記録一覧
+    let pauseRecords   = [];     // 一時停止管理用の顧客別作業設定
+    let currentTab     = 'list'; // 現在のタブ
+
+    // ============================================================
+    // 初期化
+    // ============================================================
+
+    // 今月をデフォルト値としてセットする
+    (function initDefaultMonth() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('filterMonth').value = `${y}-${m}`;
+      // 記録作成の実施日は今日をデフォルトにする
+      const today = `${y}-${m}-${String(now.getDate()).padStart(2,'0')}`;
+      document.getElementById('createDate').value = today;
+    })();
+
+    // 起動時にメタ情報（事業所・スタッフ・利用者）を取得して初期化する
+    async function init() {
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/meta`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        officeList   = data.officeList   || [];
+        staffList    = data.staffList    || [];
+        customerList = data.customerList || [];
+
+        // 事業所タブを描画する
+        renderOfficeTabs();
+
+        // 利用者フィルターに選択肢を追加する
+        const filterName = document.getElementById('filterName');
+        customerList.forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = n;
+          filterName.appendChild(opt);
+        });
+
+        // 記録作成の事業所セレクトに選択肢を追加する
+        const createOffice = document.getElementById('createOffice');
+        officeList.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = o;
+          createOffice.appendChild(opt);
+        });
+
+        // スタッフセレクトに選択肢を追加する（記録作成・編集両方）
+        [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
+          sel.innerHTML = '<option value="">選択してください</option>';
+          staffList.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = opt.textContent = s;
+            sel.appendChild(opt);
+          });
+        });
+
+      } catch (err) {
+        console.error('[init] メタ取得失敗:', err);
+      }
+    }
+
+    // ============================================================
+    // 事業所タブ
+    // ============================================================
+
+    function renderOfficeTabs() {
+      const container = document.getElementById('officeTabs');
+      container.innerHTML = '';
+      officeList.forEach((office, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'office-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = office;
+        btn.addEventListener('click', () => selectOffice(office, btn));
+        container.appendChild(btn);
+      });
+      // 先頭事業所を選択状態にする
+      if (officeList.length > 0) selectOffice(officeList[0]);
+    }
+
+    function selectOffice(office, clickedBtn) {
+      activeOffice = office;
+      // 事業所タブのactiveを更新する
+      document.querySelectorAll('.office-tab').forEach(b => {
+        b.classList.toggle('active', b.textContent === office);
+      });
+      // タブ切り替え時に各タブのデフォルト事業所も更新する
+      const createOfficeEl = document.getElementById('createOffice');
+      if (createOfficeEl) createOfficeEl.value = office;
+
+      // 一時停止タブが表示中なら再読み込みする
+      if (currentTab === 'pause') loadPauseSettings();
+    }
+
+    // ============================================================
+    // タブ切り替え
+    // ============================================================
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        currentTab = tab;
+        // タブボタンのactiveを更新する
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        // コンテンツの表示切り替え
+        ['list', 'create', 'pause'].forEach(t => {
+          document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+        });
+        // 一時停止タブを開いたときにデータを読み込む
+        if (tab === 'pause') loadPauseSettings();
+      });
+    });
+
+    // ============================================================
+    // タブ①：記録一覧
+    // ============================================================
+
+    document.getElementById('searchBtn').addEventListener('click', loadRecords);
+
+    async function loadRecords() {
+      const [year, month] = (document.getElementById('filterMonth').value || '').split('-');
+      const name  = document.getElementById('filterName').value;
+      const kinmu = document.getElementById('filterKinmu').value;
+
+      const list = document.getElementById('recordsList');
+      list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-spinner fa-spin"></i>読み込み中...</div>`;
+      document.getElementById('recordCount').textContent = '';
+
+      try {
+        const params = new URLSearchParams({ office: activeOffice });
+        if (year)  params.set('year',  year);
+        if (month) params.set('month', month);
+        if (name)  params.set('name',  name);
+        if (kinmu) params.set('kinmu', kinmu);
+
+        const res  = await fetch(`${API_BASE}/api/helper/records?${params}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        currentRecords = data.records || [];
+        document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
+        renderRecords(currentRecords);
+      } catch (err) {
+        list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-triangle-exclamation"></i>${escHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderRecords(records) {
+      const list = document.getElementById('recordsList');
+      if (records.length === 0) {
+        list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-folder-open"></i>記録がありません</div>`;
+        return;
+      }
+      list.innerHTML = records.map(r => `
+        <div class="record-card">
+          <div class="record-card-header">
+            <div>
+              <div class="record-date">${fmtDate(r.実施日)}</div>
+              <div class="record-name">${escHtml(r.氏名 || '（氏名未設定）')}</div>
+            </div>
+            ${kinmuBadge(r.勤務区分)}
+          </div>
+          <div class="record-meta">
+            ${r.スタッフ    ? `<span><i class="fa-solid fa-user"></i>${escHtml(r.スタッフ)}</span>` : ''}
+            ${r.作業項目    ? `<span><i class="fa-solid fa-list-check"></i>${escHtml(r.作業項目)}</span>` : ''}
+            ${r.サービス略称 ? `<span><i class="fa-solid fa-tag"></i>${escHtml(r.サービス略称)}</span>` : ''}
+            ${r.記録タイプ  ? `<span><i class="fa-solid fa-layer-group"></i>${escHtml(r.記録タイプ)}</span>` : ''}
+          </div>
+          ${r.記録内容 ? `<div style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted);border-top:1px solid #f0e0d0;padding-top:0.4rem;">${escHtml(r.記録内容)}</div>` : ''}
+          <div class="record-actions">
+            <button class="btn-edit" onclick="openEditModal('${r.recordId}')">
+              <i class="fa-solid fa-pen"></i> 編集
+            </button>
+            <button class="btn-delete" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
+              <i class="fa-solid fa-trash"></i> 削除
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ============================================================
+    // 記録削除
+    // ============================================================
+
+    async function deleteRecord(recordId, name) {
+      if (!confirm(`「${name}」の記録を削除しますか？\nこの操作は元に戻せません。`)) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/records/${recordId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // 画面上から削除して再描画する
+        currentRecords = currentRecords.filter(r => r.recordId !== recordId);
+        document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
+        renderRecords(currentRecords);
+      } catch (err) {
+        alert('削除に失敗しました: ' + err.message);
+      }
+    }
+
+    // ============================================================
+    // 記録編集モーダル
+    // ============================================================
+
+    function openEditModal(recordId) {
+      const r = currentRecords.find(rec => rec.recordId === recordId);
+      if (!r) return;
+
+      document.getElementById('editRecordId').value    = recordId;
+      document.getElementById('editDate').value        = msToInputDate(r.実施日);
+      document.getElementById('editName').value        = r.氏名 || '';
+      document.getElementById('editKinmu').value       = r.勤務区分 || '日勤';
+      document.getElementById('editStaff').value       = r.スタッフ || '';
+      document.getElementById('editSagyou').value      = r.作業項目 || '';
+      document.getElementById('editServiceName').value = r.サービス略称 || '';
+      document.getElementById('editContent').value     = r.記録内容 || '';
+
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal(e) {
+      if (e && e.target !== document.getElementById('editModal')) return;
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    async function submitEdit() {
+      const recordId = document.getElementById('editRecordId').value;
+      const btn = document.getElementById('editSaveBtn');
+      btn.disabled = true;
+      btn.textContent = '保存中...';
+
+      try {
+        const body = {
+          実施日:       document.getElementById('editDate').value,
+          勤務区分:     document.getElementById('editKinmu').value,
+          スタッフ:     document.getElementById('editStaff').value,
+          作業項目:     document.getElementById('editSagyou').value,
+          サービス略称: document.getElementById('editServiceName').value,
+          記録内容:     document.getElementById('editContent').value,
+        };
+
+        const res  = await fetch(`${API_BASE}/api/helper/records/${recordId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        // ローカルの currentRecords も更新して再描画する
+        const idx = currentRecords.findIndex(r => r.recordId === recordId);
+        if (idx !== -1) {
+          currentRecords[idx] = {
+            ...currentRecords[idx],
+            実施日:       body.実施日 ? new Date(body.実施日).getTime() + 9*60*60*1000 : currentRecords[idx].実施日,
+            勤務区分:     body.勤務区分,
+            スタッフ:     body.スタッフ,
+            作業項目:     body.作業項目,
+            サービス略称: body.サービス略称,
+            記録内容:     body.記録内容,
+          };
+          renderRecords(currentRecords);
+        }
+        document.getElementById('editModal').classList.add('hidden');
+      } catch (err) {
+        alert('保存に失敗しました: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存する';
+      }
+    }
+
+    // ============================================================
+    // タブ②：記録作成
+    // ============================================================
+
+    async function submitCreate() {
+      const 実施日   = document.getElementById('createDate').value;
+      const 事業所   = document.getElementById('createOffice').value;
+      const 勤務区分 = document.getElementById('createKinmu').value;
+      const スタッフ = document.getElementById('createStaff').value;
+
+      if (!実施日 || !事業所 || !勤務区分 || !スタッフ) {
+        alert('すべての項目を入力してください。');
+        return;
+      }
+
+      const btn    = document.getElementById('createBtn');
+      const result = document.getElementById('createResult');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 作成中...';
+      result.classList.add('hidden');
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/records/batch-create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 実施日, 事業所, 勤務区分, スタッフ }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        result.className = 'create-result ok';
+        if (data.created === 0) {
+          result.textContent = data.message || '該当するサービス設定が見つかりませんでした。';
+        } else {
+          result.textContent = `✓ ${data.created} 件の記録を作成しました（全 ${data.total} 件中）`;
+          if (data.errors && data.errors.length > 0) {
+            result.textContent += `\n⚠ ${data.errors.length} 件エラー`;
+          }
+        }
+        result.classList.remove('hidden');
+      } catch (err) {
+        result.className = 'create-result err';
+        result.textContent = '作成に失敗しました: ' + err.message;
+        result.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> 記録を一括作成する';
+      }
+    }
+
+    // ============================================================
+    // タブ③：一時停止管理
+    // ============================================================
+
+    async function loadPauseSettings() {
+      const container = document.getElementById('pauseList');
+      container.innerHTML = `<div class="status-msg"><i class="fa-solid fa-spinner fa-spin"></i>読み込み中...</div>`;
+
+      try {
+        const params = new URLSearchParams({ office: activeOffice });
+        const res    = await fetch(`${API_BASE}/api/helper/pause-settings?${params}`);
+        const data   = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        pauseRecords = data.records || [];
+        renderPauseList(pauseRecords);
+      } catch (err) {
+        container.innerHTML = `<div class="status-msg"><i class="fa-solid fa-triangle-exclamation"></i>${escHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderPauseList(records) {
+      const container = document.getElementById('pauseList');
+      if (records.length === 0) {
+        container.innerHTML = `<div class="status-msg"><i class="fa-solid fa-folder-open"></i>設定データがありません</div>`;
+        return;
+      }
+
+      // 氏名でグループ化する
+      const groups = {};
+      records.forEach(r => {
+        if (!groups[r.氏名]) groups[r.氏名] = [];
+        groups[r.氏名].push(r);
+      });
+
+      container.innerHTML = '';
+      Object.entries(groups).forEach(([name, items]) => {
+        const group = document.createElement('div');
+        group.className = 'pause-customer-group';
+
+        // グループヘッダー（折りたたみ可能）
+        const header = document.createElement('div');
+        header.className = 'pause-customer-header';
+        header.innerHTML = `
+          <i class="fa-solid fa-user"></i>
+          <span>${escHtml(name)}</span>
+          <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted);">${items.length} サービス</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        `;
+        header.addEventListener('click', () => {
+          header.classList.toggle('collapsed');
+          serviceList.classList.toggle('hidden');
+        });
+
+        // サービスリスト
+        const serviceList = document.createElement('div');
+        serviceList.className = 'pause-service-list';
+
+        items.forEach(item => {
+          const now = Date.now();
+          // 現在の状態を判定する
+          const isPaused  = item.終了日 && item.終了日 < now;
+          const isWaiting = item.終了日 && item.終了日 >= now; // 将来の停止予定
+
+          let statusLabel, statusClass;
+          if (isPaused) {
+            statusLabel = '停止中'; statusClass = 'status-paused';
+          } else if (isWaiting) {
+            statusLabel = '停止予定'; statusClass = 'status-waiting';
+          } else {
+            statusLabel = '稼働中'; statusClass = 'status-active';
+          }
+
+          const kinmuShort = (item.勤務区分 || '')
+            .replace('夜勤担当①', '夜勤①').replace('夜勤担当②', '夜勤②');
+          const yobi = item.提供曜日 ? `（${item.提供曜日}曜日）` : '';
+
+          const itemEl = document.createElement('div');
+          itemEl.className = 'pause-service-item';
+          itemEl.dataset.recordId = item.recordId;
+          itemEl.innerHTML = `
+            <div class="pause-service-title">
+              <div class="pause-service-name">
+                ${escHtml(item.作業項目 || item.サービス略称 || '?')}
+                <span style="font-size:0.75rem;color:var(--text-muted);">
+                  ${escHtml(kinmuShort)}${escHtml(yobi)}
+                </span>
+              </div>
+              <span class="pause-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="pause-date-info">
+              開始日: ${item.開始日 ? fmtDate(item.開始日) : '未設定'}
+              　終了日: ${item.終了日 ? fmtDate(item.終了日) : '未設定'}
+            </div>
+            <div class="pause-actions">
+              <button class="btn-pause"  onclick="showPauseForm(this, '${item.recordId}')">
+                <i class="fa-solid fa-pause"></i> 停止
+              </button>
+              <button class="btn-resume" onclick="resumeService('${item.recordId}', this)">
+                <i class="fa-solid fa-play"></i> 再開
+              </button>
+              <button class="btn-set-date" onclick="showStartDateForm(this, '${item.recordId}')">
+                <i class="fa-solid fa-calendar-plus"></i> 開始日変更
+              </button>
+            </div>
+          `;
+          serviceList.appendChild(itemEl);
+        });
+
+        group.appendChild(header);
+        group.appendChild(serviceList);
+        container.appendChild(group);
+      });
+    }
+
+    // 停止ボタンを押したときに日付入力フォームを表示する
+    function showPauseForm(btn, recordId) {
+      // 既存フォームがあれば削除する
+      const existing = btn.closest('.pause-actions').parentElement.querySelector('.pause-date-form');
+      if (existing) { existing.remove(); return; }
+
+      const today = msToInputDate(Date.now());
+      const form = document.createElement('div');
+      form.className = 'pause-date-form';
+      form.innerHTML = `
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">停止（終了日を設定）</div>
+        <div class="pause-date-row">
+          <label>終了日</label>
+          <input type="date" class="pause-date-input" id="pauseEndDate_${recordId}" value="${today}">
+          <button class="pause-date-confirm" onclick="applyPause('${recordId}')">設定</button>
+        </div>
+      `;
+      btn.closest('.pause-service-item').appendChild(form);
+    }
+
+    // 開始日変更フォームを表示する
+    function showStartDateForm(btn, recordId) {
+      const existing = btn.closest('.pause-actions').parentElement.querySelector('.pause-date-form');
+      if (existing) { existing.remove(); return; }
+
+      const today = msToInputDate(Date.now());
+      const form = document.createElement('div');
+      form.className = 'pause-date-form';
+      form.innerHTML = `
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">開始日の変更</div>
+        <div class="pause-date-row">
+          <label>開始日</label>
+          <input type="date" class="pause-date-input" id="pauseStartDate_${recordId}" value="${today}">
+          <button class="pause-date-confirm" onclick="applyStartDate('${recordId}')">設定</button>
+        </div>
+      `;
+      btn.closest('.pause-service-item').appendChild(form);
+    }
+
+    // 終了日を設定してサービスを停止する
+    async function applyPause(recordId) {
+      const endDate = document.getElementById(`pauseEndDate_${recordId}`)?.value;
+      if (!endDate) { alert('終了日を入力してください。'); return; }
+      await updatePauseSetting(recordId, { 終了日: endDate });
+    }
+
+    // 開始日を更新する
+    async function applyStartDate(recordId) {
+      const startDate = document.getElementById(`pauseStartDate_${recordId}`)?.value;
+      if (!startDate) { alert('開始日を入力してください。'); return; }
+      await updatePauseSetting(recordId, { 開始日: startDate });
+    }
+
+    // 終了日をクリアしてサービスを再開する
+    async function resumeService(recordId, btn) {
+      if (!confirm('このサービスの停止を解除して再開しますか？')) return;
+      await updatePauseSetting(recordId, { clear終了日: true });
+    }
+
+    // 顧客別作業設定の開始日・終了日をサーバー経由で更新する
+    async function updatePauseSetting(recordId, body) {
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/pause-settings/${recordId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // 更新後に一覧を再取得して再描画する
+        await loadPauseSettings();
+      } catch (err) {
+        alert('更新に失敗しました: ' + err.message);
+      }
+    }
+
+    // ============================================================
+    // 起動
+    // ============================================================
+    init();
+  </script>
+</body>
+</html>

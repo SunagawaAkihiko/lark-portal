@@ -23,7 +23,7 @@ const portalLinks = [
         title: "ヘルパー記録",
         description: "ヘルパー記録の入力・確認",
         icon: "fa-clipboard-user",
-        url: "https://ejprp394joad.jp.larksuite.com/app/VWcEbeUY8aUcxps3QH8jBm6Op4g?pageId=pgendY8NmFDDgyb5"
+        url: "helper-record.html"
     },
     {
         title: "入居者物品提供",
