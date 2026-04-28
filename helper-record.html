@@ -640,20 +640,56 @@
 
       <!-- ② 体調不良のサブ質問 -->
       <div id="ijoSection-taichou" class="ijo-section hidden">
+        <!-- 症状プルダウン -->
         <div class="form-row">
-          <label class="form-label">症状（複数選択可）</label>
-          <div class="check-group">
-            <label><input type="checkbox" name="shoujou" value="発熱"> 発熱</label>
-            <label><input type="checkbox" name="shoujou" value="嘔吐・吐き気"> 嘔吐・吐き気</label>
-            <label><input type="checkbox" name="shoujou" value="下痢"> 下痢</label>
-            <label><input type="checkbox" name="shoujou" value="呼吸困難"> 呼吸困難</label>
-            <label><input type="checkbox" name="shoujou" value="意識障害"> 意識障害</label>
-            <label><input type="checkbox" name="shoujou" value="その他"> その他</label>
-          </div>
+          <label class="form-label">症状</label>
+          <select id="ijoShoujou" class="form-select" onchange="onIjoShoujouChange()">
+            <option value="">選択してください</option>
+            <option>発熱</option>
+            <option>嘔吐・吐き気</option>
+            <option>下痢</option>
+            <option>呼吸困難</option>
+            <option>意識障害</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- 症状「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoShoujouSonotaRow">
+          <label class="form-label">症状の詳細</label>
+          <input type="text" id="ijoShoujouSonota" class="form-input" placeholder="症状を入力してください">
+        </div>
+        <!-- バイタル -->
+        <div class="form-row">
+          <label class="form-label">血圧</label>
+          <input type="text" id="ijoKetsuatsu" class="form-input" placeholder="例：120/80">
         </div>
         <div class="form-row">
           <label class="form-label">体温（℃）</label>
           <input type="number" id="ijoTaion" class="form-input" step="0.1" min="30" max="45" placeholder="例：38.5">
+        </div>
+        <div class="form-row">
+          <label class="form-label">SPO2（%）</label>
+          <input type="number" id="ijoSpo2" class="form-input" step="1" min="50" max="100" placeholder="例：98">
+        </div>
+        <!-- 対応内容プルダウン（体調不良専用） -->
+        <div class="form-row">
+          <label class="form-label">対応内容</label>
+          <select id="ijoTaioTaichou" class="form-select" onchange="onIjoTaioTaichouChange()">
+            <option value="">選択してください</option>
+            <option>頓服服用</option>
+            <option>クーリング</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- 対応内容「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoTaioSonotaRow">
+          <label class="form-label">対応内容の詳細</label>
+          <input type="text" id="ijoTaioSonota" class="form-input" placeholder="対応内容を入力してください">
+        </div>
+        <!-- 詳細メモ（体調不良用） -->
+        <div class="form-row">
+          <label class="form-label">詳細メモ</label>
+          <textarea id="ijoMemoTaichou" class="form-input" rows="2" placeholder="詳細を記入してください"></textarea>
         </div>
       </div>
 
@@ -1172,15 +1208,16 @@
 
     // 異常記録モーダルを初期化して表示する
     function openIjoModal() {
-      document.getElementById('ijoType').value = '';
+      // 全入力欄をリセットする
+      ['ijoType','ijoShoujou','ijoKetsuatsu','ijoTaion','ijoSpo2',
+       'ijoTaioTaichou','ijoTaioSonota','ijoShoujouSonota','ijoMemoTaichou',
+       'ijoBasho','ijoBusho','ijoTeido','ijoGaiyou','ijoMemo']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       document.querySelectorAll('#ijoModal input[type=checkbox]').forEach(cb => cb.checked = false);
-      document.getElementById('ijoTaion').value  = '';
-      document.getElementById('ijoBasho').value  = '';
-      document.getElementById('ijoBusho').value  = '';
-      document.getElementById('ijoTeido').value  = '';
-      document.getElementById('ijoGaiyou').value = '';
-      document.getElementById('ijoMemo').value   = '';
-      // サブセクションをすべて非表示にリセットする
+      // 条件表示欄と全セクションを非表示にリセットする
+      ['ijoShoujouSonotaRow','ijoTaioSonotaRow'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+      );
       ['taichou','tento','sonota','taio'].forEach(k =>
         document.getElementById(`ijoSection-${k}`).classList.add('hidden')
       );
@@ -1195,15 +1232,26 @@
     // 異常内容の選択に応じてサブ質問セクションを切り替える
     function onIjoTypeChange() {
       const type = document.getElementById('ijoType').value;
-      // 種別固有セクションを全て隠してから選択中のものだけ表示する
       ['taichou','tento','sonota'].forEach(k =>
         document.getElementById(`ijoSection-${k}`).classList.add('hidden')
       );
       if (type === '体調不良')  document.getElementById('ijoSection-taichou').classList.remove('hidden');
       if (type === '転倒・怪我') document.getElementById('ijoSection-tento').classList.remove('hidden');
       if (type === 'その他')    document.getElementById('ijoSection-sonota').classList.remove('hidden');
-      // 対応内容・詳細メモは種別が選ばれたときのみ表示する
-      document.getElementById('ijoSection-taio').classList.toggle('hidden', !type);
+      // 共通の対応内容は体調不良以外のときのみ表示する（体調不良は専用項目を使う）
+      document.getElementById('ijoSection-taio').classList.toggle('hidden', !type || type === '体調不良');
+    }
+
+    // 症状プルダウンで「その他」を選んだとき入力欄を表示する
+    function onIjoShoujouChange() {
+      const isSonota = document.getElementById('ijoShoujou').value === 'その他';
+      document.getElementById('ijoShoujouSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 対応内容プルダウンで「その他」を選んだとき入力欄を表示する
+    function onIjoTaioTaichouChange() {
+      const isSonota = document.getElementById('ijoTaioTaichou').value === 'その他';
+      document.getElementById('ijoTaioSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
     // 異常記録を保存する：フォームの入力値を記録内容テキストに変換してPUTする
@@ -1217,10 +1265,30 @@
       const parts = [`【異常内容】${type}`];
 
       if (type === '体調不良') {
-        const symptoms = [...document.querySelectorAll('input[name=shoujou]:checked')].map(cb => cb.value);
-        if (symptoms.length) parts.push(`症状：${symptoms.join('・')}`);
-        const taion = document.getElementById('ijoTaion').value;
-        if (taion) parts.push(`体温：${taion}℃`);
+        // 症状
+        let shoujou = document.getElementById('ijoShoujou').value;
+        if (shoujou === 'その他') {
+          const detail = document.getElementById('ijoShoujouSonota').value.trim();
+          if (detail) shoujou = `その他（${detail}）`;
+        }
+        if (shoujou) parts.push(`症状：${shoujou}`);
+        // バイタル
+        const ketsuatsu = document.getElementById('ijoKetsuatsu').value.trim();
+        const taion     = document.getElementById('ijoTaion').value;
+        const spo2      = document.getElementById('ijoSpo2').value;
+        if (ketsuatsu) parts.push(`血圧：${ketsuatsu}`);
+        if (taion)     parts.push(`体温：${taion}℃`);
+        if (spo2)      parts.push(`SPO2：${spo2}%`);
+        // 対応内容（体調不良専用）
+        let taio = document.getElementById('ijoTaioTaichou').value;
+        if (taio === 'その他') {
+          const detail = document.getElementById('ijoTaioSonota').value.trim();
+          if (detail) taio = `その他（${detail}）`;
+        }
+        if (taio) parts.push(`対応：${taio}`);
+        // 詳細メモ（体調不良用）
+        const memo = document.getElementById('ijoMemoTaichou').value.trim();
+        if (memo) parts.push(`詳細：${memo}`);
       } else if (type === '転倒・怪我') {
         const basho = document.getElementById('ijoBasho').value;
         if (basho) parts.push(`発生場所：${basho}`);
@@ -1234,10 +1302,13 @@
         parts.push(`概要：${gaiyou}`);
       }
 
-      const taio = [...document.querySelectorAll('input[name=taio]:checked')].map(cb => cb.value);
-      if (taio.length) parts.push(`対応：${taio.join('・')}`);
-      const memo = document.getElementById('ijoMemo').value.trim();
-      if (memo) parts.push(`詳細：${memo}`);
+      // 体調不良は専用項目で対応・メモを処理済みなので共通セクションは他タイプのみ適用する
+      if (type !== '体調不良') {
+        const taio = [...document.querySelectorAll('input[name=taio]:checked')].map(cb => cb.value);
+        if (taio.length) parts.push(`対応：${taio.join('・')}`);
+        const memo = document.getElementById('ijoMemo').value.trim();
+        if (memo) parts.push(`詳細：${memo}`);
+      }
 
       const kirokuNaiyou = parts.join('　');
 
