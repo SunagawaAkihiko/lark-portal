@@ -359,9 +359,6 @@
         <span class="filter-label">勤務区分</span>
         <select id="filterKinmu" class="filter-select">
           <option value="">全区分</option>
-          <option>日勤</option>
-          <option>夜勤担当①</option>
-          <option>夜勤担当②</option>
         </select>
       </div>
       <div class="filter-row" style="justify-content:flex-end;">
@@ -403,9 +400,6 @@
         <label class="form-label">勤務区分 <span class="form-required">*</span></label>
         <select id="createKinmu" class="form-select">
           <option value="">選択してください</option>
-          <option>日勤</option>
-          <option>夜勤担当①</option>
-          <option>夜勤担当②</option>
         </select>
       </div>
       <div class="form-row">
@@ -465,9 +459,6 @@
       <div class="form-row">
         <label class="form-label">勤務区分</label>
         <select id="editKinmu" class="form-select">
-          <option>日勤</option>
-          <option>夜勤担当①</option>
-          <option>夜勤担当②</option>
         </select>
       </div>
       <div class="form-row">
@@ -508,6 +499,59 @@
 
     // URLパラメータから管理者モードを判定する
     const isAdmin = new URLSearchParams(location.search).get('mode') === 'admin';
+
+    // 事業所ごとの勤務区分選択肢（label: 画面表示、value: Larkに保存する値）
+    const KINMU_OPTIONS = {
+      '大浦家': [
+        { label: '日勤', value: '日勤' },
+        { label: '夜勤', value: '夜勤担当①' },
+      ],
+      '上津役家': [
+        { label: '日勤',    value: '日勤' },
+        { label: '夜勤1人目', value: '夜勤担当①' },
+        { label: '夜勤2人目', value: '夜勤担当②' },
+      ],
+    };
+
+    /**
+     * 事業所に合わせて勤務区分セレクトの選択肢を更新する。
+     * フィルター・記録作成・編集モーダルの3箇所を同時に更新する。
+     */
+    function updateKinmuSelects(office) {
+      const opts = KINMU_OPTIONS[office] || [
+        { label: '日勤',    value: '日勤' },
+        { label: '夜勤担当①', value: '夜勤担当①' },
+        { label: '夜勤担当②', value: '夜勤担当②' },
+      ];
+      // フィルター用（先頭に「全区分」を追加する）
+      const filterSel = document.getElementById('filterKinmu');
+      filterSel.innerHTML = '<option value="">全区分</option>';
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value; opt.textContent = o.label;
+        filterSel.appendChild(opt);
+      });
+      // 記録作成用
+      const createSel = document.getElementById('createKinmu');
+      createSel.innerHTML = '<option value="">選択してください</option>';
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value; opt.textContent = o.label;
+        createSel.appendChild(opt);
+      });
+      // 編集モーダル用
+      const editSel = document.getElementById('editKinmu');
+      if (editSel) {
+        const cur = editSel.value; // 現在値を保持して再設定する
+        editSel.innerHTML = '';
+        opts.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value; opt.textContent = o.label;
+          editSel.appendChild(opt);
+        });
+        if (cur && opts.some(o => o.value === cur)) editSel.value = cur;
+      }
+    }
 
     // 勤務区分に対応するバッジスタイルを返す
     function kinmuBadge(kinmu) {
@@ -644,7 +688,10 @@
       document.querySelectorAll('.office-tab').forEach(b => {
         b.classList.toggle('active', b.textContent === office);
       });
-      // タブ切り替え時に各タブのデフォルト事業所も更新する
+      // 事業所に応じた勤務区分選択肢へ更新する
+      updateKinmuSelects(office);
+
+      // 記録作成フォームの事業所セレクトも同期する
       const createOfficeEl = document.getElementById('createOffice');
       if (createOfficeEl) createOfficeEl.value = office;
 
