@@ -606,13 +606,13 @@
   function renderMedicine(photos) {
     const pane = document.getElementById('paneMedicine');
 
-    // 写真追加ボタンは管理者のみ表示する
-    const addBtnHtml = IS_ADMIN ? `
+    // 写真追加ボタンはスタッフ・管理者ともに表示する
+    const addBtnHtml = `
       <button class="medicine-add-btn" id="medicineAddBtn" onclick="triggerPhotoUpload()">
         <i class="fa-solid fa-camera"></i> 写真を追加
       </button>
       <input type="file" id="medicineFileInput" accept="image/*" style="display:none"
-             onchange="onMedicineFileSelected(this)">` : '';
+             onchange="onMedicineFileSelected(this)">`;
 
     if (!photos || photos.length === 0) {
       pane.innerHTML = `
@@ -625,13 +625,11 @@
 
     const thumbs = photos.map((p, i) => {
       const src = proxyUrl(p.url);
-      // 削除ボタンは管理者のみ表示する
-      const deleteBtnHtml = IS_ADMIN
-        ? `<button class="photo-delete-btn" title="削除"
-                   onclick="deleteMedicinePhoto('${escHtml(p.fileToken)}',this)">
-             <i class="fa-solid fa-xmark"></i>
-           </button>`
-        : '';
+      // 削除ボタンはスタッフ・管理者ともに表示する
+      const deleteBtnHtml = `<button class="photo-delete-btn" title="削除"
+                 onclick="deleteMedicinePhoto('${escHtml(p.fileToken)}',this)">
+           <i class="fa-solid fa-xmark"></i>
+         </button>`;
       return `<div class="photo-thumb">
         <img src="${src}" alt="薬手帳${i+1}" loading="lazy"
              onclick="openLightbox('${src}')" draggable="false" oncontextmenu="return false">
