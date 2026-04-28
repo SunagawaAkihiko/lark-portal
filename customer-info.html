@@ -1192,6 +1192,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerName: activeCustomerName,
+          office: activeOffice,
           officeName: g('relOfficeName'), relation,
           person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
         }),
@@ -1218,6 +1219,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recordId,
+          office: activeOffice,
           officeName: g('relOfficeName'), relation,
           person: g('relPerson'), tel: g('relTel'), fax: g('relFax'),
         }),
