@@ -79,78 +79,89 @@
     /* ===== コンテンツ共通 ===== */
     .tab-content { padding: 1rem; }
 
-    /* ===== フィルターエリア ===== */
+    /* ===== フィルターエリア（1行コンパクト） ===== */
     .filter-area {
       background: white;
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 0.9rem 1rem;
-      margin-bottom: 1rem;
-      display: flex; flex-direction: column; gap: 0.7rem;
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
     }
-    .filter-row {
-      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    /* ラベル＋入力欄をまとめたチップ単位 */
+    .filter-chip {
+      display: flex; align-items: center; gap: 0.3rem;
+      flex: 1; min-width: 7rem;
     }
     .filter-label {
-      font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
-      width: 4.5rem; flex-shrink: 0;
+      font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+      white-space: nowrap; flex-shrink: 0;
     }
     .filter-select, .filter-input {
       flex: 1; min-width: 0;
       border: 1.5px solid var(--border-color); border-radius: 8px;
-      padding: 0.45rem 0.65rem; font-family: inherit; font-size: 0.9rem;
+      padding: 0.4rem 0.5rem; font-family: inherit; font-size: 0.85rem;
       background: var(--bg-color); color: var(--text-color);
     }
     .filter-select:focus, .filter-input:focus {
       outline: none; border-color: var(--primary-color);
     }
     .filter-btn {
-      padding: 0.45rem 1.2rem; border-radius: 8px; border: none;
+      padding: 0.42rem 0.9rem; border-radius: 8px; border: none;
       background: var(--primary-color); color: white;
       font-family: inherit; font-size: 0.9rem; font-weight: 700;
-      cursor: pointer;
+      cursor: pointer; flex-shrink: 0;
     }
 
-    /* ===== レコード一覧（コンパクト行形式） ===== */
+    /* ===== レコード一覧（日付グループ形式） ===== */
     .records-area {
       background: white;
       border: 1px solid var(--border-color);
       border-radius: 10px;
       overflow: hidden;
     }
-    .record-row {
-      display: flex; align-items: center;
-      padding: 0.42rem 0.75rem; gap: 0.5rem;
-      border-bottom: 1px solid #f0e4d6;
-      min-height: 2.6rem;
-    }
-    .record-row:last-child { border-bottom: none; }
-    .record-row:active { background: var(--primary-light); }
-    /* 左カラム：日付 */
-    .row-date {
+    /* 日付グループのヘッダー帯 */
+    .date-group-header {
+      padding: 0.25rem 0.75rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
       font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
-      white-space: nowrap; flex-shrink: 0; width: 4.8rem;
+      letter-spacing: 0.03em;
     }
-    /* 中央カラム：氏名＋サブ情報 */
-    .row-main { flex: 1; min-width: 0; }
-    .row-name {
+    /* 1レコード：2行レイアウト */
+    .record-item {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid #f0e4d6;
+    }
+    .record-item:last-child { border-bottom: none; }
+    .record-item:active { background: var(--primary-light); }
+    /* 1行目：氏名・作業項目・提供時間 ＋ 操作ボタン */
+    .record-item-main {
+      display: flex; align-items: flex-start; gap: 0.4rem;
+    }
+    .record-item-info { flex: 1; min-width: 0; }
+    .record-item-line1 {
+      display: flex; align-items: baseline; gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .record-item-name {
       font-size: 0.88rem; font-weight: 700;
+      white-space: nowrap;
+    }
+    .record-item-sagyou {
+      font-size: 0.8rem; color: var(--text-color);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .row-sub {
-      font-size: 0.7rem; color: var(--text-muted);
+    .record-item-time {
+      font-size: 0.75rem; color: var(--text-muted);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    /* 2行目：記録内容 */
+    .record-item-content {
+      font-size: 0.72rem; color: var(--text-muted);
+      margin-top: 0.12rem;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    /* バッジ */
-    .record-badge {
-      display: inline-flex; align-items: center;
-      padding: 0.1rem 0.4rem; border-radius: 4px;
-      font-size: 0.67rem; font-weight: 700; flex-shrink: 0;
-    }
-    .badge-nikkin  { background: #e8f4fd; color: #1565c0; }
-    .badge-yakinha { background: #fdecea; color: #c62828; }
-    .badge-yakinhb { background: #fce4ec; color: #880e4f; }
-    .badge-other   { background: #f3e5f5; color: #6a1b9a; }
     /* 右カラム：操作ボタン */
     .row-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
     .btn-edit, .btn-delete {
@@ -396,29 +407,27 @@
 
   <!-- ===== タブ①：記録一覧 ===== -->
   <div id="tab-list" class="tab-content">
-    <!-- フィルターエリア -->
+    <!-- フィルターエリア（1行コンパクト） -->
     <div class="filter-area">
-      <div class="filter-row">
+      <div class="filter-chip">
         <span class="filter-label">年月</span>
-        <input type="month" id="filterMonth" class="filter-input" style="flex:none;width:9rem;">
+        <input type="month" id="filterMonth" class="filter-input">
       </div>
-      <div class="filter-row">
+      <div class="filter-chip">
         <span class="filter-label">氏名</span>
         <select id="filterName" class="filter-select">
           <option value="">全員</option>
         </select>
       </div>
-      <div class="filter-row">
-        <span class="filter-label">勤務区分</span>
+      <div class="filter-chip">
+        <span class="filter-label">区分</span>
         <select id="filterKinmu" class="filter-select">
           <option value="">全区分</option>
         </select>
       </div>
-      <div class="filter-row" style="justify-content:flex-end;">
-        <button class="filter-btn" id="searchBtn">
-          <i class="fa-solid fa-magnifying-glass"></i> 検索
-        </button>
-      </div>
+      <button class="filter-btn" id="searchBtn">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
     </div>
     <!-- 件数表示 -->
     <div id="recordCount" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
@@ -876,32 +885,50 @@
         list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-folder-open"></i>記録がありません</div>`;
         return;
       }
-      // コンパクトな行形式で表示する（1行に日付・氏名・勤務区分・サブ情報・操作ボタンを配置）
-      list.innerHTML = records.map(r => {
-        // サブ情報：スタッフ / 作業項目 / 提供時間 をコンパクトに1行表示する（サービス略称・勤務区分は非表示）
-        const subParts = [];
-        if (r.スタッフ)   subParts.push(r.スタッフ);
-        if (r.作業項目)   subParts.push(r.作業項目);
-        if (r.提供時間)   subParts.push(r.提供時間);
-        const sub = subParts.map(s => escHtml(s)).join(' / ');
 
-        return `
-          <div class="record-row">
-            <div class="row-date">${fmtDateShort(r.実施日)}</div>
-            <div class="row-main">
-              <div class="row-name">${escHtml(r.氏名 || '（氏名未設定）')}</div>
-              ${sub ? `<div class="row-sub">${sub}</div>` : ''}
-            </div>
-            <div class="row-actions">
-              <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-              <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </div>`;
-      }).join('');
+      // 実施日の降順でソートしてから日付ごとにグループ化する
+      const sorted = [...records].sort((a, b) => b.実施日 - a.実施日);
+      const groups = new Map();
+      for (const r of sorted) {
+        const key = fmtDateShort(r.実施日);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+
+      let html = '';
+      for (const [date, recs] of groups) {
+        // 日付グループのヘッダー帯を挿入する
+        html += `<div class="date-group-header">${date}</div>`;
+        for (const r of recs) {
+          // 1行目：作業項目・提供時間（氏名の右に並べる）
+          const sagyouHtml = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
+          const timeHtml   = r.提供時間 ? `<span class="record-item-time">${escHtml(r.提供時間)}</span>` : '';
+          // 2行目：記録内容（空なら非表示）
+          const contentHtml = r.記録内容
+            ? `<div class="record-item-content">${escHtml(r.記録内容)}</div>` : '';
+          html += `
+            <div class="record-item">
+              <div class="record-item-main">
+                <div class="record-item-info">
+                  <div class="record-item-line1">
+                    <span class="record-item-name">${escHtml(r.氏名 || '氏名未設定')}</span>
+                    ${sagyouHtml}${timeHtml}
+                  </div>
+                  ${contentHtml}
+                </div>
+                <div class="row-actions">
+                  <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }
+      }
+      list.innerHTML = html;
     }
 
     // ============================================================
