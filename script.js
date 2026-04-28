@@ -93,7 +93,7 @@ const portalLinks = [
         title: "各種マニュアル",
         description: "業務や操作に関するマニュアル",
         icon: "fa-book",
-        url: "https://ejprp394joad.jp.larksuite.com/app/RsCCbm6nSaLgy0sKOkWjgzE1pkb?pageId=pgeBU1mbnZ9tp592"
+        url: "manual.html"
     }
 ];
 

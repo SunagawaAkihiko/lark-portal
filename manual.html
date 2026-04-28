@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>各種マニュアル</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --border-color:  #dcbfa6;
+      --card-bg:       #fff0e3;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 3rem;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--text-color);
+      padding: 0.85rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+    .header-back {
+      color: white; font-size: 1.2rem;
+      background: none; border: none; cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      display: flex; align-items: center;
+    }
+    .header-title {
+      color: white; font-size: 1.1rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .header-title i { color: #f4a261; }
+
+    /* ===== ファイル一覧 ===== */
+    .file-list {
+      padding: 1rem;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+
+    /* ===== ファイルカード ===== */
+    .file-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.9rem 1rem;
+      text-decoration: none; color: inherit;
+      box-shadow: 0 1px 4px rgba(139,115,95,0.08);
+      transition: background 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .file-card:active {
+      background: var(--primary-light);
+      box-shadow: 0 2px 8px rgba(231,111,81,0.15);
+    }
+
+    /* ===== ファイル種別アイコン ===== */
+    .file-icon {
+      width: 48px; height: 48px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .file-icon--video {
+      background: #e8f4fd; color: #2196f3;
+    }
+    .file-icon--pdf {
+      background: #fdecea; color: #e53935;
+    }
+    .file-icon--other {
+      background: var(--primary-light); color: var(--primary-color);
+    }
+
+    /* ===== ファイル情報 ===== */
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 0.95rem; font-weight: 600;
+      line-height: 1.4;
+      /* 長いファイル名は折り返す */
+      word-break: break-all;
+    }
+    .file-meta {
+      font-size: 0.75rem; color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .file-arrow {
+      color: var(--text-muted); font-size: 0.9rem; flex-shrink: 0;
+    }
+
+    /* ===== ローディング・エラー ===== */
+    .status-msg {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-muted); font-size: 0.95rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+    }
+    .status-msg i { font-size: 2rem; }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <button class="header-back" onclick="history.back()">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="header-title">
+      <i class="fa-solid fa-book"></i>
+      各種マニュアル
+    </div>
+  </div>
+
+  <!-- ファイル一覧 -->
+  <div class="file-list" id="fileList">
+    <div class="status-msg">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      読み込み中...
+    </div>
+  </div>
+
+  <script>
+    // APIベースURL（ローカル開発時とRenderデプロイ時で切り替える）
+    const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+    const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+    // ファイル種別を判定してアイコン情報を返す
+    function getFileIcon(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (['mp4', 'mov', 'avi', 'webm', 'mkv'].includes(ext)) {
+        return { cls: 'file-icon--video', icon: 'fa-circle-play' };
+      }
+      if (ext === 'pdf') {
+        return { cls: 'file-icon--pdf', icon: 'fa-file-pdf' };
+      }
+      return { cls: 'file-icon--other', icon: 'fa-file' };
+    }
+
+    // 更新日時をフォーマットする
+    function fmtDate(ms) {
+      const d = new Date(ms);
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} 更新`;
+    }
+
+    // ファイル一覧を取得して描画する
+    async function loadFiles() {
+      const list = document.getElementById('fileList');
+      try {
+        const res  = await fetch(`${API_BASE}/api/manual/files`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        if (data.files.length === 0) {
+          list.innerHTML = `
+            <div class="status-msg">
+              <i class="fa-solid fa-folder-open"></i>
+              ファイルがありません
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = data.files.map(f => {
+          const { cls, icon } = getFileIcon(f.name);
+          return `
+            <a class="file-card" href="${f.url}" target="_blank" rel="noopener noreferrer">
+              <div class="file-icon ${cls}">
+                <i class="fa-solid ${icon}"></i>
+              </div>
+              <div class="file-info">
+                <div class="file-name">${escHtml(f.name)}</div>
+                <div class="file-meta">${fmtDate(f.modifiedTime)}</div>
+              </div>
+              <i class="fa-solid fa-external-link-alt file-arrow"></i>
+            </a>`;
+        }).join('');
+
+      } catch (err) {
+        list.innerHTML = `
+          <div class="status-msg">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            読み込みに失敗しました<br>${err.message}
+          </div>`;
+      }
+    }
+
+    // HTMLエスケープ
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>
