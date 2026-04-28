@@ -158,11 +158,15 @@
     }
     .record-item-sagyou {
       font-size: 0.8rem; color: var(--text-color);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      /* 固定幅にして全行でスタッフ名の開始位置を揃える */
+      flex: 0 0 6rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .record-item-time {
       font-size: 0.9rem; font-weight: 700; color: var(--text-color);
-      white-space: nowrap; flex-shrink: 0;
+      /* "19:00" を収める幅に固定してスタッフ名・作業項目の位置を揃える */
+      flex: 0 0 2.8rem;
+      white-space: nowrap;
     }
     .record-item-staff {
       font-size: 0.75rem; color: var(--text-color);
