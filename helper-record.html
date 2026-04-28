@@ -128,6 +128,13 @@
       font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
       letter-spacing: 0.03em;
     }
+    /* 氏名サブグループのヘッダー帯（日付帯の下に入る） */
+    .name-group-header {
+      padding: 0.22rem 1rem;
+      background: #fdf0eb;
+      border-bottom: 1px solid #f0e4d6;
+      font-size: 0.82rem; font-weight: 700; color: var(--text-color);
+    }
     /* 1レコード：2行レイアウト */
     .record-item {
       padding: 0.45rem 0.75rem;
@@ -816,6 +823,9 @@
 
       // 一時停止タブが表示中なら再読み込みする
       if (currentTab === 'pause') loadPauseSettings();
+
+      // 事業所切り替え時に記録履歴を自動で再取得する（初回表示も含む）
+      loadRecords();
     }
 
     // ============================================================
@@ -886,46 +896,49 @@
         return;
       }
 
-      // 実施日の降順でソートしてから日付ごとにグループ化する
+      // 実施日の降順でソートしてから、日付→氏名の2段階でグループ化する
       const sorted = [...records].sort((a, b) => b.実施日 - a.実施日);
-      const groups = new Map();
+      const dateGroups = new Map(); // Map<dateStr, Map<name, record[]>>
       for (const r of sorted) {
-        const key = fmtDateShort(r.実施日);
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(r);
+        const dateKey = fmtDateShort(r.実施日);
+        const nameKey = r.氏名 || '氏名未設定';
+        if (!dateGroups.has(dateKey)) dateGroups.set(dateKey, new Map());
+        const nameMap = dateGroups.get(dateKey);
+        if (!nameMap.has(nameKey)) nameMap.set(nameKey, []);
+        nameMap.get(nameKey).push(r);
       }
 
       let html = '';
-      for (const [date, recs] of groups) {
-        // 日付グループのヘッダー帯を挿入する
+      for (const [date, nameMap] of dateGroups) {
+        // 日付ヘッダー帯
         html += `<div class="date-group-header">${date}</div>`;
-        for (const r of recs) {
-          // 1行目：作業項目・提供時間（氏名の右に並べる）
-          const sagyouHtml = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
-          const timeHtml   = r.提供時間 ? `<span class="record-item-time">${escHtml(r.提供時間)}</span>` : '';
-          // 2行目：記録内容（空なら非表示）
-          const contentHtml = r.記録内容
-            ? `<div class="record-item-content">${escHtml(r.記録内容)}</div>` : '';
-          html += `
-            <div class="record-item">
-              <div class="record-item-main">
-                <div class="record-item-info">
-                  <div class="record-item-line1">
-                    <span class="record-item-name">${escHtml(r.氏名 || '氏名未設定')}</span>
-                    ${sagyouHtml}${timeHtml}
+        for (const [name, recs] of nameMap) {
+          // 氏名サブヘッダー帯（同日・同氏名の記録をまとめる）
+          html += `<div class="name-group-header">${escHtml(name)}</div>`;
+          for (const r of recs) {
+            // 1行目：作業項目・提供時間（氏名はサブヘッダーに出すため省略）
+            const sagyouHtml  = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
+            const timeHtml    = r.提供時間 ? `<span class="record-item-time">${escHtml(r.提供時間)}</span>` : '';
+            // 2行目：記録内容（空なら非表示）
+            const contentHtml = r.記録内容 ? `<div class="record-item-content">${escHtml(r.記録内容)}</div>` : '';
+            html += `
+              <div class="record-item">
+                <div class="record-item-main">
+                  <div class="record-item-info">
+                    <div class="record-item-line1">${sagyouHtml}${timeHtml}</div>
+                    ${contentHtml}
                   </div>
-                  ${contentHtml}
+                  <div class="row-actions">
+                    <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
+                      <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
                 </div>
-                <div class="row-actions">
-                  <button class="btn-edit"   title="編集" onclick="openEditModal('${r.recordId}')">
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                  <button class="btn-delete" title="削除" onclick="deleteRecord('${r.recordId}', '${escHtml(r.氏名)}')">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </div>`;
+              </div>`;
+          }
         }
       }
       list.innerHTML = html;
