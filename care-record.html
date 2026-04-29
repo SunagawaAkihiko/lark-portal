@@ -1258,15 +1258,16 @@
         }
       }
 
-      openBatchModal(names, todayStr);
+      const title = mode === 'scheduled' ? '入浴者バイタル登録' : 'バイタル任意登録';
+      openBatchModal(names, todayStr, title);
     }
 
     // ==================== 入浴バイタル：一括入力モーダルを開く ====================
     // names配列の各利用者に対してバイタル入力グリッド行を生成する
-    function openBatchModal(names, date) {
+    function openBatchModal(names, date, title) {
       document.getElementById('batch-date').value = date;
       document.getElementById('batch-modal-title').innerHTML =
-        `<i class="fa-solid fa-bath"></i> バイタル任意登録（${names.length}名）`;
+        `<i class="fa-solid fa-bath"></i> ${title}（${names.length}名）`;
 
       const fields = TABLE_DEFS['bathing'].fields;
 
