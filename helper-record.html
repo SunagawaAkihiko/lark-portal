@@ -317,6 +317,29 @@
 
     /* ===== 異常記録モーダル専用 ===== */
     .ijo-section { display: flex; flex-direction: column; gap: 0.85rem; }
+    /* バイタル入力：care-recordの入浴バイタル・不調バイタルと同じコンパクトグリッド形式 */
+    .vital-input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(3.4rem, 1fr));
+      gap: 0.35rem;
+    }
+    .vital-input-item {
+      display: flex; flex-direction: column; gap: 0.2rem;
+    }
+    .vital-input-label {
+      font-size: 0.66rem; font-weight: 700; color: var(--text-muted);
+      text-align: center; white-space: nowrap;
+    }
+    .vital-input-field {
+      text-align: center; width: 100%; box-sizing: border-box;
+      padding: 0.45rem 0.2rem; font-family: inherit; font-size: 0.92rem;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      background: var(--bg-color); color: var(--text-color);
+    }
+    .vital-input-field:focus { outline: none; border-color: var(--primary-color); }
+    /* Chrome等のnumber入力のスピナーを非表示にして幅を節約する */
+    .vital-input-field::-webkit-inner-spin-button,
+    .vital-input-field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .check-group { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
     .check-group label {
       display: flex; align-items: center; gap: 0.35rem;
@@ -658,18 +681,31 @@
           <label class="form-label">症状の詳細</label>
           <input type="text" id="ijoShoujouSonota" class="form-input" placeholder="症状を入力してください">
         </div>
-        <!-- バイタル -->
+        <!-- バイタル（入浴バイタル・不調バイタルと同じコンパクトグリッド形式） -->
         <div class="form-row">
-          <label class="form-label">血圧</label>
-          <input type="text" id="ijoKetsuatsu" class="form-input" placeholder="例：120/80">
-        </div>
-        <div class="form-row">
-          <label class="form-label">体温（℃）</label>
-          <input type="number" id="ijoTaion" class="form-input" step="0.1" min="30" max="45" placeholder="例：38.5">
-        </div>
-        <div class="form-row">
-          <label class="form-label">SPO2（%）</label>
-          <input type="number" id="ijoSpo2" class="form-input" step="1" min="50" max="100" placeholder="例：98">
+          <label class="form-label">バイタル</label>
+          <div class="vital-input-grid">
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(上)</span>
+              <input type="number" id="ijoKetsuatsuJo" class="vital-input-field" inputmode="numeric" placeholder="120">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(下)</span>
+              <input type="number" id="ijoKetsuatsuKa" class="vital-input-field" inputmode="numeric" placeholder="80">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">脈拍</span>
+              <input type="number" id="ijoMyakuhaku" class="vital-input-field" inputmode="numeric" placeholder="72">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">体温(℃)</span>
+              <input type="number" id="ijoTaion" class="vital-input-field" inputmode="decimal" step="0.1" min="30" max="45" placeholder="36.5">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">SPO2(%)</span>
+              <input type="number" id="ijoSpo2" class="vital-input-field" inputmode="numeric" step="1" min="50" max="100" placeholder="98">
+            </div>
+          </div>
         </div>
         <!-- 対応内容プルダウン（体調不良専用） -->
         <div class="form-row">
@@ -1226,7 +1262,8 @@
     // 異常記録モーダルを初期化して表示する
     function openIjoModal() {
       // 全入力欄をリセットする（ijoMemoTaichouは削除済みのため含めない）
-      ['ijoType','ijoShoujou','ijoKetsuatsu','ijoTaion','ijoSpo2',
+      ['ijoType','ijoShoujou',
+       'ijoKetsuatsuJo','ijoKetsuatsuKa','ijoMyakuhaku','ijoTaion','ijoSpo2',
        'ijoTaioTaichou','ijoTaioSonota','ijoShoujouSonota',
        'ijoShiji','ijoService','ijoServiceSonota',
        'ijoBasho','ijoBusho','ijoTeido','ijoGaiyou','ijoMemo']
@@ -1302,11 +1339,14 @@
           if (detail) shoujou = `その他（${detail}）`;
         }
         if (shoujou) parts.push(`症状：${shoujou}`);
-        // バイタル
-        const ketsuatsu = document.getElementById('ijoKetsuatsu').value.trim();
-        const taion     = document.getElementById('ijoTaion').value;
-        const spo2      = document.getElementById('ijoSpo2').value;
-        if (ketsuatsu) parts.push(`血圧：${ketsuatsu}`);
+        // バイタル（入浴バイタル・不調バイタルと同項目）
+        const ketsuatsuJo = document.getElementById('ijoKetsuatsuJo').value;
+        const ketsuatsuKa = document.getElementById('ijoKetsuatsuKa').value;
+        const myakuhaku   = document.getElementById('ijoMyakuhaku').value;
+        const taion       = document.getElementById('ijoTaion').value;
+        const spo2        = document.getElementById('ijoSpo2').value;
+        if (ketsuatsuJo || ketsuatsuKa) parts.push(`血圧：${ketsuatsuJo || '-'}/${ketsuatsuKa || '-'}`);
+        if (myakuhaku) parts.push(`脈拍：${myakuhaku}`);
         if (taion)     parts.push(`体温：${taion}℃`);
         if (spo2)      parts.push(`SPO2：${spo2}%`);
         // 対応内容（体調不良専用）：3パターンで記録テキストを組み立てる
