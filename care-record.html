@@ -530,7 +530,6 @@
       <button class="tab-btn"        data-table="bowel">排便管理</button>
       <button class="tab-btn"        data-table="meal">食事摂取量</button>
       <button class="tab-btn"        data-table="water">水分摂取量</button>
-      <button class="tab-btn"        data-table="supply">消耗品提供</button>
     </nav>
 
     <!-- 3段目: 氏名セレクト + 全員ボタン -->
@@ -623,18 +622,18 @@
     </div>
   </div>
 
-  <!-- ===== 入浴バイタル：モード選択モーダル ===== -->
+  <!-- ===== 記録モード選択モーダル（全タブ共通） ===== -->
   <div class="modal hidden" id="bathing-mode-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2><i class="fa-solid fa-bath"></i> 入浴バイタルを記録</h2>
+        <h2 id="mode-modal-title"><i class="fa-solid fa-pen"></i> 記録を登録</h2>
         <button class="close-btn" onclick="closeModal(document.getElementById('bathing-mode-modal'))">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.75rem;">
-        <!-- 入浴：当日の入浴予定者を一括入力する -->
-        <button class="bathing-mode-btn" onclick="selectBathingMode('scheduled')">
+        <!-- 入浴：バイタルタブのみ表示する。当日の入浴予定者を一括入力する -->
+        <button class="bathing-mode-btn hidden" id="mode-btn-scheduled" onclick="selectMode('scheduled')">
           <i class="fa-solid fa-calendar-check"></i>
           <div>
             <div>入浴</div>
@@ -642,7 +641,7 @@
           </div>
         </button>
         <!-- 複数：全入居者の中から任意の人だけ一括入力する -->
-        <button class="bathing-mode-btn" onclick="selectBathingMode('all')">
+        <button class="bathing-mode-btn" onclick="selectMode('all')">
           <i class="fa-solid fa-users"></i>
           <div>
             <div>複数</div>
@@ -650,7 +649,7 @@
           </div>
         </button>
         <!-- 個別：通常の登録フォームで1名ずつ入力する -->
-        <button class="bathing-mode-btn" onclick="selectBathingMode('individual')">
+        <button class="bathing-mode-btn" onclick="selectMode('individual')">
           <i class="fa-solid fa-user"></i>
           <div>
             <div>個別</div>
@@ -736,15 +735,6 @@
         label: '水分摂取量',
         fields: [
           { name: 'ml', type: 'number', placeholder: '例: 800', unit: 'ml' },
-        ],
-      },
-      supply: {
-        label: '消耗品提供',
-        fields: [
-          // 個数を先頭（左の小ボックス）、商品をその右（rightfill）に並べて1行表示
-          { name: '個数',             type: 'number', placeholder: '例: 1' },
-          { name: '商品',             type: 'select', rightfill: true, options: ['歯ブラシ','歯磨き粉','義歯洗浄剤','マウスウォッシュ','Pトイレ消臭剤','その他'] },
-          { name: 'その他で提供したもの', type: 'text', placeholder: '商品名を入力' },
         ],
       },
     };
@@ -1010,23 +1000,14 @@
 
     // ==================== 登録モーダル制御 ====================
     fabAdd.addEventListener('click', () => {
-      // 入浴バイタルタブの場合はモード選択画面を先に表示する
-      if (currentTable === 'bathing') {
-        openModal(document.getElementById('bathing-mode-modal'));
-        return;
-      }
       const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
-      modalTitle.textContent = `${label}を登録`;
-
-      // 上部タブで選択中の事業所で氏名リストを更新する（フォームに事業所選択欄はない）
-      updateNameOptions(currentOffice, inputName);
-      // 氏名セレクトの選択もあれば引き継ぐ
-      if (selName.value) inputName.value = selName.value;
-
-      buildDynamicFields(currentTable);
-      formMsg.textContent = '';
-      formMsg.className   = 'form-msg';
-      openModal(addModal);
+      // モーダルタイトルをテーブル名に合わせる
+      document.getElementById('mode-modal-title').innerHTML =
+        `<i class="fa-solid fa-pen"></i> ${label}を登録`;
+      // 「入浴」ボタンはバイタルタブのみ表示する
+      document.getElementById('mode-btn-scheduled')
+        .classList.toggle('hidden', currentTable !== 'bathing');
+      openModal(document.getElementById('bathing-mode-modal'));
     });
 
     closeAddModal.addEventListener('click', () => closeModal(addModal));
@@ -1201,18 +1182,18 @@
     closeEditModal.addEventListener('click', () => closeModal(editModal));
     editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(editModal); });
 
-    // ==================== 入浴バイタル：モード選択 ====================
-    // モード選択モーダルで選択後に呼ばれる。
-    // scheduled=入浴予定者、all=全利用者、individual=個別登録フォーム
-    async function selectBathingMode(mode) {
+    // ==================== 記録モード選択（全タブ共通） ====================
+    // scheduled=入浴予定者(バイタルのみ)、all=全入居者から任意、individual=個別フォーム
+    async function selectMode(mode) {
       closeModal(document.getElementById('bathing-mode-modal'));
+      const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
 
-      // 個別モードは通常の登録フォームをそのまま開く
+      // 個別モード：通常の登録フォームをそのまま開く
       if (mode === 'individual') {
-        modalTitle.textContent = 'バイタル個別登録';
+        modalTitle.textContent = `${label}個別登録`;
         updateNameOptions(currentOffice, inputName);
         if (selName.value) inputName.value = selName.value;
-        buildDynamicFields('bathing');
+        buildDynamicFields(currentTable);
         formMsg.textContent = '';
         formMsg.className   = 'form-msg';
         openModal(addModal);
@@ -1221,73 +1202,103 @@
 
       const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
       let names = [];
+      let title = '';
 
       if (mode === 'scheduled') {
-        // APIで本日の入浴予定者を取得する
+        // バイタルタブ専用：APIで本日の入浴予定者を取得する
         try {
           const res  = await fetch(`${API_BASE}/api/care/bathing-scheduled?office=${encodeURIComponent(currentOffice)}&date=${todayStr}`);
           const data = await res.json();
           if (!data.ok) throw new Error(data.error);
           names = data.names;
-          if (names.length === 0) {
-            alert('本日の入浴予定者が見つかりません。');
-            return;
-          }
+          if (names.length === 0) { alert('本日の入浴予定者が見つかりません。'); return; }
         } catch (err) {
-          alert('入浴予定者の取得に失敗しました: ' + err.message);
-          return;
+          alert('入浴予定者の取得に失敗しました: ' + err.message); return;
         }
+        title = '入浴者バイタル登録';
       } else {
-        // 全員モード：顧客情報から事業所の全利用者を使う
+        // 複数モード：officeNamesMapから全入居者を取得する
         names = officeNamesMap[currentOffice] || [];
-        if (names.length === 0) {
-          alert('利用者情報が取得できていません。');
-          return;
-        }
+        if (names.length === 0) { alert('利用者情報が取得できていません。'); return; }
+        title = `${label}任意登録`;
       }
 
-      const title = mode === 'scheduled' ? '入浴者バイタル登録' : 'バイタル任意登録';
       openBatchModal(names, todayStr, title);
     }
 
-    // ==================== 入浴バイタル：一括入力モーダルを開く ====================
-    // names配列の各利用者に対してバイタル入力グリッド行を生成する
+    // ==================== 一括入力モーダルを開く（全タブ共通） ====================
+    // currentTableのフィールド定義に従い各利用者の入力行を動的生成する
     function openBatchModal(names, date, title) {
       document.getElementById('batch-date').value = date;
       document.getElementById('batch-modal-title').innerHTML =
-        `<i class="fa-solid fa-bath"></i> ${title}（${names.length}名）`;
+        `<i class="fa-solid fa-pen"></i> ${title}（${names.length}名）`;
 
-      const fields = TABLE_DEFS['bathing'].fields;
-
-      // 利用者ごとに氏名ヘッダー＋バイタル入力グリッドの行を生成する
+      // 利用者ごとに氏名ヘッダー＋フィールド入力欄の行を生成する
       const html = names.map(name => {
         const safeN = escHtml(name);
-        const gridItems = fields.map(f => {
-          const ml   = f.maxlen    ? `data-maxlen="${f.maxlen}"`       : '';
-          const im   = f.inputmode ? `inputmode="${f.inputmode}"`      : '';
-          const ph   = f.placeholder ? `placeholder="${f.placeholder.replace('例: ', '')}"` : '';
-          const type = f.type === 'text' ? 'text' : 'number';
-          return `<div class="vital-input-item">
-              <span class="vital-input-label">${escHtml(f.name)}</span>
-              <input type="${type}" class="vital-input-field" ${im} ${ml} ${ph}
-                data-person="${safeN}" data-field="${escHtml(f.name)}">
-            </div>`;
-        }).join('');
         return `<div class="batch-person-row">
-            <div class="batch-person-name">${safeN}</div>
-            <div class="batch-person-fields">
-              <div class="vital-input-grid">${gridItems}</div>
-            </div>
-          </div>`;
+          <div class="batch-person-name">${safeN}</div>
+          <div class="batch-person-fields">${buildBatchPersonFields(currentTable, name)}</div>
+        </div>`;
       }).join('');
 
       document.getElementById('batch-person-list').innerHTML = html;
       document.getElementById('batch-form-msg').textContent = '';
       document.getElementById('batch-form-msg').className   = 'form-msg';
 
-      // 全利用者の入力欄を横断した自動フォーカス移動を設定する
       initBatchAutoAdvance();
       openModal(document.getElementById('batch-modal'));
+    }
+
+    // ==================== 一括入力：1人分のフィールドHTML生成 ====================
+    // maxlenを持つ項目はバイタルグリッドに、selectや他の入力は縦並びに配置する
+    function buildBatchPersonFields(tableKey, personName) {
+      const fields = TABLE_DEFS[tableKey]?.fields || [];
+      const safeN  = escHtml(personName);
+
+      // maxlenあり（バイタル系）→ グリッド / それ以外 → 縦並び
+      const gridFields  = fields.filter(f => f.maxlen);
+      const plainFields = fields.filter(f => !f.maxlen);
+      let html = '';
+
+      if (gridFields.length > 0) {
+        html += '<div class="vital-input-grid">' +
+          gridFields.map(f => {
+            const ml   = `data-maxlen="${f.maxlen}"`;
+            const im   = f.inputmode ? `inputmode="${f.inputmode}"` : '';
+            const ph   = f.placeholder ? `placeholder="${f.placeholder.replace('例: ', '')}"` : '';
+            const type = f.type === 'text' ? 'text' : 'number';
+            return `<div class="vital-input-item">
+              <span class="vital-input-label">${escHtml(f.name)}</span>
+              <input type="${type}" class="vital-input-field" ${im} ${ml} ${ph}
+                data-person="${safeN}" data-field="${escHtml(f.name)}">
+            </div>`;
+          }).join('') +
+        '</div>';
+      }
+
+      // select / number / text（maxlenなし）は縦並びで描画する
+      const fieldStyle = 'width:100%;padding:0.45rem 0.6rem;border:1.5px solid var(--border-color);border-radius:8px;font-family:inherit;font-size:0.9rem;background:var(--bg-color);color:var(--text-color)';
+      plainFields.forEach(f => {
+        const lbl = `<div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem">${escHtml(f.name)}</div>`;
+        if (f.type === 'select') {
+          const opts = (f.options || []).map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
+          html += `<div style="margin-top:0.45rem">${lbl}
+            <select style="${fieldStyle}" data-person="${safeN}" data-field="${escHtml(f.name)}">
+              <option value="">選択</option>${opts}
+            </select></div>`;
+        } else {
+          const ph   = f.placeholder ? `placeholder="${f.placeholder}"` : '';
+          const im   = f.inputmode   ? `inputmode="${f.inputmode}"`   : '';
+          const step = f.step        ? `step="${f.step}"`             : '';
+          const type = f.type === 'text' ? 'text' : 'number';
+          html += `<div style="margin-top:0.45rem">${lbl}
+            <input type="${type}" ${ph} ${im} ${step} style="${fieldStyle}"
+              data-person="${safeN}" data-field="${escHtml(f.name)}"></div>`;
+        }
+      });
+
+      return html;
     }
 
     // ==================== 一括入力：バイタル自動フォーカス移動 ====================
@@ -1326,15 +1337,16 @@
       const requests = rows.map(row => {
         const name   = row.querySelector('.batch-person-name')?.textContent?.trim() || '';
         const fields = {};
-        row.querySelectorAll('input[data-field]').forEach(inp => {
-          if (inp.value !== '') fields[inp.dataset.field] = inp.value;
+        // input・select 両方から data-field を収集する
+        row.querySelectorAll('[data-field]').forEach(el => {
+          if (el.value !== '') fields[el.dataset.field] = el.value;
         });
         return { name, fields };
-      // fieldsが空（バイタル未入力）の人はスキップする
+      // 未入力の人はスキップする
       }).filter(r => r.name && Object.keys(r.fields).length > 0);
 
       if (requests.length === 0) {
-        document.getElementById('batch-form-msg').textContent = '入力されたバイタルがありません。';
+        document.getElementById('batch-form-msg').textContent = '入力されたデータがありません。';
         document.getElementById('batch-form-msg').className   = 'form-msg err';
         return;
       }
@@ -1351,7 +1363,7 @@
             fetch(`${API_BASE}/api/care/record`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ table: 'bathing', date, office: currentOffice, name, fields }),
+              body: JSON.stringify({ table: currentTable, date, office: currentOffice, name, fields }),
             }).then(r => r.json())
           )
         );
