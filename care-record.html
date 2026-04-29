@@ -1221,8 +1221,7 @@
 
       // 個別モードは通常の登録フォームをそのまま開く
       if (mode === 'individual') {
-        const label = TABLE_DEFS['bathing']?.label || '入浴バイタル';
-        modalTitle.textContent = `${label}を登録`;
+        modalTitle.textContent = 'バイタル個別登録';
         updateNameOptions(currentOffice, inputName);
         if (selName.value) inputName.value = selName.value;
         buildDynamicFields('bathing');
@@ -1267,7 +1266,7 @@
     function openBatchModal(names, date) {
       document.getElementById('batch-date').value = date;
       document.getElementById('batch-modal-title').innerHTML =
-        `<i class="fa-solid fa-bath"></i> 入浴バイタル一括入力（${names.length}名）`;
+        `<i class="fa-solid fa-bath"></i> バイタル任意登録（${names.length}名）`;
 
       const fields = TABLE_DEFS['bathing'].fields;
 
