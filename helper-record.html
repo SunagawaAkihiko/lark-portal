@@ -676,20 +676,37 @@
           <label class="form-label">対応内容</label>
           <select id="ijoTaioTaichou" class="form-select" onchange="onIjoTaioTaichouChange()">
             <option value="">選択してください</option>
-            <option>頓服服用</option>
-            <option>クーリング</option>
+            <option>頓服服用にて経過観察</option>
+            <option>クーリングにて経過観察</option>
+            <option>かかりつけ医に連絡</option>
+            <option>訪問看護に連絡</option>
             <option>その他</option>
           </select>
+        </div>
+        <!-- かかりつけ医・訪問看護を選択したときの指示内容入力欄 -->
+        <div class="form-row hidden" id="ijoShijiRow">
+          <label class="form-label">受けた指示内容詳細</label>
+          <textarea id="ijoShiji" class="form-input" rows="2" placeholder="受けた指示の内容を記入してください"></textarea>
         </div>
         <!-- 対応内容「その他」の入力欄 -->
         <div class="form-row hidden" id="ijoTaioSonotaRow">
           <label class="form-label">対応内容の詳細</label>
           <input type="text" id="ijoTaioSonota" class="form-input" placeholder="対応内容を入力してください">
         </div>
-        <!-- 詳細メモ（体調不良用） -->
+        <!-- サービス実施についてプルダウン -->
         <div class="form-row">
-          <label class="form-label">詳細メモ</label>
-          <textarea id="ijoMemoTaichou" class="form-input" rows="2" placeholder="詳細を記入してください"></textarea>
+          <label class="form-label">サービス実施について</label>
+          <select id="ijoService" class="form-select" onchange="onIjoServiceChange()">
+            <option value="">選択してください</option>
+            <option>通常通り実施</option>
+            <option>居室にて実施</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- サービス実施「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoServiceSonotaRow">
+          <label class="form-label">どういう形でサービス実施しましたか？</label>
+          <input type="text" id="ijoServiceSonota" class="form-input" placeholder="実施内容を入力してください">
         </div>
       </div>
 
@@ -1208,14 +1225,15 @@
 
     // 異常記録モーダルを初期化して表示する
     function openIjoModal() {
-      // 全入力欄をリセットする
+      // 全入力欄をリセットする（ijoMemoTaichouは削除済みのため含めない）
       ['ijoType','ijoShoujou','ijoKetsuatsu','ijoTaion','ijoSpo2',
-       'ijoTaioTaichou','ijoTaioSonota','ijoShoujouSonota','ijoMemoTaichou',
+       'ijoTaioTaichou','ijoTaioSonota','ijoShoujouSonota',
+       'ijoShiji','ijoService','ijoServiceSonota',
        'ijoBasho','ijoBusho','ijoTeido','ijoGaiyou','ijoMemo']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       document.querySelectorAll('#ijoModal input[type=checkbox]').forEach(cb => cb.checked = false);
       // 条件表示欄と全セクションを非表示にリセットする
-      ['ijoShoujouSonotaRow','ijoTaioSonotaRow'].forEach(id =>
+      ['ijoShoujouSonotaRow','ijoTaioSonotaRow','ijoShijiRow','ijoServiceSonotaRow'].forEach(id =>
         document.getElementById(id).classList.add('hidden')
       );
       ['taichou','tento','sonota','taio'].forEach(k =>
@@ -1248,10 +1266,22 @@
       document.getElementById('ijoShoujouSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
-    // 対応内容プルダウンで「その他」を選んだとき入力欄を表示する
+    // 対応内容プルダウンの選択に応じて条件欄を切り替える
+    // 「かかりつけ医に連絡」「訪問看護に連絡」→ 指示内容欄を表示
+    // 「その他」→ その他詳細欄を表示
+    // それ以外 → 両方非表示
     function onIjoTaioTaichouChange() {
-      const isSonota = document.getElementById('ijoTaioTaichou').value === 'その他';
+      const val = document.getElementById('ijoTaioTaichou').value;
+      const isRenraku = val === 'かかりつけ医に連絡' || val === '訪問看護に連絡';
+      const isSonota  = val === 'その他';
+      document.getElementById('ijoShijiRow').classList.toggle('hidden', !isRenraku);
       document.getElementById('ijoTaioSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // サービス実施プルダウンで「その他」を選んだとき入力欄を表示する
+    function onIjoServiceChange() {
+      const isSonota = document.getElementById('ijoService').value === 'その他';
+      document.getElementById('ijoServiceSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
     // 異常記録を保存する：フォームの入力値を記録内容テキストに変換してPUTする
@@ -1279,16 +1309,25 @@
         if (ketsuatsu) parts.push(`血圧：${ketsuatsu}`);
         if (taion)     parts.push(`体温：${taion}℃`);
         if (spo2)      parts.push(`SPO2：${spo2}%`);
-        // 対応内容（体調不良専用）
+        // 対応内容（体調不良専用）：3パターンで記録テキストを組み立てる
         let taio = document.getElementById('ijoTaioTaichou').value;
-        if (taio === 'その他') {
+        if (taio === 'かかりつけ医に連絡' || taio === '訪問看護に連絡') {
+          // 連絡系：受けた指示内容を末尾に付加する
+          const shiji = document.getElementById('ijoShiji').value.trim();
+          if (shiji) taio = `${taio}（指示内容：${shiji}）`;
+        } else if (taio === 'その他') {
+          // その他：詳細テキストを付加する
           const detail = document.getElementById('ijoTaioSonota').value.trim();
           if (detail) taio = `その他（${detail}）`;
         }
         if (taio) parts.push(`対応：${taio}`);
-        // 詳細メモ（体調不良用）
-        const memo = document.getElementById('ijoMemoTaichou').value.trim();
-        if (memo) parts.push(`詳細：${memo}`);
+        // サービス実施について
+        let service = document.getElementById('ijoService').value;
+        if (service === 'その他') {
+          const detail = document.getElementById('ijoServiceSonota').value.trim();
+          if (detail) service = `その他（${detail}）`;
+        }
+        if (service) parts.push(`サービス実施：${service}`);
       } else if (type === '転倒・怪我') {
         const basho = document.getElementById('ijoBasho').value;
         if (basho) parts.push(`発生場所：${basho}`);
