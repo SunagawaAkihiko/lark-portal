@@ -244,6 +244,36 @@
       border-radius: 12px;
     }
 
+    /* ==================== グループ化表示（helper-recordと統一デザイン） ==================== */
+    .record-group-area {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    /* 日付グループのヘッダー帯：濃いブラウンで強調する */
+    .date-group-header {
+      padding: 0.28rem 0.75rem;
+      background: #4a3f35;
+      border-bottom: 2px solid #2e2620;
+      font-size: 0.8rem; font-weight: 700; color: #ffffff;
+      letter-spacing: 0.05em;
+    }
+    /* 氏名サブグループのヘッダー帯：オレンジ系で日付帯と差別化する */
+    .name-group-header {
+      padding: 0.22rem 1.1rem;
+      background: #e8a070;
+      border-bottom: 1px solid #c8784a;
+      font-size: 0.82rem; font-weight: 700; color: #fff;
+    }
+    /* データカード行：グリッドのみ表示（日付・氏名はグループ帯に集約） */
+    .record-group-card {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    /* グループエリアの最後の子要素は下線不要 */
+    .record-group-area > *:last-child { border-bottom: none; }
+
     /* ==================== FABボタン ==================== */
     /* 共通ベース */
     .fab {
@@ -518,22 +548,23 @@
       vital: {
         label: '不調時バイタル一覧',
         fields: [
-          { name: '血圧(上)', type: 'number', placeholder: '例: 120' },
-          { name: '血圧(下)', type: 'number', placeholder: '例: 80'  },
-          { name: '脈拍',     type: 'number', placeholder: '例: 72'  },
-          { name: '体温',     type: 'number', placeholder: '例: 36.5', step: '0.1' },
-          { name: 'SPO2',     type: 'number', placeholder: '例: 98'  },
+          { name: '血圧(上)', type: 'number', inputmode: 'numeric',  placeholder: '例: 120', maxlen: 3 },
+          { name: '血圧(下)', type: 'number', inputmode: 'numeric',  placeholder: '例: 80',  maxlen: 2 },
+          { name: '脈拍',     type: 'number', inputmode: 'numeric',  placeholder: '例: 72',  maxlen: 2 },
+          // type=numberは小数入力中にvalueが空になるためtype=textで代替する
+          { name: '体温',     type: 'text',   inputmode: 'decimal',  placeholder: '例: 36.5', maxlen: 4 },
+          { name: 'SPO2',     type: 'number', inputmode: 'numeric',  placeholder: '例: 98',  maxlen: 3 },
         ],
       },
       bathing: {
         label: '入浴時バイタル',
         fields: [
-          { name: '血圧(上)', type: 'number', placeholder: '例: 120' },
-          { name: '血圧(下)', type: 'number', placeholder: '例: 80'  },
-          { name: '脈拍',     type: 'number', placeholder: '例: 72'  },
-          { name: '体温',     type: 'number', placeholder: '例: 36.5', step: '0.1' },
-          { name: 'SPO2',     type: 'number', placeholder: '例: 98'  },
-          // 勤務区分は非表示（ユーザー指示により削除）
+          { name: '血圧(上)', type: 'number', inputmode: 'numeric',  placeholder: '例: 120', maxlen: 3 },
+          { name: '血圧(下)', type: 'number', inputmode: 'numeric',  placeholder: '例: 80',  maxlen: 2 },
+          { name: '脈拍',     type: 'number', inputmode: 'numeric',  placeholder: '例: 72',  maxlen: 2 },
+          // type=numberは小数入力中にvalueが空になるためtype=textで代替する
+          { name: '体温',     type: 'text',   inputmode: 'decimal',  placeholder: '例: 36.5', maxlen: 4 },
+          { name: 'SPO2',     type: 'number', inputmode: 'numeric',  placeholder: '例: 98',  maxlen: 3 },
         ],
       },
       weight: {
@@ -710,14 +741,15 @@
         }
 
         const tableDef = TABLE_DEFS[currentTable];
-        recordList.innerHTML = data.data.map(r => {
-          // 各フィールドをA案のボックス形式でHTMLに変換する
-          const gridItems = tableDef.fields
+
+        // 各フィールドをボックス形式のHTMLに変換するヘルパー
+        function buildGridItems(r) {
+          return tableDef.fields
             .filter(f => r.fields[f.name] !== undefined)
             .map(f => {
               const val = r.fields[f.name];
-              if (f.type === 'number') {
-                // 数値: 大きく中央に、単位は右隣に小さく
+              if (f.type === 'number' || f.type === 'text') {
+                // 数値・体温：大きく中央に、単位は右隣に小さく
                 const unit = f.unit ? `<span class="record-grid-unit">${f.unit}</span>` : '';
                 return `<div class="record-grid-item">
                   <span class="record-grid-label">${f.name}</span>
@@ -737,17 +769,37 @@
                 </div>`;
               }
             }).join('');
+        }
 
-          // 左列に日付・氏名、右列にデータグリッドを横並びで配置
-          // 事業所は上部タブで選択済みのためカード内には表示しない
-          return `<div class="record-card">
-            <div class="record-header">
-              <span class="record-date">${r.date || '—'}</span>
-              <span class="record-name">${r.name || '—'}</span>
-            </div>
-            <div class="record-grid">${gridItems || '<span style="color:var(--text-muted);font-size:.88rem">データなし</span>'}</div>
-          </div>`;
-        }).join('');
+        // 日付降順でソートしてから日付→氏名の2段グループに分類する
+        const sorted = [...data.data].sort((a, b) => {
+          return new Date(b.date || 0) - new Date(a.date || 0);
+        });
+        const dateGroups = new Map();
+        for (const r of sorted) {
+          const dk = r.date || '—';
+          const nk = r.name || '—';
+          if (!dateGroups.has(dk)) dateGroups.set(dk, new Map());
+          const nameMap = dateGroups.get(dk);
+          if (!nameMap.has(nk)) nameMap.set(nk, []);
+          nameMap.get(nk).push(r);
+        }
+
+        // グループヘッダー帯＋データカード行でHTMLを組み立てる
+        let html = '';
+        for (const [date, nameMap] of dateGroups) {
+          html += `<div class="date-group-header">${date}</div>`;
+          for (const [name, recs] of nameMap) {
+            html += `<div class="name-group-header">${name}</div>`;
+            for (const r of recs) {
+              const gridItems = buildGridItems(r);
+              html += `<div class="record-group-card">
+                <div class="record-grid">${gridItems || '<span style="color:var(--text-muted);font-size:.88rem">データなし</span>'}</div>
+              </div>`;
+            }
+          }
+        }
+        recordList.innerHTML = `<div class="record-group-area">${html}</div>`;
 
       } catch (err) {
         recordList.innerHTML = `<div class="no-records" style="color:#e63946"><i class="fa-solid fa-triangle-exclamation"></i><br>${err.message}</div>`;
@@ -807,18 +859,44 @@
           const step = f.step ? `step="${f.step}"` : '';
           const ph   = f.placeholder ? `placeholder="${f.placeholder}"` : '';
           const unit = f.unit ? `<span style="font-size:.82rem;color:var(--text-muted);margin-left:.3rem">${f.unit}</span>` : '';
+          const im   = f.inputmode ? `inputmode="${f.inputmode}"` : 'inputmode="decimal"';
+          const ml   = f.maxlen   ? `data-maxlen="${f.maxlen}"`   : '';
           return `<div class="form-group">
             <label for="${id}">${f.name}${unit}</label>
-            <input type="number" id="${id}" data-field="${f.name}" ${step} ${ph} inputmode="decimal">
+            <input type="number" id="${id}" data-field="${f.name}" ${step} ${ph} ${im} ${ml}>
           </div>`;
         } else {
+          // type=text：inputmodeとmaxlenを付与して自動フォーカス移動に対応する
           const ph = f.placeholder ? `placeholder="${f.placeholder}"` : '';
+          const im = f.inputmode   ? `inputmode="${f.inputmode}"`     : '';
+          const ml = f.maxlen      ? `data-maxlen="${f.maxlen}"`      : '';
           return `<div class="form-group">
             <label for="${id}">${f.name}</label>
-            <input type="text" id="${id}" data-field="${f.name}" ${ph}>
+            <input type="text" id="${id}" data-field="${f.name}" ${ph} ${im} ${ml}>
           </div>`;
         }
       }).join('');
+      // フィールド生成後に自動フォーカス移動を初期化する
+      initAutoAdvance();
+    }
+
+    // ==================== バイタル入力自動フォーカス移動 ====================
+    // data-maxlen を持つ入力欄で、入力値が指定桁数に達したら DOM 順で次の入力欄へ移動する
+    function initAutoAdvance() {
+      const inputs = [...dynamicFields.querySelectorAll('input[data-maxlen]')];
+      inputs.forEach((input, i) => {
+        // 前回設定したリスナーを上書きするためcloneで置き換える（重複登録防止）
+        const fresh = input.cloneNode(true);
+        input.parentNode.replaceChild(fresh, input);
+        inputs[i] = fresh;
+        fresh.addEventListener('input', () => {
+          const maxLen = parseInt(fresh.dataset.maxlen, 10);
+          if (String(fresh.value).length >= maxLen) {
+            const next = inputs[i + 1];
+            if (next) { next.focus(); if (next.select) next.select(); }
+          }
+        });
+      });
     }
 
     // ==================== フォーム送信（登録） ====================
