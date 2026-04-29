@@ -687,23 +687,28 @@
           <div class="vital-input-grid">
             <div class="vital-input-item">
               <span class="vital-input-label">血圧(上)</span>
-              <input type="number" id="ijoKetsuatsuJo" class="vital-input-field" inputmode="numeric" placeholder="120">
+              <input type="number" id="ijoKetsuatsuJo" class="vital-input-field" inputmode="numeric" placeholder="120"
+                data-maxlen="3" data-next="ijoKetsuatsuKa">
             </div>
             <div class="vital-input-item">
               <span class="vital-input-label">血圧(下)</span>
-              <input type="number" id="ijoKetsuatsuKa" class="vital-input-field" inputmode="numeric" placeholder="80">
+              <input type="number" id="ijoKetsuatsuKa" class="vital-input-field" inputmode="numeric" placeholder="80"
+                data-maxlen="2" data-next="ijoMyakuhaku">
             </div>
             <div class="vital-input-item">
               <span class="vital-input-label">脈拍</span>
-              <input type="number" id="ijoMyakuhaku" class="vital-input-field" inputmode="numeric" placeholder="72">
+              <input type="number" id="ijoMyakuhaku" class="vital-input-field" inputmode="numeric" placeholder="72"
+                data-maxlen="3" data-next="ijoTaion">
             </div>
             <div class="vital-input-item">
               <span class="vital-input-label">体温(℃)</span>
-              <input type="number" id="ijoTaion" class="vital-input-field" inputmode="decimal" step="0.1" min="30" max="45" placeholder="36.5">
+              <input type="text" id="ijoTaion" class="vital-input-field" inputmode="decimal" placeholder="36.5"
+                data-maxlen="4" data-next="ijoSpo2">
             </div>
             <div class="vital-input-item">
               <span class="vital-input-label">SPO2(%)</span>
-              <input type="number" id="ijoSpo2" class="vital-input-field" inputmode="numeric" step="1" min="50" max="100" placeholder="98">
+              <input type="number" id="ijoSpo2" class="vital-input-field" inputmode="numeric" step="1" min="50" max="100" placeholder="98"
+                data-maxlen="3">
             </div>
           </div>
         </div>
@@ -1793,6 +1798,25 @@
     // ============================================================
     // 起動
     // ============================================================
+
+    // ============================================================
+    // バイタル入力：自動フォーカス移動
+    // data-maxlen 桁数に達したら data-next で指定した次フィールドへ自動で移動する。
+    // type=number は小数入力中に value が空になる場合があるため体温は type=text に変更済み。
+    // ============================================================
+    document.querySelectorAll('.vital-input-field[data-next]').forEach(input => {
+      input.addEventListener('input', () => {
+        const maxLen = parseInt(input.dataset.maxlen, 10);
+        if (!isNaN(maxLen) && String(input.value).length >= maxLen) {
+          const next = document.getElementById(input.dataset.next);
+          if (next) {
+            next.focus();
+            // テキスト全選択して上書き入力しやすくする（select()はnumber型では無視される）
+            if (next.select) next.select();
+          }
+        }
+      });
+    });
 
     // 管理者モード（?mode=admin）のときのみ一時停止管理タブを表示する
     if (isAdmin) {
