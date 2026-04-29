@@ -1342,9 +1342,14 @@
           if (inp.value !== '') fields[inp.dataset.field] = inp.value;
         });
         return { name, fields };
-      }).filter(r => r.name);
+      // fieldsが空（バイタル未入力）の人はスキップする
+      }).filter(r => r.name && Object.keys(r.fields).length > 0);
 
-      if (requests.length === 0) return;
+      if (requests.length === 0) {
+        document.getElementById('batch-form-msg').textContent = '入力されたバイタルがありません。';
+        document.getElementById('batch-form-msg').className   = 'form-msg err';
+        return;
+      }
 
       const btn = document.getElementById('batch-submit-btn');
       btn.disabled    = true;
