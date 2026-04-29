@@ -604,6 +604,17 @@
       },
     };
 
+    // ==================== 日付フォーマット ====================
+    // "YYYY-MM-DD" 文字列をヘルパー記録と同じ "M/D(曜)" 形式に変換する
+    function fmtDateShort(dateStr) {
+      if (!dateStr || dateStr === '—') return dateStr || '—';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      if (!y || !m || !d) return dateStr;
+      const days = ['日','月','火','水','木','金','土'];
+      const dow  = new Date(y, m - 1, d).getDay();
+      return `${m}/${d}(${days[dow]})`;
+    }
+
     // ==================== 状態変数 ====================
     let currentTable  = 'bathing'; // 現在表示中のテーブルキー（入浴バイタルが先頭）
     let currentOffice = '大浦家';  // 現在選択中の事業所
@@ -788,7 +799,7 @@
         // グループヘッダー帯＋データカード行でHTMLを組み立てる
         let html = '';
         for (const [date, nameMap] of dateGroups) {
-          html += `<div class="date-group-header">${date}</div>`;
+          html += `<div class="date-group-header">${fmtDateShort(date)}</div>`;
           for (const [name, recs] of nameMap) {
             html += `<div class="name-group-header">${name}</div>`;
             for (const r of recs) {
