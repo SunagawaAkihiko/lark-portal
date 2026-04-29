@@ -274,6 +274,27 @@
     /* グループエリアの最後の子要素は下線不要 */
     .record-group-area > *:last-child { border-bottom: none; }
 
+    /* ==================== 記録選択・アクションバー ==================== */
+    /* タップで選択した記録のハイライト */
+    .record-group-card { cursor: pointer; }
+    .record-group-card.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
+    /* 下部アクションバー：helper-recordと同デザイン */
+    .record-action-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      display: flex; z-index: 30;
+      border-top: 2px solid var(--border-color);
+      box-shadow: 0 -3px 14px rgba(0,0,0,0.15);
+    }
+    .rab-btn {
+      flex: 1; padding: 1rem 0.4rem; border: none;
+      font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      transition: filter 0.12s;
+    }
+    .rab-btn:active { filter: brightness(0.88); }
+    .rab-edit   { background: #5c6bc0; color: #fff; border-right: 1px solid #3949ab; }
+    .rab-delete { background: #c62828; color: #fff; }
+
     /* ==================== FABボタン ==================== */
     /* 共通ベース */
     .fab {
@@ -486,15 +507,20 @@
     </div>
   </main>
 
-  <!-- ===== 削除FABボタン（左下） ===== -->
-  <button class="fab fab-delete" id="fab-delete">
-    <i class="fa-solid fa-trash"></i> 削除
-  </button>
-
   <!-- ===== 登録FABボタン（右下） ===== -->
   <button class="fab fab-add" id="fab-add">
     <i class="fa-solid fa-pen"></i> 記録
   </button>
+
+  <!-- 記録選択時に表示される下部アクションバー（スクリプトより前に配置してDOMを確保する） -->
+  <div id="recordActionBar" class="record-action-bar hidden">
+    <button class="rab-btn rab-edit" onclick="onEditRecord()">
+      <i class="fa-solid fa-pen"></i> 編集
+    </button>
+    <button class="rab-btn rab-delete" onclick="onDeleteRecord()">
+      <i class="fa-solid fa-trash"></i> 削除
+    </button>
+  </div>
 
   <!-- ===== 登録モーダル（ボトムシート） ===== -->
   <div class="modal hidden" id="add-modal">
@@ -522,16 +548,32 @@
     </div>
   </div>
 
-  <!-- ===== 削除モーダル（ボトムシート） ===== -->
-  <div class="modal hidden" id="delete-modal">
+  <!-- ===== 編集モーダル（ボトムシート） ===== -->
+  <div class="modal hidden" id="edit-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2><i class="fa-solid fa-trash" style="margin-right:.4rem"></i>削除するレコードを選択</h2>
-        <button class="close-btn" id="close-delete-modal"><i class="fa-solid fa-xmark"></i></button>
+        <h2 id="edit-modal-title"><i class="fa-solid fa-pen"></i> 記録を編集</h2>
+        <button class="close-btn" id="close-edit-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div id="delete-record-list">
-        <!-- 現在表示中のレコード一覧がJSで挿入される -->
-      </div>
+      <form id="edit-form">
+        <input type="hidden" id="edit-record-id">
+        <div class="form-group">
+          <label>日付</label>
+          <input type="date" id="edit-date">
+        </div>
+        <div class="form-group">
+          <label>氏名</label>
+          <input type="text" id="edit-name" readonly
+            style="-webkit-appearance:none;background:#f0e0d0;color:var(--text-muted);">
+          <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.2rem;">
+            ※ 氏名の変更はLarkで直接行ってください
+          </div>
+        </div>
+        <!-- テーブル固有フィールド（JSで動的生成） -->
+        <div id="edit-dynamic-fields"></div>
+        <button type="submit" class="submit-btn" id="edit-submit-btn">保存する</button>
+        <div class="form-msg" id="edit-form-msg"></div>
+      </form>
     </div>
   </div>
 
@@ -630,19 +672,21 @@
     const loadingEl      = document.getElementById('loading');
     const recordList     = document.getElementById('record-list');
     const fabAdd         = document.getElementById('fab-add');
-    const fabDelete      = document.getElementById('fab-delete');
     const addModal       = document.getElementById('add-modal');
-    const deleteModal    = document.getElementById('delete-modal');
+    const editModal      = document.getElementById('edit-modal');
     const closeAddModal  = document.getElementById('close-add-modal');
-    const closeDeleteModal = document.getElementById('close-delete-modal');
+    const closeEditModal = document.getElementById('close-edit-modal');
     const modalTitle     = document.getElementById('modal-title');
     const addForm        = document.getElementById('add-form');
+    const editForm       = document.getElementById('edit-form');
     const inputDate      = document.getElementById('input-date');
     const inputName      = document.getElementById('input-name');
-    const dynamicFields  = document.getElementById('dynamic-fields');
+    const dynamicFields      = document.getElementById('dynamic-fields');
+    const editDynamicFields  = document.getElementById('edit-dynamic-fields');
     const submitBtn      = document.getElementById('submit-btn');
+    const editSubmitBtn  = document.getElementById('edit-submit-btn');
     const formMsg        = document.getElementById('form-msg');
-    const deleteRecordList = document.getElementById('delete-record-list');
+    const editFormMsg    = document.getElementById('edit-form-msg');
 
     // ==================== 初期化 ====================
     // 今日の日付を日付入力の初期値にする
@@ -652,10 +696,36 @@
     // ページ読み込み時にデフォルト事業所の全員データを自動表示する
     loadRecords(currentOffice, '');
 
+    // ==================== 記録選択・アクションバー ====================
+    let selectedRecordId = null;
+
+    // 選択状態を解除してアクションバーを隠す
+    function clearSelection() {
+      selectedRecordId = null;
+      document.querySelectorAll('.record-group-card.selected').forEach(e => e.classList.remove('selected'));
+      const bar = document.getElementById('recordActionBar');
+      if (bar) bar.classList.add('hidden');
+    }
+
+    // 記録カードをタップ：同じ行なら選択解除、別の行なら選択切り替え
+    function selectRecord(el, id) {
+      if (selectedRecordId === id) { clearSelection(); return; }
+      document.querySelectorAll('.record-group-card.selected').forEach(e => e.classList.remove('selected'));
+      selectedRecordId = id;
+      el.classList.add('selected');
+      document.getElementById('recordActionBar').classList.remove('hidden');
+    }
+
+    // 選択中のレコードオブジェクトを返す
+    function getSelectedRecord() {
+      return loadedRecords.find(r => r.id === selectedRecordId) || null;
+    }
+
     // ==================== テーブルタブ切り替え ====================
     tabBar.addEventListener('click', e => {
       const btn = e.target.closest('.tab-btn');
       if (!btn) return;
+      clearSelection();
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTable = btn.dataset.table;
@@ -668,6 +738,7 @@
     officeTabs.addEventListener('click', e => {
       const btn = e.target.closest('.office-tab');
       if (!btn) return;
+      clearSelection();
       document.querySelectorAll('.office-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentOffice = btn.dataset.office;
@@ -687,6 +758,7 @@
 
     // ==================== 全員ボタン → 事業所全データ取得 ====================
     allBtn.addEventListener('click', () => {
+      clearSelection();
       selName.value = '';
       loadRecords(currentOffice, '');
     });
@@ -804,7 +876,7 @@
             html += `<div class="name-group-header">${name}</div>`;
             for (const r of recs) {
               const gridItems = buildGridItems(r);
-              html += `<div class="record-group-card">
+              html += `<div class="record-group-card" onclick="selectRecord(this,'${r.id}')" data-id="${r.id}">
                 <div class="record-grid">${gridItems || '<span style="color:var(--text-muted);font-size:.88rem">データなし</span>'}</div>
               </div>`;
             }
@@ -887,14 +959,15 @@
           </div>`;
         }
       }).join('');
-      // フィールド生成後に自動フォーカス移動を初期化する
-      initAutoAdvance();
+      // フィールド生成後に追加フォーム用の自動フォーカス移動を初期化する
+      initAutoAdvance(dynamicFields);
     }
 
     // ==================== バイタル入力自動フォーカス移動 ====================
-    // data-maxlen を持つ入力欄で、入力値が指定桁数に達したら DOM 順で次の入力欄へ移動する
-    function initAutoAdvance() {
-      const inputs = [...dynamicFields.querySelectorAll('input[data-maxlen]')];
+    // data-maxlen を持つ入力欄で、入力値が指定桁数に達したら DOM 順で次の入力欄へ移動する。
+    // container を引数で受け取ることで追加・編集フォーム両方に対応する。
+    function initAutoAdvance(container) {
+      const inputs = [...container.querySelectorAll('input[data-maxlen]')];
       inputs.forEach((input, i) => {
         // 前回設定したリスナーを上書きするためcloneで置き換える（重複登録防止）
         const fresh = input.cloneNode(true);
@@ -909,6 +982,116 @@
         });
       });
     }
+
+    // ==================== 編集フィールド生成 ====================
+    // 選択中のレコード値を初期値として埋め込んだ編集フォームを生成する
+    function buildEditFields(tableKey, record) {
+      const fields = TABLE_DEFS[tableKey]?.fields || [];
+      editDynamicFields.innerHTML = fields.map(f => {
+        const id  = `editfield-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const val = record.fields?.[f.name] ?? '';
+        if (f.type === 'select') {
+          const opts = f.options.map(o =>
+            `<option value="${o}" ${o === String(val) ? 'selected' : ''}>${o}</option>`
+          ).join('');
+          return `<div class="form-group">
+            <label for="${id}">${f.name}</label>
+            <select id="${id}" data-field="${f.name}">
+              <option value="">選択してください</option>${opts}
+            </select>
+          </div>`;
+        } else if (f.type === 'number') {
+          const step = f.step     ? `step="${f.step}"`           : '';
+          const im   = f.inputmode ? `inputmode="${f.inputmode}"` : 'inputmode="decimal"';
+          const ml   = f.maxlen   ? `data-maxlen="${f.maxlen}"`  : '';
+          return `<div class="form-group">
+            <label for="${id}">${f.name}</label>
+            <input type="number" id="${id}" data-field="${f.name}" value="${val}" ${step} ${im} ${ml}>
+          </div>`;
+        } else {
+          const im = f.inputmode ? `inputmode="${f.inputmode}"` : '';
+          const ml = f.maxlen   ? `data-maxlen="${f.maxlen}"`  : '';
+          return `<div class="form-group">
+            <label for="${id}">${f.name}</label>
+            <input type="text" id="${id}" data-field="${f.name}" value="${val}" ${im} ${ml}>
+          </div>`;
+        }
+      }).join('');
+      initAutoAdvance(editDynamicFields);
+    }
+
+    // ==================== アクションバー：削除 ====================
+    async function onDeleteRecord() {
+      const r = getSelectedRecord();
+      if (!r) return;
+      if (!confirm(`「${r.name}」の記録を削除しますか？\nこの操作は元に戻せません。`)) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${r.id}?table=${currentTable}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        clearSelection();
+        await loadRecords(currentOffice, selName.value);
+      } catch (err) {
+        alert('削除に失敗しました: ' + err.message);
+      }
+    }
+
+    // ==================== アクションバー：編集モーダルを開く ====================
+    function onEditRecord() {
+      const r = getSelectedRecord();
+      if (!r) return;
+      document.getElementById('edit-record-id').value = r.id;
+      document.getElementById('edit-date').value      = r.date || '';
+      document.getElementById('edit-name').value      = r.name || '';
+      const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
+      document.getElementById('edit-modal-title').innerHTML =
+        `<i class="fa-solid fa-pen"></i> ${label}を編集`;
+      buildEditFields(currentTable, r);
+      editFormMsg.textContent = '';
+      editFormMsg.className   = 'form-msg';
+      openModal(editModal);
+    }
+
+    // ==================== 編集フォーム送信 ====================
+    editForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const recId  = document.getElementById('edit-record-id').value;
+      const date   = document.getElementById('edit-date').value;
+      const fields = {};
+      editDynamicFields.querySelectorAll('[data-field]').forEach(el => {
+        if (el.value !== '') fields[el.dataset.field] = el.value;
+      });
+
+      editSubmitBtn.disabled    = true;
+      editSubmitBtn.textContent = '保存中...';
+      editFormMsg.textContent   = '';
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${recId}`, {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ table: currentTable, date, fields }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '保存に失敗しました');
+        editFormMsg.textContent = '保存しました！';
+        editFormMsg.className   = 'form-msg ok';
+        setTimeout(() => {
+          closeModal(editModal);
+          clearSelection();
+          loadRecords(currentOffice, selName.value);
+        }, 800);
+      } catch (err) {
+        editFormMsg.textContent = err.message;
+        editFormMsg.className   = 'form-msg err';
+      } finally {
+        editSubmitBtn.disabled    = false;
+        editSubmitBtn.textContent = '保存する';
+      }
+    });
+
+    closeEditModal.addEventListener('click', () => closeModal(editModal));
+    editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(editModal); });
 
     // ==================== フォーム送信（登録） ====================
     addForm.addEventListener('submit', async e => {
@@ -958,72 +1141,6 @@
       }
     });
 
-    // ==================== 削除モーダル制御 ====================
-    // 削除FABをタップしたとき、現在表示中のレコード一覧を削除モーダルに展開する
-    fabDelete.addEventListener('click', () => {
-      if (loadedRecords.length === 0) {
-        alert('削除できるレコードがありません。先に一覧を表示してください。');
-        return;
-      }
-      buildDeleteList();
-      openModal(deleteModal);
-    });
-
-    closeDeleteModal.addEventListener('click', () => closeModal(deleteModal));
-    deleteModal.addEventListener('click', e => { if (e.target === deleteModal) closeModal(deleteModal); });
-
-    // ==================== 削除一覧の構築 ====================
-    function buildDeleteList() {
-      const tableDef = TABLE_DEFS[currentTable];
-      deleteRecordList.innerHTML = loadedRecords.map(r => {
-        // 固有フィールドの値を1行サマリーとして表示する
-        const summary = tableDef.fields
-          .filter(f => r.fields[f.name] !== undefined)
-          .map(f => `${f.name}: ${r.fields[f.name]}`)
-          .join(' / ');
-
-        return `<div class="delete-record-item" data-id="${r.id}">
-          <div class="delete-record-info">
-            <div class="dr-date">${r.date || '—'}</div>
-            <div class="dr-name">${r.name || '—'}</div>
-            ${summary ? `<div class="dr-vals">${summary}</div>` : ''}
-          </div>
-          <button class="delete-item-btn" data-id="${r.id}">
-            <i class="fa-solid fa-trash"></i> 削除
-          </button>
-        </div>`;
-      }).join('');
-    }
-
-    // ==================== レコード削除実行 ====================
-    // 削除モーダル内の各削除ボタンを押したとき API を呼び出す
-    deleteRecordList.addEventListener('click', async e => {
-      const btn = e.target.closest('.delete-item-btn');
-      if (!btn) return;
-
-      const recordId = btn.dataset.id;
-      if (!confirm('このレコードを削除してもよいですか？')) return;
-
-      btn.disabled   = true;
-      btn.textContent = '削除中...';
-
-      try {
-        const res  = await fetch(`${API_BASE}/api/care/record/${recordId}?table=${currentTable}`, {
-          method: 'DELETE',
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || '削除に失敗しました');
-
-        // 削除成功時: loadedRecordsから除去してUIを更新する
-        loadedRecords = loadedRecords.filter(r => r.id !== recordId);
-        buildDeleteList(); // 削除モーダルの一覧を再描画する
-        await loadRecords(currentOffice, selName.value); // メイン一覧も再取得する
-      } catch (err) {
-        alert(`削除エラー: ${err.message}`);
-        btn.disabled   = false;
-        btn.textContent = '削除';
-      }
-    });
   </script>
 </body>
 </html>
