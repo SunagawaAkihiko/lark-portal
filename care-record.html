@@ -523,10 +523,9 @@
       <button class="office-tab"        data-office="上津役家">上津役家</button>
     </div>
 
-    <!-- 2段目: テーブル切り替えタブ（入浴バイタル先頭） -->
+    <!-- 2段目: テーブル切り替えタブ（バイタル先頭） -->
     <nav class="tab-bar" id="tab-bar">
-      <button class="tab-btn active" data-table="bathing">入浴バイタル</button>
-      <button class="tab-btn"        data-table="vital">不調バイタル</button>
+      <button class="tab-btn active" data-table="bathing">バイタル</button>
       <button class="tab-btn"        data-table="weight">体重管理</button>
       <button class="tab-btn"        data-table="bowel">排便管理</button>
       <button class="tab-btn"        data-table="meal">食事摂取量</button>
@@ -702,19 +701,8 @@
     // テーブルキーごとの表示フィールド定義
     // server.js の CARE_TABLES.displayFields と同期させること
     const TABLE_DEFS = {
-      vital: {
-        label: '不調時バイタル一覧',
-        fields: [
-          { name: '血圧(上)', type: 'number', inputmode: 'numeric',  placeholder: '例: 120', maxlen: 3 },
-          { name: '血圧(下)', type: 'number', inputmode: 'numeric',  placeholder: '例: 80',  maxlen: 2 },
-          { name: '脈拍',     type: 'number', inputmode: 'numeric',  placeholder: '例: 72',  maxlen: 2 },
-          // type=numberは小数入力中にvalueが空になるためtype=textで代替する
-          { name: '体温',     type: 'text',   inputmode: 'decimal',  placeholder: '例: 36.5', maxlen: 4 },
-          { name: 'SPO2',     type: 'number', inputmode: 'numeric',  placeholder: '例: 98',  maxlen: 3 },
-        ],
-      },
       bathing: {
-        label: '入浴時バイタル',
+        label: 'バイタル',
         fields: [
           { name: '血圧(上)', type: 'number', inputmode: 'numeric',  placeholder: '例: 120', maxlen: 3 },
           { name: '血圧(下)', type: 'number', inputmode: 'numeric',  placeholder: '例: 80',  maxlen: 2 },
