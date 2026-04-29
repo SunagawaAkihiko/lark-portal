@@ -422,6 +422,53 @@
     .form-msg.ok  { color: #2a9d4e; }
     .form-msg.err { color: #e63946; }
 
+    /* ==================== バイタル入力グリッド（helper-recordと統一スタイル） ==================== */
+    .vital-input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(3.4rem, 1fr));
+      gap: 0.35rem;
+    }
+    .vital-input-item { display: flex; flex-direction: column; gap: 0.2rem; }
+    .vital-input-label {
+      font-size: 0.66rem; font-weight: 700; color: var(--text-muted);
+      text-align: center; white-space: nowrap;
+    }
+    .vital-input-field {
+      text-align: center; width: 100%; box-sizing: border-box;
+      padding: 0.45rem 0.2rem; font-family: inherit; font-size: 0.92rem;
+      border: 1.5px solid var(--border-color); border-radius: 8px;
+      background: var(--bg-color); color: var(--text-color);
+    }
+    .vital-input-field:focus { outline: none; border-color: var(--primary-color); }
+    .vital-input-field::-webkit-inner-spin-button,
+    .vital-input-field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* ==================== 入浴バイタル：モード選択ボタン ==================== */
+    .bathing-mode-btn {
+      width: 100%; padding: 1rem;
+      border: 1.5px solid var(--border-color); border-radius: 12px;
+      background: var(--card-bg); font-family: inherit;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 0.8rem;
+      color: var(--text-color); text-align: left;
+      transition: background 0.15s;
+    }
+    .bathing-mode-btn:active { background: var(--primary-light); }
+    .bathing-mode-btn i { font-size: 1.4rem; color: var(--primary-color); width: 1.8rem; text-align: center; flex-shrink: 0; }
+    .mode-desc { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; margin-top: 0.1rem; }
+
+    /* ==================== 入浴バイタル：一括入力フォーム ==================== */
+    .batch-person-row {
+      border: 1px solid var(--border-color); border-radius: 10px;
+      overflow: hidden; margin-bottom: 0.75rem;
+    }
+    .batch-person-name {
+      padding: 0.3rem 0.75rem;
+      background: #e8a070; color: white;
+      font-size: 0.85rem; font-weight: 700;
+    }
+    .batch-person-fields { padding: 0.5rem; background: var(--card-bg); }
+
     /* ==================== 削除モーダル ==================== */
     .delete-record-item {
       display: flex;
@@ -577,8 +624,76 @@
     </div>
   </div>
 
+  <!-- ===== 入浴バイタル：モード選択モーダル ===== -->
+  <div class="modal hidden" id="bathing-mode-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-bath"></i> 入浴バイタルを記録</h2>
+        <button class="close-btn" onclick="closeModal(document.getElementById('bathing-mode-modal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <!-- 入浴：当日の入浴予定者を一括入力する -->
+        <button class="bathing-mode-btn" onclick="selectBathingMode('scheduled')">
+          <i class="fa-solid fa-calendar-check"></i>
+          <div>
+            <div>入浴</div>
+            <div class="mode-desc">本日の入浴予定者を一括入力</div>
+          </div>
+        </button>
+        <!-- 全員：事業所の全利用者を一括入力する -->
+        <button class="bathing-mode-btn" onclick="selectBathingMode('all')">
+          <i class="fa-solid fa-users"></i>
+          <div>
+            <div>全員</div>
+            <div class="mode-desc">全利用者を一括入力</div>
+          </div>
+        </button>
+        <!-- 個別：通常の登録フォームで1名ずつ入力する -->
+        <button class="bathing-mode-btn" onclick="selectBathingMode('individual')">
+          <i class="fa-solid fa-user"></i>
+          <div>
+            <div>個別</div>
+            <div class="mode-desc">利用者を選んで個別入力</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 入浴バイタル：一括入力モーダル ===== -->
+  <div class="modal hidden" id="batch-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="batch-modal-title"><i class="fa-solid fa-bath"></i> 入浴バイタル一括入力</h2>
+        <button class="close-btn" onclick="closeModal(document.getElementById('batch-modal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="form-group">
+        <label>日付 <span style="color:#e63946">*</span></label>
+        <input type="date" id="batch-date">
+      </div>
+      <!-- 利用者ごとのバイタル入力行（JSで動的生成） -->
+      <div id="batch-person-list"></div>
+      <button class="submit-btn" id="batch-submit-btn" onclick="submitBatch()">一括登録する</button>
+      <div class="form-msg" id="batch-form-msg"></div>
+    </div>
+  </div>
+
   <script>
     'use strict';
+
+    // ==================== ユーティリティ ====================
+    // XSS防止のためにHTML特殊文字をエスケープするヘルパー関数
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
 
     // ==================== 定数 ====================
     // バックエンドAPIのベースURL（Render本番環境）
@@ -907,6 +1022,11 @@
 
     // ==================== 登録モーダル制御 ====================
     fabAdd.addEventListener('click', () => {
+      // 入浴バイタルタブの場合はモード選択画面を先に表示する
+      if (currentTable === 'bathing') {
+        openModal(document.getElementById('bathing-mode-modal'));
+        return;
+      }
       const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
       modalTitle.textContent = `${label}を登録`;
 
@@ -1092,6 +1212,179 @@
 
     closeEditModal.addEventListener('click', () => closeModal(editModal));
     editModal.addEventListener('click', e => { if (e.target === editModal) closeModal(editModal); });
+
+    // ==================== 入浴バイタル：モード選択 ====================
+    // モード選択モーダルで選択後に呼ばれる。
+    // scheduled=入浴予定者、all=全利用者、individual=個別登録フォーム
+    async function selectBathingMode(mode) {
+      closeModal(document.getElementById('bathing-mode-modal'));
+
+      // 個別モードは通常の登録フォームをそのまま開く
+      if (mode === 'individual') {
+        const label = TABLE_DEFS['bathing']?.label || '入浴バイタル';
+        modalTitle.textContent = `${label}を登録`;
+        updateNameOptions(currentOffice, inputName);
+        if (selName.value) inputName.value = selName.value;
+        buildDynamicFields('bathing');
+        formMsg.textContent = '';
+        formMsg.className   = 'form-msg';
+        openModal(addModal);
+        return;
+      }
+
+      const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+      let names = [];
+
+      if (mode === 'scheduled') {
+        // APIで本日の入浴予定者を取得する
+        try {
+          const res  = await fetch(`${API_BASE}/api/care/bathing-scheduled?office=${encodeURIComponent(currentOffice)}&date=${todayStr}`);
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+          names = data.names;
+          if (names.length === 0) {
+            alert('本日の入浴予定者が見つかりません。');
+            return;
+          }
+        } catch (err) {
+          alert('入浴予定者の取得に失敗しました: ' + err.message);
+          return;
+        }
+      } else {
+        // 全員モード：顧客情報から事業所の全利用者を使う
+        names = officeNamesMap[currentOffice] || [];
+        if (names.length === 0) {
+          alert('利用者情報が取得できていません。');
+          return;
+        }
+      }
+
+      openBatchModal(names, todayStr);
+    }
+
+    // ==================== 入浴バイタル：一括入力モーダルを開く ====================
+    // names配列の各利用者に対してバイタル入力グリッド行を生成する
+    function openBatchModal(names, date) {
+      document.getElementById('batch-date').value = date;
+      document.getElementById('batch-modal-title').innerHTML =
+        `<i class="fa-solid fa-bath"></i> 入浴バイタル一括入力（${names.length}名）`;
+
+      const fields = TABLE_DEFS['bathing'].fields;
+
+      // 利用者ごとに氏名ヘッダー＋バイタル入力グリッドの行を生成する
+      const html = names.map(name => {
+        const safeN = escHtml(name);
+        const gridItems = fields.map(f => {
+          const ml   = f.maxlen    ? `data-maxlen="${f.maxlen}"`       : '';
+          const im   = f.inputmode ? `inputmode="${f.inputmode}"`      : '';
+          const ph   = f.placeholder ? `placeholder="${f.placeholder.replace('例: ', '')}"` : '';
+          const type = f.type === 'text' ? 'text' : 'number';
+          return `<div class="vital-input-item">
+              <span class="vital-input-label">${escHtml(f.name)}</span>
+              <input type="${type}" class="vital-input-field" ${im} ${ml} ${ph}
+                data-person="${safeN}" data-field="${escHtml(f.name)}">
+            </div>`;
+        }).join('');
+        return `<div class="batch-person-row">
+            <div class="batch-person-name">${safeN}</div>
+            <div class="batch-person-fields">
+              <div class="vital-input-grid">${gridItems}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('batch-person-list').innerHTML = html;
+      document.getElementById('batch-form-msg').textContent = '';
+      document.getElementById('batch-form-msg').className   = 'form-msg';
+
+      // 全利用者の入力欄を横断した自動フォーカス移動を設定する
+      initBatchAutoAdvance();
+      openModal(document.getElementById('batch-modal'));
+    }
+
+    // ==================== 一括入力：バイタル自動フォーカス移動 ====================
+    // 全利用者行をまたいでdata-maxlen入力欄をフラットに繋げる
+    function initBatchAutoAdvance() {
+      const container = document.getElementById('batch-person-list');
+      const inputs = [...container.querySelectorAll('input[data-maxlen]')];
+      inputs.forEach((input, i) => {
+        // 重複リスナーを防ぐためcloneで置き換えてから新規リスナーを設定する
+        const fresh = input.cloneNode(true);
+        input.parentNode.replaceChild(fresh, input);
+        inputs[i] = fresh;
+        fresh.addEventListener('input', () => {
+          const maxLen = parseInt(fresh.dataset.maxlen, 10);
+          if (String(fresh.value).length >= maxLen) {
+            const next = inputs[i + 1];
+            if (next) { next.focus(); if (next.select) next.select(); }
+          }
+        });
+      });
+    }
+
+    // ==================== 一括入力：送信処理 ====================
+    // 各利用者のバイタル値を並列POSTして結果をまとめて表示する
+    async function submitBatch() {
+      const date = document.getElementById('batch-date').value;
+      if (!date) {
+        document.getElementById('batch-form-msg').textContent = '日付は必須です。';
+        document.getElementById('batch-form-msg').className   = 'form-msg err';
+        return;
+      }
+
+      // 各利用者行からフィールド値を収集する
+      const container = document.getElementById('batch-person-list');
+      const rows = [...container.querySelectorAll('.batch-person-row')];
+      const requests = rows.map(row => {
+        const name   = row.querySelector('.batch-person-name')?.textContent?.trim() || '';
+        const fields = {};
+        row.querySelectorAll('input[data-field]').forEach(inp => {
+          if (inp.value !== '') fields[inp.dataset.field] = inp.value;
+        });
+        return { name, fields };
+      }).filter(r => r.name);
+
+      if (requests.length === 0) return;
+
+      const btn = document.getElementById('batch-submit-btn');
+      btn.disabled    = true;
+      btn.textContent = '登録中...';
+      document.getElementById('batch-form-msg').textContent = '';
+
+      try {
+        // 全利用者分を並列でAPIに送信する
+        const results = await Promise.allSettled(
+          requests.map(({ name, fields }) =>
+            fetch(`${API_BASE}/api/care/record`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ table: 'bathing', date, office: currentOffice, name, fields }),
+            }).then(r => r.json())
+          )
+        );
+
+        const failed = results.filter(r => r.status === 'rejected' || !r.value?.ok);
+        if (failed.length > 0) {
+          document.getElementById('batch-form-msg').textContent =
+            `${results.length - failed.length}件登録、${failed.length}件失敗しました。`;
+          document.getElementById('batch-form-msg').className = 'form-msg err';
+        } else {
+          document.getElementById('batch-form-msg').textContent =
+            `${results.length}件すべて登録しました！`;
+          document.getElementById('batch-form-msg').className = 'form-msg ok';
+          setTimeout(() => {
+            closeModal(document.getElementById('batch-modal'));
+            loadRecords(currentOffice, selName.value);
+          }, 1000);
+        }
+      } catch (err) {
+        document.getElementById('batch-form-msg').textContent = '登録中にエラーが発生しました: ' + err.message;
+        document.getElementById('batch-form-msg').className   = 'form-msg err';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '一括登録する';
+      }
+    }
 
     // ==================== フォーム送信（登録） ====================
     addForm.addEventListener('submit', async e => {
