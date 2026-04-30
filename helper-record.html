@@ -432,6 +432,84 @@
     .bulk-result.ok  { background: var(--green-light); color: var(--green); }
     .bulk-result.err { background: var(--red-light);   color: var(--red); }
 
+    /* ===== タイムピッカー（時分スクロール選択） ===== */
+    .time-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--border-color, #ddd);
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      height: 176px; /* アイテム44px × 表示4件分 */
+      background: #fff;
+    }
+    /* 上下のフェードアウトグラデーション */
+    .time-picker-wrap::before,
+    .time-picker-wrap::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 66px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .time-picker-wrap::before {
+      top: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(255,255,255,0));
+    }
+    .time-picker-wrap::after {
+      bottom: 0;
+      background: linear-gradient(to top, rgba(255,255,255,0.92), rgba(255,255,255,0));
+    }
+    /* 中央の選択ハイライト */
+    .time-picker-center-line {
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 44px;
+      border-top: 1.5px solid var(--primary-color, #4f6ef7);
+      border-bottom: 1.5px solid var(--primary-color, #4f6ef7);
+      background: rgba(79,110,247,0.07);
+      pointer-events: none;
+      z-index: 1;
+    }
+    /* 各列（時・分） */
+    .time-picker-col {
+      flex: 1;
+      height: 100%;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .time-picker-col::-webkit-scrollbar { display: none; }
+    /* 上下の余白スペーサー（先頭・末尾の選択を可能にする） */
+    .time-picker-spacer { height: 66px; flex-shrink: 0; }
+    /* 各アイテム */
+    .time-picker-item {
+      height: 44px;
+      scroll-snap-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      user-select: none;
+    }
+    /* コロン区切り */
+    .time-picker-sep {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #555;
+      padding: 0 2px;
+      z-index: 3;
+      flex-shrink: 0;
+    }
+
     /* ===== 一時停止日程設定サブエリア（個別編集用） ===== */
     .pause-date-form {
       background: #fdf0eb; border: 1px solid var(--border-color);
@@ -646,12 +724,15 @@
         </select>
       </div>
 
-      <!-- 提供時間（振替は自動入力・時間変更は選択式／振替記録では非表示） -->
+      <!-- 変更後の提供時間（振替は自動入力・時間変更はスクロール選択／振替記録では非表示） -->
       <div class="form-row" id="indivTeikyoJikanRow">
         <label class="form-label">変更後の提供時間 <span class="form-required">*</span></label>
-        <select id="indivTeikyoJikan" class="form-select">
-          <option value="">選択してください</option>
-        </select>
+        <div class="time-picker-wrap">
+          <div class="time-picker-center-line"></div>
+          <div class="time-picker-col" id="indivHourPicker"></div>
+          <div class="time-picker-sep">:</div>
+          <div class="time-picker-col" id="indivMinutePicker"></div>
+        </div>
       </div>
 
       <!-- サービス略称（自動入力・読み取り専用／振替記録では非表示） -->
@@ -2314,18 +2395,48 @@
     // 最後にメタデータをロードした事業所（事業所切り替え時に再取得するためキャッシュする）
     let indivMetaOffice  = null;
 
-    // 提供時間セレクトを0:00〜23:55の5分刻みで初期化する
-    (function buildTeikyoJikanOptions() {
-      const sel = document.getElementById('indivTeikyoJikan');
-      for (let h = 0; h < 24; h++) {
-        for (let m = 0; m < 60; m += 5) {
-          const label = `${h}:${String(m).padStart(2, '0')}`;
-          const opt = document.createElement('option');
-          opt.value = opt.textContent = label;
-          sel.appendChild(opt);
+    // ── タイムピッカー（時分スクロール） ──────────────────────────────
+    const TIME_ITEM_H = 44; // アイテム1個の高さ（px）・CSSと合わせること
+
+    // 時・分の列にスペーサーとアイテムを生成して初期スクロール位置を設定する
+    function buildTimePicker() {
+      function buildCol(el, count, labelFn) {
+        const top = document.createElement('div');
+        top.className = 'time-picker-spacer';
+        el.appendChild(top);
+        for (let i = 0; i < count; i++) {
+          const div = document.createElement('div');
+          div.className = 'time-picker-item';
+          div.textContent = labelFn(i);
+          el.appendChild(div);
         }
+        const bot = document.createElement('div');
+        bot.className = 'time-picker-spacer';
+        el.appendChild(bot);
       }
-    })();
+      buildCol(document.getElementById('indivHourPicker'),   24, i => String(i));
+      buildCol(document.getElementById('indivMinutePicker'), 12, i => String(i * 5).padStart(2, '0'));
+      // 初期位置を 9:00 に設定する
+      document.getElementById('indivHourPicker').scrollTop   = 9 * TIME_ITEM_H;
+      document.getElementById('indivMinutePicker').scrollTop = 0;
+    }
+    buildTimePicker();
+
+    // ピッカーから現在選択中の時刻文字列（H:MM）を取得する
+    function getIndivTeikyoJikan() {
+      const h = Math.round(document.getElementById('indivHourPicker').scrollTop   / TIME_ITEM_H);
+      const m = Math.round(document.getElementById('indivMinutePicker').scrollTop / TIME_ITEM_H) * 5;
+      return `${Math.min(h, 23)}:${String(Math.min(m, 55)).padStart(2, '0')}`;
+    }
+
+    // "H:MM" または "HH:MM" 形式の文字列でピッカーのスクロール位置を設定する
+    function setIndivTeikyoJikan(timeStr) {
+      if (!timeStr) return;
+      const [h, m] = timeStr.split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return;
+      document.getElementById('indivHourPicker').scrollTop   = h * TIME_ITEM_H;
+      document.getElementById('indivMinutePicker').scrollTop = (m / 5) * TIME_ITEM_H;
+    }
 
     // 氏名・作業項目・勤務区分・定型文の初期データを取得してセレクトに設定する
     // 事業所が変わった場合はセレクトをリセットして再取得する
@@ -2473,18 +2584,18 @@
         });
         const data = await res.json();
         if (!data.ok) {
-          // 一致なし：提供時間・サービス略称をクリアして記録内容は定型文のみ表示
+          // 一致なし：振替記録の場合は提供時間ピッカーを9:00にリセット、略称・記録内容はクリア
           if (document.getElementById('indivBunrui').value === '振替記録') {
-            document.getElementById('indivTeikyoJikan').value = '';
+            setIndivTeikyoJikan('9:00');
           }
           document.getElementById('indivRyakusho').value = '';
           updateIndivKirokuSelect(sagyo);
           return;
         }
         const bunrui = document.getElementById('indivBunrui').value;
-        // 振替記録は提供時間を自動入力、時間変更記録は手動入力を維持する
+        // 振替記録は提供時間を自動入力、時間変更記録はピッカーで手動選択を維持する
         if (bunrui === '振替記録') {
-          document.getElementById('indivTeikyoJikan').value = data.提供時間 || '';
+          setIndivTeikyoJikan(data.提供時間 || '');
         }
         document.getElementById('indivRyakusho').value = data.サービス略称 || '';
         // 記録内容セレクトに顧客別設定の記録内容を先頭に追加して自動選択する
@@ -2524,7 +2635,7 @@
       const sagyo       = document.getElementById('indivSagyo').value;
       const kinmu       = document.getElementById('indivKinmu').value;
       const staff       = document.getElementById('indivStaff').value;
-      const teikyoJikan = document.getElementById('indivTeikyoJikan').value.trim();
+      const teikyoJikan = getIndivTeikyoJikan();
       const ryakusho    = document.getElementById('indivRyakusho').value;
       let   kirokuNaiyou = document.getElementById('indivKirokuNaiyou').value;
 
@@ -2533,10 +2644,6 @@
       if (!sagyo)      { alert('作業項目を選択してください。');     return; }
       if (!kinmu)      { alert('勤務区分を選択してください。');     return; }
       if (!staff)      { alert('スタッフを選択してください。');     return; }
-      // 時間変更記録は変更後の提供時間が必須
-      if (bunrui === '時間変更記録' && !teikyoJikan) {
-        alert('変更後の提供時間を選択してください。'); return;
-      }
       // 振替記録・時間変更記録は記録内容が自動入力のため必須チェックを省略する
       if (bunrui !== '振替記録' && bunrui !== '時間変更記録' && !kirokuNaiyou) {
         alert('記録内容を選択してください。'); return;
@@ -2582,11 +2689,13 @@
 
         // フォームをリセットする（記録分類・実施日は保持して連続入力しやすくする）
         ['indivName','indivSagyo','indivKinmu','indivStaff',
-         'indivTeikyoJikan','indivRyakusho','indivKirokuNaiyou',
+         'indivRyakusho','indivKirokuNaiyou',
          'indivJikanRiyuu','indivFurikaeRiyuu','indivFurikaeDetail'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
+        // 提供時間ピッカーを初期値（9:00）に戻す
+        setIndivTeikyoJikan('9:00');
         document.getElementById('indivJikanRiyuuRow').classList.add('hidden');
         document.getElementById('indivFurikaeRiyuuRow').classList.add('hidden');
         document.getElementById('indivFurikaeDetailRow').classList.add('hidden');
