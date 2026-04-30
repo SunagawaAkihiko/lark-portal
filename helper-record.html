@@ -1487,19 +1487,32 @@
 
     // 異常記録モーダルを初期化して表示する
     function openIjoModal() {
-      // 全入力欄をリセットする（ijoMemoTaichouは削除済みのため含めない）
-      ['ijoType','ijoShoujou',
-       'ijoKetsuatsuJo','ijoKetsuatsuKa','ijoMyakuhaku','ijoTaion','ijoSpo2',
-       'ijoTaioTaichou','ijoTaioSonota','ijoShoujouSonota',
-       'ijoShiji','ijoService','ijoServiceSonota',
-       'ijoBasho','ijoBusho','ijoTeido','ijoGaiyou','ijoMemo']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-      document.querySelectorAll('#ijoModal input[type=checkbox]').forEach(cb => cb.checked = false);
-      // 条件表示欄と全セクションを非表示にリセットする
-      ['ijoShoujouSonotaRow','ijoTaioSonotaRow','ijoShijiRow','ijoServiceSonotaRow'].forEach(id =>
-        document.getElementById(id).classList.add('hidden')
-      );
-      ['taichou','tento','sonota','taio'].forEach(k =>
+      // 全入力欄をリセットする
+      [
+        // 共通
+        'ijoType','ijoHosoku',
+        // 体調不良
+        'ijoShoujou','ijoShoujouSonota','ijoFucho','ijoFuchoNaiyou',
+        'ijoKetsuatsuJo','ijoKetsuatsuKa','ijoMyakuhaku','ijoTaion','ijoSpo2',
+        'ijoTaioTaichou','ijoTaioSonota','ijoShiji','ijoService','ijoServiceSonota',
+        // 転倒・怪我
+        'ijoBasho','ijoBashoSonota','ijoItami','ijoItamiNaiyou','ijoBusho','ijoTeido',
+        'ijoTentoKetsuatsuJo','ijoTentoKetsuatsuKa','ijoTentoMyakuhaku','ijoTentoTaion','ijoTentoSpo2',
+        'ijoTentoTaio','ijoTentoTaioSonota','ijoTentoShiji','ijoTentoService','ijoTentoServiceSonota',
+        // その他
+        'ijoGaiyou',
+        'ijoSonotaKetsuatsuJo','ijoSonotaKetsuatsuKa','ijoSonotaMyakuhaku','ijoSonotaTaion','ijoSonotaSpo2',
+        'ijoSonotaTaio','ijoSonotaTaioSonota','ijoSonotaShiji','ijoSonotaService','ijoSonotaServiceSonota',
+      ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      // 条件表示欄を非表示にリセットする
+      [
+        'ijoShoujouSonotaRow','ijoFuchoNaiyouRow','ijoTaioSonotaRow','ijoShijiRow','ijoServiceSonotaRow',
+        'ijoBashoSonotaRow','ijoItamiNaiyouRow',
+        'ijoTentoShijiRow','ijoTentoTaioSonotaRow','ijoTentoServiceSonotaRow',
+        'ijoSonotaShijiRow','ijoSonotaTaioSonotaRow','ijoSonotaServiceSonotaRow',
+      ].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+      // サブ質問セクションと補足を非表示にリセットする
+      ['taichou','tento','sonota','hosoku'].forEach(k =>
         document.getElementById(`ijoSection-${k}`).classList.add('hidden')
       );
       document.getElementById('ijoModal').classList.remove('hidden');
