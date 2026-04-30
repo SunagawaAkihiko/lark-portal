@@ -681,6 +681,20 @@
           <label class="form-label">症状の詳細 <span class="form-required">*</span></label>
           <input type="text" id="ijoShoujouSonota" class="form-input" placeholder="症状を入力してください">
         </div>
+        <!-- 不調の訴え -->
+        <div class="form-row">
+          <label class="form-label">不調の訴え <span class="form-required">*</span></label>
+          <select id="ijoFucho" class="form-select" onchange="onIjoFuchoChange()">
+            <option value="">選択してください</option>
+            <option>不調の訴えあり</option>
+            <option>不調の訴えなし</option>
+          </select>
+        </div>
+        <!-- 不調の訴え「あり」の内容入力欄 -->
+        <div class="form-row hidden" id="ijoFuchoNaiyouRow">
+          <label class="form-label">訴えの内容 <span class="form-required">*</span></label>
+          <textarea id="ijoFuchoNaiyou" class="form-input" rows="2" placeholder="訴えの内容を入力してください"></textarea>
+        </div>
         <!-- バイタル（入浴バイタル・不調バイタルと同じコンパクトグリッド形式） -->
         <div class="form-row">
           <label class="form-label">バイタル <span class="form-required">*</span></label>
@@ -882,6 +896,14 @@
         <div class="form-row">
           <label class="form-label">詳細メモ <span class="form-required">*</span></label>
           <textarea id="ijoMemo" class="form-input" rows="3" placeholder="詳細を記入してください"></textarea>
+        </div>
+      </div>
+
+      <!-- 補足：全ての異常内容選択時に表示する共通項目 -->
+      <div id="ijoSection-hosoku" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">補足（その他必要事項あれば入力）</label>
+          <textarea id="ijoHosoku" class="form-input" rows="2" placeholder="補足事項があれば入力してください"></textarea>
         </div>
       </div>
 
@@ -1441,6 +1463,8 @@
       if (type === 'その他')    document.getElementById('ijoSection-sonota').classList.remove('hidden');
       // 共通の対応内容・詳細メモは「その他」のみ表示する（体調不良・転倒怪我は専用項目を使う）
       document.getElementById('ijoSection-taio').classList.toggle('hidden', type !== 'その他');
+      // 補足は全ての異常内容選択時に表示する
+      document.getElementById('ijoSection-hosoku').classList.toggle('hidden', !type);
     }
 
     // 症状プルダウンで「その他」を選んだとき入力欄を表示する
@@ -1465,6 +1489,12 @@
     function onIjoServiceChange() {
       const isSonota = document.getElementById('ijoService').value === 'その他';
       document.getElementById('ijoServiceSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 不調の訴えプルダウンで「あり」を選んだとき訴え内容入力欄を表示する
+    function onIjoFuchoChange() {
+      const isAri = document.getElementById('ijoFucho').value === '不調の訴えあり';
+      document.getElementById('ijoFuchoNaiyouRow').classList.toggle('hidden', !isAri);
     }
 
     // 発生場所で「その他」を選んだとき入力欄を表示する（転倒・怪我用）
@@ -1508,6 +1538,16 @@
           shoujou = `その他（${detail}）`;
         }
         parts.push(`症状：${shoujou}`);
+        // 不調の訴え（必須）
+        const fucho = document.getElementById('ijoFucho').value;
+        if (!fucho) { alert('不調の訴えを選択してください。'); return; }
+        if (fucho === '不調の訴えあり') {
+          const naiyou = document.getElementById('ijoFuchoNaiyou').value.trim();
+          if (!naiyou) { alert('訴えの内容を入力してください。'); return; }
+          parts.push(`不調の訴え：あり（${naiyou}）`);
+        } else {
+          parts.push(`不調の訴え：なし`);
+        }
         // バイタル（全項目必須）
         const ketsuatsuJo = document.getElementById('ijoKetsuatsuJo').value;
         const ketsuatsuKa = document.getElementById('ijoKetsuatsuKa').value;
@@ -1624,6 +1664,10 @@
         if (!memo) { alert('詳細メモを入力してください。'); return; }
         parts.push(`詳細：${memo}`);
       }
+
+      // 補足（全タイプ共通・任意）
+      const hosoku = document.getElementById('ijoHosoku').value.trim();
+      if (hosoku) parts.push(`補足：${hosoku}`);
 
       const kirokuNaiyou = parts.join('　');
 
