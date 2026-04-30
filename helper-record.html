@@ -1512,6 +1512,8 @@
       updateKinmuSelects(office);
       // 事業所に応じてスタッフセレクトを絞り込む（勤務区分も考慮する）
       updateStaffSelects(office, document.getElementById('createKinmu')?.value || '');
+      // 振替・時間変更タブのスタッフセレクトも事業所で絞り込む
+      updateIndivStaffSelect(document.getElementById('indivKinmu')?.value || '');
 
       // 記録作成フォームの事業所セレクトも同期する
       const createOfficeEl = document.getElementById('createOffice');
@@ -2423,7 +2425,11 @@
         : ALL_ALLOWED_EMPLOYMENT;
       const matched      = staffByOffice[activeOffice] || [];
       const unclassified = staffByOffice['']           || [];
-      const pool         = [...new Set([...matched, ...unclassified])];
+      const combined     = [...new Set([...matched, ...unclassified])];
+      // 一致なし（staffByOffice未構築）の場合は全スタッフを候補にする
+      const pool         = combined.length > 0
+        ? combined
+        : Object.values(staffByOffice).flat();
       const empMap       = Object.fromEntries(staffAllData.map(s => [s.name, s.employment]));
       const names        = pool.filter(n => allowedEmp.includes(empMap[n] || ''));
 
