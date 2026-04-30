@@ -970,7 +970,8 @@
 
     let activeOffice      = '';   // 選択中の事業所
     let officeList        = [];   // 事業所リスト
-    let staffList         = [];   // スタッフリスト
+    let staffList         = [];   // スタッフリスト（全件）
+    let staffByOffice     = {};   // 事業所別スタッフ名リスト { 事業所名: [氏名, ...] }
     let customerList      = [];   // 利用者リスト
     let currentRecords    = [];   // 現在表示中の記録一覧
     let pauseRecords      = [];   // 一時停止管理用の顧客別作業設定
@@ -1019,18 +1020,18 @@
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
-        staffList    = data.staffList    || [];
         customerList = data.customerList || [];
 
-        // スタッフセレクトに選択肢を追加する（記録作成・編集モーダル両方）
-        [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
-          sel.innerHTML = '<option value="">選択してください</option>';
-          staffList.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = opt.textContent = s;
-            sel.appendChild(opt);
-          });
+        // staffListは { name, office } の配列。事業所別マップを構築する
+        staffList = data.staffList || [];
+        staffByOffice = {};
+        staffList.forEach(({ name, office }) => {
+          if (!name) return;
+          if (!staffByOffice[office]) staffByOffice[office] = [];
+          staffByOffice[office].push(name);
         });
+        // 現在の事業所でスタッフセレクトを絞り込み更新する
+        updateStaffSelects(activeOffice);
       } catch (err) {
         console.error('[loadMeta] スタッフ・利用者リスト取得失敗:', err);
       }
@@ -1054,6 +1055,23 @@
       if (officeList.length > 0) selectOffice(officeList[0]);
     }
 
+    // 事業所別にスタッフセレクトの選択肢を更新する（記録作成・編集モーダル両方）
+    function updateStaffSelects(office) {
+      const names = staffByOffice[office] || [];
+      [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">選択してください</option>';
+        names.forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = n;
+          sel.appendChild(opt);
+        });
+        // 事業所切り替え後も選択中の名前が有効なら保持する
+        if (current && names.includes(current)) sel.value = current;
+      });
+    }
+
     function selectOffice(office, clickedBtn) {
       activeOffice = office;
       // 事業所タブのactiveを更新する
@@ -1062,6 +1080,8 @@
       });
       // 事業所に応じた勤務区分選択肢へ更新する
       updateKinmuSelects(office);
+      // 事業所に応じてスタッフセレクトを絞り込む
+      updateStaffSelects(office);
 
       // 記録作成フォームの事業所セレクトも同期する
       const createOfficeEl = document.getElementById('createOffice');
