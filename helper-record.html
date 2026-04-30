@@ -785,11 +785,16 @@
         <!-- 痛みの訴え -->
         <div class="form-row">
           <label class="form-label">痛みの訴え <span class="form-required">*</span></label>
-          <select id="ijoItami" class="form-select">
+          <select id="ijoItami" class="form-select" onchange="onIjoItamiChange()">
             <option value="">選択してください</option>
             <option>痛みの訴えあり</option>
             <option>痛みの訴えなし</option>
           </select>
+        </div>
+        <!-- 痛みの訴え「あり」の内容入力欄 -->
+        <div class="form-row hidden" id="ijoItamiNaiyouRow">
+          <label class="form-label">訴えの内容 <span class="form-required">*</span></label>
+          <textarea id="ijoItamiNaiyou" class="form-input" rows="2" placeholder="訴えの内容を入力してください"></textarea>
         </div>
         <!-- 受傷部位 -->
         <div class="form-row">
@@ -1503,6 +1508,12 @@
       document.getElementById('ijoBashoSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
+    // 痛みの訴えで「あり」を選んだとき訴え内容入力欄を表示する（転倒・怪我用）
+    function onIjoItamiChange() {
+      const isAri = document.getElementById('ijoItami').value === '痛みの訴えあり';
+      document.getElementById('ijoItamiNaiyouRow').classList.toggle('hidden', !isAri);
+    }
+
     // 転倒・怪我の対応内容プルダウンの選択に応じて条件欄を切り替える
     function onIjoTentoTaioChange() {
       const val = document.getElementById('ijoTentoTaio').value;
@@ -1600,7 +1611,13 @@
         // 痛みの訴え（必須）
         const itami = document.getElementById('ijoItami').value;
         if (!itami) { alert('痛みの訴えを選択してください。'); return; }
-        parts.push(`痛みの訴え：${itami}`);
+        if (itami === '痛みの訴えあり') {
+          const naiyou = document.getElementById('ijoItamiNaiyou').value.trim();
+          if (!naiyou) { alert('訴えの内容を入力してください。'); return; }
+          parts.push(`痛みの訴え：あり（${naiyou}）`);
+        } else {
+          parts.push(`痛みの訴え：なし`);
+        }
         // 受傷部位（必須）
         const busho = document.getElementById('ijoBusho').value.trim();
         if (!busho) { alert('受傷部位を入力してください。'); return; }
