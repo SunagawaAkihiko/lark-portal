@@ -1056,8 +1056,16 @@
     }
 
     // 事業所別にスタッフセレクトの選択肢を更新する（記録作成・編集モーダル両方）
+    // 事業所フィールドが未設定のスタッフは全事業所に表示し、完全に0件の場合は全員表示する
     function updateStaffSelects(office) {
-      const names = staffByOffice[office] || [];
+      const matched      = staffByOffice[office] || [];
+      const unclassified = staffByOffice['']     || [];
+      // 分類済みスタッフ ＋ 事業所未設定スタッフを合わせる（重複排除）
+      // 分類済みが0件かつ未設定も0件なら全スタッフをフォールバック表示する
+      const combined = [...new Set([...matched, ...unclassified])];
+      const names = combined.length > 0
+        ? combined
+        : Object.values(staffByOffice).flat();
       [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
         if (!sel) return;
         const current = sel.value;
