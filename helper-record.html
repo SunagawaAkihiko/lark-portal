@@ -1006,6 +1006,9 @@
         opt.value = opt.textContent = o;
         createOffice.appendChild(opt);
       });
+      // option追加後にactiveOfficeを反映する
+      // （renderOfficeTabs内のselectOffice実行時はまだoptionがなく値がセットされないため）
+      if (activeOffice) createOffice.value = activeOffice;
     }
 
     // スタッフ・利用者リストをAPIから非同期で取得してセレクトに追加する
