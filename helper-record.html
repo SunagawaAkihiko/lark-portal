@@ -2023,13 +2023,13 @@
         const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録タイプ: '個別入力', 記録分類: type, 記録内容: kirokuNaiyou }),
+          body: JSON.stringify({ 記録分類: type, 記録内容: kirokuNaiyou }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
         // ローカルの記録も更新する
         const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) { local.記録タイプ = '個別入力'; local.記録分類 = type; local.記録内容 = kirokuNaiyou; }
+        if (local) { local.記録分類 = type; local.記録内容 = kirokuNaiyou; }
         document.getElementById('ijoModal').classList.add('hidden');
         clearSelection();
       } catch (err) {
@@ -2150,13 +2150,13 @@
         const res = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録タイプ: '個別入力', 記録分類: 'サービス中止', 記録内容: kirokuNaiyou }),
+          body: JSON.stringify({ 記録分類: 'サービス中止', 記録内容: kirokuNaiyou }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
         // ローカルの記録も更新する
         const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) { local.記録タイプ = '個別入力'; local.記録分類 = 'サービス中止'; local.記録内容 = kirokuNaiyou; }
+        if (local) { local.記録分類 = 'サービス中止'; local.記録内容 = kirokuNaiyou; }
         document.getElementById('chushiModal').classList.add('hidden');
         clearSelection();
       } catch (err) {
@@ -2276,13 +2276,21 @@
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
-        result.className = 'create-result ok';
-        if (data.created === 0) {
-          result.textContent = data.message || '該当するサービス設定が見つかりませんでした。';
+        if (data.errors && data.errors.length > 0) {
+          // 一部でも失敗した場合はエラー表示して再作成を促す
+          result.className = 'create-result err';
+          result.textContent =
+            `⚠ ${data.errors.length} 件の作成に失敗しました。再度「記録を一括作成する」を押してください。\n` +
+            data.errors.map(e => `・${e}`).join('\n');
         } else {
-          result.textContent = `✓ ${data.created} 件の記録を作成しました（全 ${data.total} 件中）`;
-          if (data.errors && data.errors.length > 0) {
-            result.textContent += `\n⚠ ${data.errors.length} 件エラー`;
+          result.className = 'create-result ok';
+          if (data.created === 0 && data.updated === 0) {
+            result.textContent = data.message || '該当するサービス設定が見つかりませんでした。';
+          } else {
+            const parts = [];
+            if (data.created > 0) parts.push(`新規 ${data.created} 件作成`);
+            if (data.updated > 0) parts.push(`既存 ${data.updated} 件を上書き`);
+            result.textContent = `✓ ${parts.join('・')}（全 ${data.total} 件中）`;
           }
         }
         result.classList.remove('hidden');
