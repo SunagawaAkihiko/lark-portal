@@ -471,7 +471,10 @@
         <i class="fa-solid fa-list"></i> 記録履歴
       </button>
       <button class="tab-btn" data-tab="create">
-        <i class="fa-solid fa-plus"></i> 記録作成
+        <i class="fa-solid fa-layer-group"></i> 一括記録作成
+      </button>
+      <button class="tab-btn" data-tab="individual">
+        <i class="fa-solid fa-pen"></i> 個別・振替・変更
       </button>
       <button class="tab-btn hidden" id="pauseTabBtn" data-tab="pause">
         <i class="fa-solid fa-pause"></i> 一時停止管理
@@ -566,7 +569,17 @@
     </div>
   </div>
 
-  <!-- ===== タブ③：一時停止管理 ===== -->
+  <!-- ===== タブ③：個別・振替・変更記録作成 ===== -->
+  <div id="tab-individual" class="tab-content hidden">
+    <div class="create-form">
+      <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.2rem 0.5rem;background:var(--primary-light);border-radius:8px;">
+        <i class="fa-solid fa-circle-info" style="color:var(--primary-color);"></i>
+        個別記録・振替記録・変更記録を1件ずつ作成します。
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== タブ④：一時停止管理 ===== -->
   <div id="tab-pause" class="tab-content hidden">
 
     <!-- 一括操作カード -->
@@ -1417,7 +1430,7 @@
         // タブボタンのactiveを更新する
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
         // コンテンツの表示切り替え
-        ['list', 'create', 'pause'].forEach(t => {
+        ['list', 'create', 'individual', 'pause'].forEach(t => {
           document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
         });
         // 一時停止タブを開いたときにデータを読み込む
