@@ -374,18 +374,18 @@
       border-radius: 10px; overflow: hidden;
     }
     .vital-rg-card {
-      padding: 0.6rem 0.75rem;
+      padding: 0.3rem 0.6rem;
       border-bottom: 1px solid var(--border-color); cursor: pointer;
     }
     .vital-rg-area > *:last-child { border-bottom: none; }
     .vital-rg-card.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
     /* バイタル数値グリッド（care-recordのrecord-gridと同形式） */
     .vital-rg-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 0.3rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 0.2rem;
     }
     .vital-rg-item {
-      background: white; border-radius: 8px;
-      padding: 0.35rem 0.3rem 0.45rem; text-align: center;
+      background: white; border-radius: 6px;
+      padding: 0.2rem 0.2rem 0.25rem; text-align: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .vital-rg-item.wide {
@@ -3236,9 +3236,7 @@
               <span class="vital-rg-value">${escHtml(String(fields[fn]))}</span>
             </div>`
           ).join('');
-          const kinmu = fields['勤務区分'];
-          const kHtml = kinmu ? `<div class="vital-rg-item wide">${kinmuBadge(kinmu)}</div>` : '';
-          return `<div class="vital-rg-grid">${kHtml}${boxes}</div>`;
+          return `<div class="vital-rg-grid">${boxes}</div>`;
         }
 
         let html = '';
