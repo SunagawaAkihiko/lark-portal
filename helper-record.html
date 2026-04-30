@@ -574,8 +574,89 @@
     <div class="create-form">
       <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.2rem 0.5rem;background:var(--primary-light);border-radius:8px;">
         <i class="fa-solid fa-circle-info" style="color:var(--primary-color);"></i>
-        個別記録・振替記録・変更記録を1件ずつ作成します。
+        振替記録・時間変更記録を1件ずつ作成します。氏名・作業項目・勤務区分を選択すると、顧客別作業設定から提供時間・サービス略称・記録内容を自動入力します。
       </div>
+
+      <!-- 記録分類 -->
+      <div class="form-row">
+        <label class="form-label">記録分類 <span class="form-required">*</span></label>
+        <select id="indivBunrui" class="form-select" onchange="onIndivBunruiChange()">
+          <option value="">選択してください</option>
+          <option value="振替記録">振替記録</option>
+          <option value="時間変更記録">時間変更記録</option>
+        </select>
+      </div>
+
+      <!-- 時間変更理由（時間変更記録のみ表示） -->
+      <div class="form-row hidden" id="indivJikanRiyuuRow">
+        <label class="form-label">時間変更理由 <span class="form-required">*</span></label>
+        <input type="text" id="indivJikanRiyuu" class="form-input" placeholder="時間変更の理由を入力してください">
+      </div>
+
+      <!-- 実施日 -->
+      <div class="form-row">
+        <label class="form-label">実施日 <span class="form-required">*</span></label>
+        <input type="date" id="indivDate" class="form-input">
+      </div>
+
+      <!-- 氏名 -->
+      <div class="form-row">
+        <label class="form-label">氏名 <span class="form-required">*</span></label>
+        <select id="indivName" class="form-select" onchange="onIndivKeyFieldChange()">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <!-- 作業項目 -->
+      <div class="form-row">
+        <label class="form-label">作業項目 <span class="form-required">*</span></label>
+        <select id="indivSagyo" class="form-select" onchange="onIndivKeyFieldChange()">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <!-- 勤務区分 -->
+      <div class="form-row">
+        <label class="form-label">勤務区分 <span class="form-required">*</span></label>
+        <select id="indivKinmu" class="form-select" onchange="onIndivKinmuChange()">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <!-- スタッフ -->
+      <div class="form-row">
+        <label class="form-label">スタッフ <span class="form-required">*</span></label>
+        <select id="indivStaff" class="form-select">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <!-- 提供時間（振替は自動・時間変更は手動入力） -->
+      <div class="form-row">
+        <label class="form-label">提供時間</label>
+        <input type="text" id="indivTeikyoJikan" class="form-input" placeholder="例: 08:30">
+      </div>
+
+      <!-- サービス略称（自動入力・読み取り専用） -->
+      <div class="form-row">
+        <label class="form-label">サービス略称</label>
+        <input type="text" id="indivRyakusho" class="form-input" readonly
+          style="background:#f5f5f5;color:var(--text-muted);">
+      </div>
+
+      <!-- 記録内容（定型文テーブルから作業項目で絞り込み選択） -->
+      <div class="form-row">
+        <label class="form-label">記録内容 <span class="form-required">*</span></label>
+        <select id="indivKirokuNaiyou" class="form-select">
+          <option value="">作業項目を選択すると候補が表示されます</option>
+        </select>
+      </div>
+
+      <button class="create-btn" id="indivCreateBtn" onclick="submitIndividual()">
+        <i class="fa-solid fa-pen-to-square"></i>
+        記録を登録する
+      </button>
+      <div id="indivResult" class="hidden"></div>
     </div>
   </div>
 
@@ -1434,7 +1515,9 @@
           document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
         });
         // 一時停止タブを開いたときにデータを読み込む
-        if (tab === 'pause') loadPauseSettings();
+        if (tab === 'pause')      loadPauseSettings();
+        // 個別・振替・変更タブを開いたときにメタデータを読み込む
+        if (tab === 'individual') loadIndivMeta();
       });
     });
 
@@ -2192,8 +2275,241 @@
     }
 
     // ============================================================
+    // タブ③：個別・振替・変更記録作成
     // ============================================================
-    // タブ③：一時停止管理
+
+    // 定型文テーブルのキャッシュ（作業項目 → テンプレート文字列配列）
+    let indivTemplateMap = {};
+    // メタデータ取得済みフラグ（タブを開くたびに再取得しないようにする）
+    let indivMetaLoaded  = false;
+
+    // 氏名・作業項目・勤務区分・定型文の初期データを取得してセレクトに設定する
+    async function loadIndivMeta() {
+      if (indivMetaLoaded) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/individual/meta`);
+        const data = await res.json();
+        if (!data.ok) return;
+
+        indivTemplateMap = data.templateMap || {};
+        indivMetaLoaded  = true;
+
+        // 氏名セレクトに選択肢を設定する
+        const nameEl = document.getElementById('indivName');
+        (data.names || []).forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = n;
+          nameEl.appendChild(opt);
+        });
+
+        // 作業項目セレクトに選択肢を設定する
+        const sagyoEl = document.getElementById('indivSagyo');
+        (data.sagyoKomokuList || []).forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = k;
+          sagyoEl.appendChild(opt);
+        });
+
+        // 勤務区分セレクトに選択肢を設定する
+        const kinmuEl = document.getElementById('indivKinmu');
+        (data.kinmuList || []).forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = k;
+          kinmuEl.appendChild(opt);
+        });
+
+        // スタッフセレクトを現在の事業所で初期化する
+        updateIndivStaffSelect('');
+      } catch (e) {
+        console.warn('[individual/meta] 取得失敗:', e);
+      }
+    }
+
+    // 記録分類変更時：時間変更理由欄の表示切り替えと提供時間の編集可否を制御する
+    function onIndivBunruiChange() {
+      const bunrui  = document.getElementById('indivBunrui').value;
+      const isJikan = bunrui === '時間変更記録';
+      document.getElementById('indivJikanRiyuuRow').classList.toggle('hidden', !isJikan);
+      // 振替記録は提供時間を自動入力のみ（読み取り専用）にし、時間変更記録は手動入力を許可する
+      const jikanEl = document.getElementById('indivTeikyoJikan');
+      jikanEl.readOnly = (bunrui === '振替記録');
+      jikanEl.style.background = (bunrui === '振替記録') ? '#f5f5f5' : '';
+      jikanEl.style.color      = (bunrui === '振替記録') ? 'var(--text-muted)' : '';
+    }
+
+    // 氏名・作業項目変更時：記録内容セレクトを更新し顧客別設定を検索する
+    function onIndivKeyFieldChange() {
+      const sagyo = document.getElementById('indivSagyo').value;
+      updateIndivKirokuSelect(sagyo);
+      fetchIndivSchedule();
+    }
+
+    // 勤務区分変更時：スタッフを絞り込み顧客別設定も再検索する
+    function onIndivKinmuChange() {
+      const kinmu = document.getElementById('indivKinmu').value;
+      updateIndivStaffSelect(kinmu);
+      fetchIndivSchedule();
+    }
+
+    // 記録内容セレクトを作業項目に対応する定型文で更新する
+    // defaultText が指定された場合は先頭オプションとして追加し自動選択する
+    function updateIndivKirokuSelect(sagyo, defaultText = '') {
+      const el = document.getElementById('indivKirokuNaiyou');
+      el.innerHTML = '<option value="">選択してください</option>';
+      const templates = indivTemplateMap[sagyo] || [];
+      // 顧客別設定の記録内容（defaultText）が定型文リストにない場合は先頭に追加する
+      if (defaultText && !templates.includes(defaultText)) {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = defaultText;
+        el.appendChild(opt);
+      }
+      templates.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = t;
+        el.appendChild(opt);
+      });
+    }
+
+    // スタッフセレクトをactiveOfficeと勤務区分で絞り込む
+    function updateIndivStaffSelect(kinmu) {
+      const allowedEmp = (kinmu && KINMU_EMPLOYMENT_MAP[kinmu])
+        ? KINMU_EMPLOYMENT_MAP[kinmu]
+        : ALL_ALLOWED_EMPLOYMENT;
+      const matched      = staffByOffice[activeOffice] || [];
+      const unclassified = staffByOffice['']           || [];
+      const pool         = [...new Set([...matched, ...unclassified])];
+      const empMap       = Object.fromEntries(staffAllData.map(s => [s.name, s.employment]));
+      const names        = pool.filter(n => allowedEmp.includes(empMap[n] || ''));
+
+      const el      = document.getElementById('indivStaff');
+      const current = el.value;
+      el.innerHTML  = '<option value="">選択してください</option>';
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = n;
+        el.appendChild(opt);
+      });
+      if (current && names.includes(current)) el.value = current;
+    }
+
+    // 氏名・作業項目・勤務区分が揃ったら顧客別作業設定を検索して自動入力する
+    async function fetchIndivSchedule() {
+      const name  = document.getElementById('indivName').value;
+      const sagyo = document.getElementById('indivSagyo').value;
+      const kinmu = document.getElementById('indivKinmu').value;
+      if (!name || !sagyo || !kinmu) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/helper/individual/schedule`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 氏名: name, 作業項目: sagyo, 勤務区分: kinmu }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          // 一致なし：提供時間・サービス略称をクリアして記録内容は定型文のみ表示
+          if (document.getElementById('indivBunrui').value === '振替記録') {
+            document.getElementById('indivTeikyoJikan').value = '';
+          }
+          document.getElementById('indivRyakusho').value = '';
+          updateIndivKirokuSelect(sagyo);
+          return;
+        }
+        const bunrui = document.getElementById('indivBunrui').value;
+        // 振替記録は提供時間を自動入力、時間変更記録は手動入力を維持する
+        if (bunrui === '振替記録') {
+          document.getElementById('indivTeikyoJikan').value = data.提供時間 || '';
+        }
+        document.getElementById('indivRyakusho').value = data.サービス略称 || '';
+        // 記録内容セレクトに顧客別設定の記録内容を先頭に追加して自動選択する
+        updateIndivKirokuSelect(sagyo, data.記録内容);
+        if (data.記録内容) {
+          document.getElementById('indivKirokuNaiyou').value = data.記録内容;
+        }
+      } catch (e) {
+        console.warn('[individual/schedule] 取得失敗:', e);
+      }
+    }
+
+    // 個別・振替・変更記録を保存する
+    async function submitIndividual() {
+      const bunrui = document.getElementById('indivBunrui').value;
+      if (!bunrui) { alert('記録分類を選択してください。'); return; }
+
+      const jikanRiyuu = document.getElementById('indivJikanRiyuu').value.trim();
+      if (bunrui === '時間変更記録' && !jikanRiyuu) {
+        alert('時間変更理由を入力してください。');
+        return;
+      }
+
+      const jisshiDate  = document.getElementById('indivDate').value;
+      const name        = document.getElementById('indivName').value;
+      const sagyo       = document.getElementById('indivSagyo').value;
+      const kinmu       = document.getElementById('indivKinmu').value;
+      const staff       = document.getElementById('indivStaff').value;
+      const teikyoJikan = document.getElementById('indivTeikyoJikan').value.trim();
+      const ryakusho    = document.getElementById('indivRyakusho').value;
+      let   kirokuNaiyou = document.getElementById('indivKirokuNaiyou').value;
+
+      if (!jisshiDate)   { alert('実施日を選択してください。');   return; }
+      if (!name)         { alert('氏名を選択してください。');     return; }
+      if (!sagyo)        { alert('作業項目を選択してください。'); return; }
+      if (!kinmu)        { alert('勤務区分を選択してください。'); return; }
+      if (!staff)        { alert('スタッフを選択してください。'); return; }
+      if (!kirokuNaiyou) { alert('記録内容を選択してください。'); return; }
+
+      // 時間変更記録の場合は記録内容に時間変更理由を追記する
+      if (bunrui === '時間変更記録' && jikanRiyuu) {
+        kirokuNaiyou = `${kirokuNaiyou}（時間変更理由：${jikanRiyuu}）`;
+      }
+
+      const btn = document.getElementById('indivCreateBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 登録中...';
+      try {
+        const res = await fetch(`${API_BASE}/api/helper/individual/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            記録分類:    bunrui,
+            実施日:      jisshiDate,
+            氏名:        name,
+            提供時間:    teikyoJikan,
+            作業項目:    sagyo,
+            勤務区分:    kinmu,
+            スタッフ:    staff,
+            サービス略称: ryakusho,
+            記録内容:    kirokuNaiyou,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        const resultEl = document.getElementById('indivResult');
+        resultEl.textContent = '登録しました！';
+        resultEl.className   = 'create-result-ok';
+        resultEl.classList.remove('hidden');
+
+        // フォームをリセットする（記録分類・実施日は保持して連続入力しやすくする）
+        ['indivName','indivSagyo','indivKinmu','indivStaff',
+         'indivTeikyoJikan','indivRyakusho','indivKirokuNaiyou','indivJikanRiyuu'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        document.getElementById('indivJikanRiyuuRow').classList.add('hidden');
+        document.getElementById('indivKirokuNaiyou').innerHTML =
+          '<option value="">作業項目を選択すると候補が表示されます</option>';
+        setTimeout(() => resultEl.classList.add('hidden'), 3000);
+      } catch (err) {
+        alert('登録に失敗しました: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> 記録を登録する';
+      }
+    }
+
+    // ============================================================
+    // ============================================================
+    // タブ④：一時停止管理
     // ============================================================
 
     let bulkAction = 'pause'; // 現在の操作（'pause' or 'resume'）
