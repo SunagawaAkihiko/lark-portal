@@ -2316,10 +2316,9 @@
       if (indivMetaOffice === activeOffice) return;
       indivMetaOffice = activeOffice;
 
-      // セレクトをリセットする
+      // セレクトをリセットする（indivKinmuはupdateKinmuSelectsで管理するためここではリセットしない）
       document.getElementById('indivName').innerHTML  = '<option value="">選択してください</option>';
       document.getElementById('indivSagyo').innerHTML = '<option value="">選択してください</option>';
-      document.getElementById('indivKinmu').innerHTML = '<option value="">選択してください</option>';
 
       try {
         const qs   = activeOffice ? `?office=${encodeURIComponent(activeOffice)}` : '';
@@ -2345,10 +2344,15 @@
           sagyoEl.appendChild(opt);
         });
 
+        // 勤務区分セレクトを事業所に合わせて更新する（一括記録と同じラベルになるよう統一）
+        updateKinmuSelects(activeOffice);
+
         // スタッフセレクトを現在の事業所で初期化する
         updateIndivStaffSelect('');
       } catch (e) {
         console.warn('[individual/meta] 取得失敗:', e);
+        // API失敗時も勤務区分だけは表示できるよう更新する
+        updateKinmuSelects(activeOffice);
       }
     }
 
