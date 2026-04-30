@@ -2365,10 +2365,12 @@
       // 時間変更理由は時間変更記録のみ表示する
       document.getElementById('indivJikanRiyuuRow').classList.toggle('hidden', !isJikan);
 
-      // 提供時間・サービス略称・記録内容は振替記録では非表示（自動入力のため表示不要）
+      // 提供時間は振替記録のみ非表示（時間変更記録は手動入力）
       document.getElementById('indivTeikyoJikanRow').classList.toggle('hidden', isFurikae);
-      document.getElementById('indivRyakushoRow').classList.toggle('hidden', isFurikae);
-      document.getElementById('indivKirokuNaiyouRow').classList.toggle('hidden', isFurikae);
+
+      // サービス略称・記録内容は振替記録・時間変更記録ともに非表示（顧客別設定から自動入力）
+      document.getElementById('indivRyakushoRow').classList.toggle('hidden', isFurikae || isJikan);
+      document.getElementById('indivKirokuNaiyouRow').classList.toggle('hidden', isFurikae || isJikan);
     }
 
     // 振替理由で「その他」を選んだとき振替理由詳細欄を表示する
@@ -2506,8 +2508,8 @@
       if (!sagyo)      { alert('作業項目を選択してください。'); return; }
       if (!kinmu)      { alert('勤務区分を選択してください。'); return; }
       if (!staff)      { alert('スタッフを選択してください。'); return; }
-      // 振替記録は記録内容が自動入力のため必須チェックを省略する
-      if (bunrui !== '振替記録' && !kirokuNaiyou) {
+      // 振替記録・時間変更記録は記録内容が自動入力のため必須チェックを省略する
+      if (bunrui !== '振替記録' && bunrui !== '時間変更記録' && !kirokuNaiyou) {
         alert('記録内容を選択してください。'); return;
       }
 
