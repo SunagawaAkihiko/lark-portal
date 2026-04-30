@@ -753,24 +753,110 @@
 
       <!-- ② 転倒・怪我のサブ質問 -->
       <div id="ijoSection-tento" class="ijo-section hidden">
+        <!-- 発生場所 -->
         <div class="form-row">
           <label class="form-label">発生場所 <span class="form-required">*</span></label>
-          <select id="ijoBasho" class="form-select">
+          <select id="ijoBasho" class="form-select" onchange="onIjoBashoChange()">
             <option value="">選択してください</option>
-            <option>居室</option><option>浴室</option><option>廊下</option>
-            <option>食堂</option><option>屋外</option><option>その他</option>
+            <option>1Fリビング</option><option>1F廊下</option><option>1Fトイレ</option>
+            <option>1F洗面所</option><option>居室</option><option>2F廊下</option>
+            <option>2Fトイレ</option><option>その他</option>
           </select>
         </div>
+        <!-- 発生場所「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoBashoSonotaRow">
+          <label class="form-label">発生場所の詳細 <span class="form-required">*</span></label>
+          <input type="text" id="ijoBashoSonota" class="form-input" placeholder="発生場所を入力してください">
+        </div>
+        <!-- 痛みの訴え -->
+        <div class="form-row">
+          <label class="form-label">痛みの訴え <span class="form-required">*</span></label>
+          <select id="ijoItami" class="form-select">
+            <option value="">選択してください</option>
+            <option>痛みの訴えあり</option>
+            <option>痛みの訴えなし</option>
+          </select>
+        </div>
+        <!-- 受傷部位 -->
         <div class="form-row">
           <label class="form-label">受傷部位 <span class="form-required">*</span></label>
           <input type="text" id="ijoBusho" class="form-input" placeholder="例：右膝">
         </div>
+        <!-- 程度 -->
         <div class="form-row">
           <label class="form-label">程度 <span class="form-required">*</span></label>
           <select id="ijoTeido" class="form-select">
             <option value="">選択してください</option>
             <option>軽微</option><option>中程度</option><option>重症</option>
           </select>
+        </div>
+        <!-- バイタル -->
+        <div class="form-row">
+          <label class="form-label">バイタル <span class="form-required">*</span></label>
+          <div class="vital-input-grid">
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(上)</span>
+              <input type="number" id="ijoTentoKetsuatsuJo" class="vital-input-field" inputmode="numeric" placeholder="120"
+                data-maxlen="3" data-next="ijoTentoKetsuatsuKa">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(下)</span>
+              <input type="number" id="ijoTentoKetsuatsuKa" class="vital-input-field" inputmode="numeric" placeholder="80"
+                data-maxlen="2" data-next="ijoTentoMyakuhaku">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">脈拍</span>
+              <input type="number" id="ijoTentoMyakuhaku" class="vital-input-field" inputmode="numeric" placeholder="72"
+                data-maxlen="2" data-next="ijoTentoTaion">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">体温(℃)</span>
+              <input type="text" id="ijoTentoTaion" class="vital-input-field" inputmode="decimal" placeholder="36.5"
+                data-maxlen="4" data-next="ijoTentoSpo2">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">SPO2(%)</span>
+              <input type="number" id="ijoTentoSpo2" class="vital-input-field" inputmode="numeric" step="1" min="50" max="100" placeholder="98"
+                data-maxlen="3">
+            </div>
+          </div>
+        </div>
+        <!-- 対応内容（転倒・怪我専用） -->
+        <div class="form-row">
+          <label class="form-label">対応内容 <span class="form-required">*</span></label>
+          <select id="ijoTentoTaio" class="form-select" onchange="onIjoTentoTaioChange()">
+            <option value="">選択してください</option>
+            <option>頓服服用にて経過観察</option>
+            <option>クーリングにて経過観察</option>
+            <option>かかりつけ医に連絡</option>
+            <option>訪問看護に連絡</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- かかりつけ医・訪問看護を選択したときの指示内容入力欄 -->
+        <div class="form-row hidden" id="ijoTentoShijiRow">
+          <label class="form-label">受けた指示内容詳細 <span class="form-required">*</span></label>
+          <textarea id="ijoTentoShiji" class="form-input" rows="2" placeholder="受けた指示の内容を記入してください"></textarea>
+        </div>
+        <!-- 対応内容「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoTentoTaioSonotaRow">
+          <label class="form-label">対応内容の詳細 <span class="form-required">*</span></label>
+          <input type="text" id="ijoTentoTaioSonota" class="form-input" placeholder="対応内容を入力してください">
+        </div>
+        <!-- サービス実施について -->
+        <div class="form-row">
+          <label class="form-label">サービス実施について <span class="form-required">*</span></label>
+          <select id="ijoTentoService" class="form-select" onchange="onIjoTentoServiceChange()">
+            <option value="">選択してください</option>
+            <option>通常通り実施</option>
+            <option>居室にて実施</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- サービス実施「その他」の入力欄 -->
+        <div class="form-row hidden" id="ijoTentoServiceSonotaRow">
+          <label class="form-label">どういう形でサービス実施しましたか？ <span class="form-required">*</span></label>
+          <input type="text" id="ijoTentoServiceSonota" class="form-input" placeholder="実施内容を入力してください">
         </div>
       </div>
 
@@ -782,7 +868,7 @@
         </div>
       </div>
 
-      <!-- ③ 共通：対応内容・詳細メモ（異常内容選択後に表示） -->
+      <!-- ③ その他専用：対応内容・詳細メモ -->
       <div id="ijoSection-taio" class="ijo-section hidden">
         <div class="form-row">
           <label class="form-label">対応内容（複数選択可） <span class="form-required">*</span></label>
@@ -1353,8 +1439,8 @@
       if (type === '体調不良')  document.getElementById('ijoSection-taichou').classList.remove('hidden');
       if (type === '転倒・怪我') document.getElementById('ijoSection-tento').classList.remove('hidden');
       if (type === 'その他')    document.getElementById('ijoSection-sonota').classList.remove('hidden');
-      // 共通の対応内容は体調不良以外のときのみ表示する（体調不良は専用項目を使う）
-      document.getElementById('ijoSection-taio').classList.toggle('hidden', !type || type === '体調不良');
+      // 共通の対応内容・詳細メモは「その他」のみ表示する（体調不良・転倒怪我は専用項目を使う）
+      document.getElementById('ijoSection-taio').classList.toggle('hidden', type !== 'その他');
     }
 
     // 症状プルダウンで「その他」を選んだとき入力欄を表示する
@@ -1375,10 +1461,31 @@
       document.getElementById('ijoTaioSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
-    // サービス実施プルダウンで「その他」を選んだとき入力欄を表示する
+    // サービス実施プルダウンで「その他」を選んだとき入力欄を表示する（体調不良用）
     function onIjoServiceChange() {
       const isSonota = document.getElementById('ijoService').value === 'その他';
       document.getElementById('ijoServiceSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 発生場所で「その他」を選んだとき入力欄を表示する（転倒・怪我用）
+    function onIjoBashoChange() {
+      const isSonota = document.getElementById('ijoBasho').value === 'その他';
+      document.getElementById('ijoBashoSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 転倒・怪我の対応内容プルダウンの選択に応じて条件欄を切り替える
+    function onIjoTentoTaioChange() {
+      const val = document.getElementById('ijoTentoTaio').value;
+      const isRenraku = val === 'かかりつけ医に連絡' || val === '訪問看護に連絡';
+      const isSonota  = val === 'その他';
+      document.getElementById('ijoTentoShijiRow').classList.toggle('hidden', !isRenraku);
+      document.getElementById('ijoTentoTaioSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 転倒・怪我のサービス実施プルダウンで「その他」を選んだとき入力欄を表示する
+    function onIjoTentoServiceChange() {
+      const isSonota = document.getElementById('ijoTentoService').value === 'その他';
+      document.getElementById('ijoTentoServiceSonotaRow').classList.toggle('hidden', !isSonota);
     }
 
     // 異常記録を保存する：フォームの入力値を記録内容テキストに変換してPUTする
@@ -1442,9 +1549,18 @@
         parts.push(`サービス実施：${service}`);
       } else if (type === '転倒・怪我') {
         // 発生場所（必須）
-        const basho = document.getElementById('ijoBasho').value;
+        let basho = document.getElementById('ijoBasho').value;
         if (!basho) { alert('発生場所を選択してください。'); return; }
+        if (basho === 'その他') {
+          const detail = document.getElementById('ijoBashoSonota').value.trim();
+          if (!detail) { alert('発生場所の詳細を入力してください。'); return; }
+          basho = `その他（${detail}）`;
+        }
         parts.push(`発生場所：${basho}`);
+        // 痛みの訴え（必須）
+        const itami = document.getElementById('ijoItami').value;
+        if (!itami) { alert('痛みの訴えを選択してください。'); return; }
+        parts.push(`痛みの訴え：${itami}`);
         // 受傷部位（必須）
         const busho = document.getElementById('ijoBusho').value.trim();
         if (!busho) { alert('受傷部位を入力してください。'); return; }
@@ -1453,6 +1569,43 @@
         const teido = document.getElementById('ijoTeido').value;
         if (!teido) { alert('程度を選択してください。'); return; }
         parts.push(`程度：${teido}`);
+        // バイタル（全項目必須）
+        const tentoKetsuatsuJo = document.getElementById('ijoTentoKetsuatsuJo').value;
+        const tentoKetsuatsuKa = document.getElementById('ijoTentoKetsuatsuKa').value;
+        const tentoMyakuhaku   = document.getElementById('ijoTentoMyakuhaku').value;
+        const tentoTaion       = document.getElementById('ijoTentoTaion').value;
+        const tentoSpo2        = document.getElementById('ijoTentoSpo2').value;
+        if (!tentoKetsuatsuJo) { alert('血圧(上)を入力してください。'); return; }
+        if (!tentoKetsuatsuKa) { alert('血圧(下)を入力してください。'); return; }
+        if (!tentoMyakuhaku)   { alert('脈拍を入力してください。'); return; }
+        if (!tentoTaion)       { alert('体温を入力してください。'); return; }
+        if (!tentoSpo2)        { alert('SPO2を入力してください。'); return; }
+        parts.push(`血圧：${tentoKetsuatsuJo}/${tentoKetsuatsuKa}`);
+        parts.push(`脈拍：${tentoMyakuhaku}`);
+        parts.push(`体温：${tentoTaion}℃`);
+        parts.push(`SPO2：${tentoSpo2}%`);
+        // 対応内容（必須）
+        let tentoTaio = document.getElementById('ijoTentoTaio').value;
+        if (!tentoTaio) { alert('対応内容を選択してください。'); return; }
+        if (tentoTaio === 'かかりつけ医に連絡' || tentoTaio === '訪問看護に連絡') {
+          const shiji = document.getElementById('ijoTentoShiji').value.trim();
+          if (!shiji) { alert('受けた指示内容詳細を入力してください。'); return; }
+          tentoTaio = `${tentoTaio}（指示内容：${shiji}）`;
+        } else if (tentoTaio === 'その他') {
+          const detail = document.getElementById('ijoTentoTaioSonota').value.trim();
+          if (!detail) { alert('対応内容の詳細を入力してください。'); return; }
+          tentoTaio = `その他（${detail}）`;
+        }
+        parts.push(`対応：${tentoTaio}`);
+        // サービス実施について（必須）
+        let tentoService = document.getElementById('ijoTentoService').value;
+        if (!tentoService) { alert('サービス実施についてを選択してください。'); return; }
+        if (tentoService === 'その他') {
+          const detail = document.getElementById('ijoTentoServiceSonota').value.trim();
+          if (!detail) { alert('サービス実施の詳細を入力してください。'); return; }
+          tentoService = `その他（${detail}）`;
+        }
+        parts.push(`サービス実施：${tentoService}`);
       } else {
         // その他：異常の概要（必須）
         const gaiyou = document.getElementById('ijoGaiyou').value.trim();
@@ -1460,8 +1613,8 @@
         parts.push(`概要：${gaiyou}`);
       }
 
-      // 体調不良は専用項目で対応・メモを処理済みなので共通セクションは他タイプのみ適用する
-      if (type !== '体調不良') {
+      // 「その他」のみ共通セクション（対応内容チェックボックス・詳細メモ）を使う
+      if (type === 'その他') {
         // 対応内容チェックボックス（必須：1つ以上選択）
         const taio = [...document.querySelectorAll('input[name=taio]:checked')].map(cb => cb.value);
         if (!taio.length) { alert('対応内容を1つ以上選択してください。'); return; }
