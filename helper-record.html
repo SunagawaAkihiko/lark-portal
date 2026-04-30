@@ -342,6 +342,133 @@
     /* Chrome等のnumber入力のスピナーを非表示にして幅を節約する */
     .vital-input-field::-webkit-inner-spin-button,
     .vital-input-field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* ===== バイタル記録タブ：care-record.htmlのバイタルタブをそのまま移植 ===== */
+    /* ボトムシートモーダル（care-recordと同形式） */
+    .vital-modal {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: flex; align-items: flex-end;
+    }
+    .vital-modal-content {
+      background: var(--bg-color); width: 100%;
+      padding: 1.5rem; border-radius: 20px 20px 0 0;
+      max-height: 92vh; overflow-y: auto; overflow-x: hidden;
+      box-sizing: border-box;
+    }
+    .vital-modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.8rem;
+    }
+    .vital-modal-header h2 { font-size: 1.1rem; }
+    .vital-close-btn {
+      background: none; border: none; font-size: 1.4rem;
+      cursor: pointer; color: var(--text-muted);
+    }
+    /* レコードグループ表示（care-recordのrecord-group-area/cardと同形式） */
+    .vital-rg-area {
+      background: white; border: 1px solid var(--border-color);
+      border-radius: 10px; overflow: hidden;
+    }
+    .vital-rg-card {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-color); cursor: pointer;
+    }
+    .vital-rg-area > *:last-child { border-bottom: none; }
+    .vital-rg-card.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
+    /* バイタル数値グリッド（care-recordのrecord-gridと同形式） */
+    .vital-rg-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 0.3rem;
+    }
+    .vital-rg-item {
+      background: white; border-radius: 8px;
+      padding: 0.35rem 0.3rem 0.45rem; text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .vital-rg-item.wide {
+      grid-column: 1 / -1; text-align: left; padding: 0.35rem 0.6rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .vital-rg-item.wide .vital-rg-label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
+    .vital-rg-item.wide .vital-rg-value { font-size: 0.95rem; white-space: nowrap; }
+    .vital-rg-label {
+      display: block; font-size: 0.66rem; color: var(--text-muted);
+      margin-bottom: 0.18rem; white-space: nowrap;
+    }
+    .vital-rg-value {
+      display: block; font-size: 1rem; font-weight: 700;
+      color: var(--text-color); line-height: 1.15; white-space: nowrap;
+    }
+    /* フォームグループ（care-recordのform-groupと同形式） */
+    .vital-fg { margin-bottom: 1.1rem; }
+    .vital-fg label {
+      display: block; font-weight: 700; font-size: 1.05rem;
+      margin-bottom: 0.4rem; color: var(--text-muted);
+    }
+    .vital-fg input, .vital-fg select {
+      width: 100%; max-width: 100%; box-sizing: border-box;
+      padding: 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px;
+      font-family: inherit; font-size: 1rem;
+      background: var(--card-bg); color: var(--text-color);
+    }
+    .vital-fg input:focus, .vital-fg select:focus {
+      outline: none; border-color: var(--primary-color);
+    }
+    .vital-fg input[type="date"] { -webkit-appearance: none; appearance: none; width: 100%; }
+    .vital-submit-btn {
+      width: 100%; padding: 0.85rem; border: none; border-radius: 8px;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; margin-top: 0.5rem; transition: background 0.2s;
+    }
+    .vital-submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .vital-form-msg { text-align: center; margin-top: 0.8rem; font-size: 0.9rem; min-height: 1.2em; }
+    .vital-form-msg.ok  { color: #2a9d4e; }
+    .vital-form-msg.err { color: #e63946; }
+    /* 一括入力：人別行 */
+    .vital-batch-row {
+      border: 1px solid var(--border-color); border-radius: 10px;
+      overflow: hidden; margin-bottom: 0.75rem;
+    }
+    .vital-batch-name {
+      padding: 0.3rem 0.75rem; background: #e8a070; color: white;
+      font-size: 0.85rem; font-weight: 700;
+    }
+    .vital-batch-fields { padding: 0.5rem; background: var(--card-bg); }
+    /* モード選択ボタン */
+    .vital-mode-btn {
+      width: 100%; padding: 1rem; border: 1.5px solid var(--border-color); border-radius: 12px;
+      background: var(--card-bg); font-family: inherit;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 0.8rem;
+      color: var(--text-color); text-align: left; transition: background 0.15s;
+    }
+    .vital-mode-btn:active { background: var(--primary-light); }
+    .vital-mode-btn i { font-size: 1.4rem; color: var(--primary-color); width: 1.8rem; text-align: center; flex-shrink: 0; }
+    .vital-mode-desc { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; margin-top: 0.1rem; }
+    /* 登録FABボタン（バイタルタブ表示中のみ表示） */
+    .vital-fab {
+      position: fixed; bottom: 1.8rem; right: 1.5rem;
+      padding: 0.9rem 1.4rem; border-radius: 30px; border: none;
+      background-color: var(--primary-color); color: white;
+      box-shadow: 0 4px 12px rgba(231,111,81,0.4);
+      font-family: inherit; font-size: 1rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+      z-index: 30; transition: transform 0.15s;
+    }
+    .vital-fab:active { transform: scale(0.95); }
+    /* バイタルタブ専用の下部アクションバー（編集・削除） */
+    .vital-action-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      display: flex; z-index: 31;
+      border-top: 2px solid var(--border-color);
+      box-shadow: 0 -3px 14px rgba(0,0,0,0.15);
+    }
+    .rab-edit { background: #5c6bc0; color: #fff; border-right: 1px solid #3949ab; }
+
     .check-group { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
     .check-group label {
       display: flex; align-items: center; gap: 0.35rem;
@@ -477,6 +604,9 @@
       </button>
       <button class="tab-btn" data-tab="individual">
         <i class="fa-solid fa-pen"></i> 振替・時間変更記録
+      </button>
+      <button class="tab-btn" data-tab="vital">
+        <i class="fa-solid fa-heart-pulse"></i> バイタル記録
       </button>
       <button class="tab-btn hidden" id="pauseTabBtn" data-tab="pause">
         <i class="fa-solid fa-pause"></i> 一時停止管理
@@ -668,7 +798,150 @@
     </div>
   </div>
 
-  <!-- ===== タブ④：一時停止管理 ===== -->
+  <!-- ===== タブ④：バイタル記録 ===== -->
+  <div id="tab-vital" class="tab-content hidden">
+    <!-- 氏名フィルター（care-recordと同形式） -->
+    <div class="filter-area" style="margin-bottom:0.75rem;">
+      <select id="vitalSelName" class="filter-select" style="flex:1;">
+        <option value="">氏名を選択</option>
+      </select>
+      <button class="filter-btn" onclick="vitalSelName.value='';vitalLoadRecords(activeOffice,'')">
+        全員
+      </button>
+    </div>
+    <!-- 記録一覧 -->
+    <div id="vitalRecordList" style="padding-bottom:5rem;">
+      <div class="status-msg"><i class="fa-solid fa-folder-open"></i> 事業所を選択すると表示されます</div>
+    </div>
+  </div>
+
+  <!-- ===== バイタル記録：FABボタン（バイタルタブ表示中のみ表示） ===== -->
+  <button class="vital-fab hidden" id="vitalFab" onclick="vitalOnFab()">
+    <i class="fa-solid fa-pen"></i> 記録
+  </button>
+
+  <!-- ===== バイタル記録：下部アクションバー（カード選択時に表示） ===== -->
+  <div id="vitalActionBar" class="vital-action-bar hidden">
+    <button class="rab-btn rab-edit" onclick="vitalOnEdit()">
+      <i class="fa-solid fa-pen"></i> 編集
+    </button>
+    <button class="rab-btn rab-delete" onclick="vitalOnDelete()">
+      <i class="fa-solid fa-trash"></i> 削除
+    </button>
+  </div>
+
+  <!-- ===== バイタル記録：個別登録モーダル（ボトムシート） ===== -->
+  <div class="vital-modal hidden" id="vitalAddModal">
+    <div class="vital-modal-content">
+      <div class="vital-modal-header">
+        <h2 id="vitalAddTitle">バイタルを登録</h2>
+        <button class="vital-close-btn" onclick="vitalCloseModal(document.getElementById('vitalAddModal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="vitalAddForm">
+        <div class="vital-fg">
+          <label>日付 <span style="color:#e63946">*</span></label>
+          <input type="date" id="vitalAddDate" required>
+        </div>
+        <div class="vital-fg">
+          <label>氏名 <span style="color:#e63946">*</span></label>
+          <select id="vitalAddName" required>
+            <option value="">氏名を選択してください</option>
+          </select>
+        </div>
+        <div id="vitalDynamicFields"></div>
+        <button type="submit" class="vital-submit-btn" id="vitalSubmitBtn">登録する</button>
+        <div class="vital-form-msg" id="vitalFormMsg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== バイタル記録：編集モーダル（ボトムシート） ===== -->
+  <div class="vital-modal hidden" id="vitalEditModal">
+    <div class="vital-modal-content">
+      <div class="vital-modal-header">
+        <h2>バイタルを編集</h2>
+        <button class="vital-close-btn" onclick="vitalCloseModal(document.getElementById('vitalEditModal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="vitalEditForm">
+        <input type="hidden" id="vitalEditRecordId">
+        <div class="vital-fg">
+          <label>日付</label>
+          <input type="date" id="vitalEditDate">
+        </div>
+        <div class="vital-fg">
+          <label>氏名</label>
+          <input type="text" id="vitalEditName" readonly
+            style="-webkit-appearance:none;background:#f0e0d0;color:var(--text-muted);">
+          <div style="font-size:0.73rem;color:var(--text-muted);margin-top:0.2rem;">
+            ※ 氏名の変更はLarkで直接行ってください
+          </div>
+        </div>
+        <div id="vitalEditDynamicFields"></div>
+        <button type="submit" class="vital-submit-btn" id="vitalEditSubmitBtn">保存する</button>
+        <div class="vital-form-msg" id="vitalEditFormMsg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== バイタル記録：モード選択モーダル（ボトムシート） ===== -->
+  <div class="vital-modal hidden" id="vitalModeModal">
+    <div class="vital-modal-content">
+      <div class="vital-modal-header">
+        <h2>バイタルを登録</h2>
+        <button class="vital-close-btn" onclick="vitalCloseModal(document.getElementById('vitalModeModal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <button class="vital-mode-btn" onclick="vitalSelectMode('scheduled')">
+          <i class="fa-solid fa-calendar-check"></i>
+          <div>
+            <div>入浴</div>
+            <div class="vital-mode-desc">本日の入浴予定者を一括入力</div>
+          </div>
+        </button>
+        <button class="vital-mode-btn" onclick="vitalSelectMode('all')">
+          <i class="fa-solid fa-users"></i>
+          <div>
+            <div>複数</div>
+            <div class="vital-mode-desc">全入居者から任意の人だけ一括入力</div>
+          </div>
+        </button>
+        <button class="vital-mode-btn" onclick="vitalSelectMode('individual')">
+          <i class="fa-solid fa-user"></i>
+          <div>
+            <div>個別</div>
+            <div class="vital-mode-desc">利用者を選んで個別入力</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== バイタル記録：一括入力モーダル（ボトムシート） ===== -->
+  <div class="vital-modal hidden" id="vitalBatchModal">
+    <div class="vital-modal-content">
+      <div class="vital-modal-header">
+        <h2 id="vitalBatchTitle">バイタル一括入力</h2>
+        <button class="vital-close-btn" onclick="vitalCloseModal(document.getElementById('vitalBatchModal'))">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="vital-fg">
+        <label>日付 <span style="color:#e63946">*</span></label>
+        <input type="date" id="vitalBatchDate">
+      </div>
+      <div id="vitalBatchPersonList"></div>
+      <button class="vital-submit-btn" id="vitalBatchSubmitBtn" onclick="vitalSubmitBatch()">一括登録する</button>
+      <div class="vital-form-msg" id="vitalBatchFormMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== タブ⑤：一時停止管理 ===== -->
   <div id="tab-pause" class="tab-content hidden">
 
     <!-- 一括操作カード -->
@@ -1514,6 +1787,10 @@
 
       // 一時停止タブが表示中なら再読み込みする
       if (currentTab === 'pause') loadPauseSettings();
+      // バイタルタブの氏名セレクトを選択事業所に合わせて更新する
+      vitalUpdateNameOptions(office, document.getElementById('vitalSelName'));
+      vitalUpdateNameOptions(office, document.getElementById('vitalAddName'));
+      if (currentTab === 'vital') vitalLoadRecords(office, '');
 
       // 事業所切り替え時に選択をリセットして記録履歴を自動で再取得する（初回表示も含む）
       clearSelection();
@@ -1533,13 +1810,18 @@
         // タブボタンのactiveを更新する
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
         // コンテンツの表示切り替え
-        ['list', 'create', 'individual', 'pause'].forEach(t => {
+        ['list', 'create', 'individual', 'vital', 'pause'].forEach(t => {
           document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
         });
         // 一時停止タブを開いたときにデータを読み込む
         if (tab === 'pause')      loadPauseSettings();
         // 振替・時間変更タブを開いたときにメタデータを読み込む
         if (tab === 'individual') loadIndivMeta();
+        // バイタルタブを開いたときに利用者リストと記録を読み込む
+        // バイタルFABはバイタルタブのみ表示する
+        document.getElementById('vitalFab').classList.toggle('hidden', tab !== 'vital');
+        if (tab !== 'vital') vitalClearSelection();
+        if (tab === 'vital') { vitalFetchCustomers(); vitalLoadRecords(activeOffice, ''); }
       });
     });
 
@@ -2828,27 +3110,550 @@
     }
 
     // ============================================================
-    // 起動
+    // タブ④：バイタル記録（care-record.html から移植・vital プレフィックス）
     // ============================================================
 
-    // ============================================================
-    // バイタル入力：自動フォーカス移動
-    // data-maxlen 桁数に達したら data-next で指定した次フィールドへ自動で移動する。
-    // type=number は小数入力中に value が空になる場合があるため体温は type=text に変更済み。
-    // ============================================================
-    document.querySelectorAll('.vital-input-field[data-next]').forEach(input => {
-      input.addEventListener('input', () => {
-        const maxLen = parseInt(input.dataset.maxlen, 10);
-        if (!isNaN(maxLen) && String(input.value).length >= maxLen) {
-          const next = document.getElementById(input.dataset.next);
-          if (next) {
-            next.focus();
-            // テキスト全選択して上書き入力しやすくする（select()はnumber型では無視される）
-            if (next.select) next.select();
+    // バイタルフィールド定義（care-record.html の TABLE_DEFS.bathing と同一）
+    const VITAL_TABLE_DEF = {
+      label: 'バイタル',
+      fields: [
+        { name: '血圧(上)', type: 'number', inputmode: 'numeric', placeholder: '例: 120', maxlen: 3 },
+        { name: '血圧(下)', type: 'number', inputmode: 'numeric', placeholder: '例: 80',  maxlen: 2 },
+        { name: '脈拍',     type: 'number', inputmode: 'numeric', placeholder: '例: 72',  maxlen: 2 },
+        // type=number は小数入力中に value が空になるため体温は type=text で代替する
+        { name: '体温',     type: 'text',   inputmode: 'decimal', placeholder: '例: 36.5', maxlen: 4 },
+        { name: 'SPO2',     type: 'number', inputmode: 'numeric', placeholder: '例: 98',  maxlen: 3 },
+      ],
+    };
+
+    // 取得済みレコードキャッシュ（アクションバー操作で参照する）
+    let vitalLoadedRecords = [];
+    // 事業所別氏名マップ（/api/customers/get から取得・初回のみ）
+    let vitalOfficeNamesMap = {};
+    // 選択中レコードID（アクションバーの操作対象）
+    let vitalSelectedId = null;
+
+    // ==================== モーダル開閉ヘルパー ====================
+    // モーダルを開く際に body スクロールを固定して横揺れを防ぐ
+    function vitalOpenModal(el) {
+      el.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    // モーダルを閉じる。全モーダルが閉じたときにスクロールを復元する
+    function vitalCloseModal(el) {
+      el.classList.add('hidden');
+      if (document.querySelectorAll('.vital-modal:not(.hidden)').length === 0) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    // ==================== 顧客情報の動的取得 ====================
+    // /api/customers/get から氏名リストを取得して vitalOfficeNamesMap を構築する（初回のみ）
+    async function vitalFetchCustomers() {
+      if (Object.keys(vitalOfficeNamesMap).length > 0) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/customers/get`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        const map = {};
+        for (const c of data.data) {
+          if (!c.name) continue;
+          if (!map[c.office]) map[c.office] = [];
+          if (!map[c.office].includes(c.name)) map[c.office].push(c.name);
+        }
+        vitalOfficeNamesMap = map;
+      } catch (e) {
+        console.warn('[vitalFetchCustomers] 取得失敗:', e.message);
+      }
+      // 取得完了後に現在の事業所でセレクトを更新する
+      vitalUpdateNameOptions(activeOffice, document.getElementById('vitalSelName'));
+      vitalUpdateNameOptions(activeOffice, document.getElementById('vitalAddName'));
+    }
+
+    // ==================== 氏名リスト更新ヘルパー ====================
+    // 指定セレクトに選択事業所の利用者氏名を再設定し、現在値を保持する
+    function vitalUpdateNameOptions(office, sel) {
+      if (!sel) return;
+      const names = vitalOfficeNamesMap[office] || [];
+      const cur   = sel.value;
+      sel.innerHTML = '<option value="">氏名を選択</option>';
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = n;
+        sel.appendChild(opt);
+      });
+      if (cur && names.includes(cur)) sel.value = cur;
+    }
+
+    // ==================== レコード取得・表示 ====================
+    // API から bathing テーブルのレコードを取得し、日付→氏名の2段グループ形式で描画する
+    async function vitalLoadRecords(office, name) {
+      const list = document.getElementById('vitalRecordList');
+      list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-spinner fa-spin"></i> 読み込み中...</div>`;
+      vitalLoadedRecords = [];
+      vitalClearSelection();
+
+      try {
+        const params = new URLSearchParams({ table: 'bathing' });
+        if (office) params.append('office', office);
+        if (name)   params.append('name',   name);
+        const res  = await fetch(`${API_BASE}/api/care/records?${params}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '取得エラー');
+        vitalLoadedRecords = data.data;
+
+        if (data.data.length === 0) {
+          list.innerHTML = '<div class="status-msg"><i class="fa-solid fa-folder-open"></i> 記録がありません</div>';
+          return;
+        }
+
+        // 日付降順ソート → 日付→氏名の2段グループに分類する
+        const sorted = [...data.data].sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+        const dateGroups = new Map();
+        for (const r of sorted) {
+          const dk = r.date || '—';
+          const nk = r.name || '—';
+          if (!dateGroups.has(dk)) dateGroups.set(dk, new Map());
+          const nm = dateGroups.get(dk);
+          if (!nm.has(nk)) nm.set(nk, []);
+          nm.get(nk).push(r);
+        }
+
+        // YYYY-MM-DD → M/D(曜) 変換
+        function fmtVDate(s) {
+          if (!s || s === '—') return s || '—';
+          const [y, m, d] = s.split('-').map(Number);
+          if (!y) return s;
+          return `${m}/${d}(${'日月火水木金土'[new Date(y, m - 1, d).getDay()]})`;
+        }
+
+        // バイタル5項目をボックスグリッドで生成する（vital-rg-grid / vital-rg-item クラスを使用）
+        function buildVGrid(fields) {
+          const NAMES = ['血圧(上)', '血圧(下)', '脈拍', '体温', 'SPO2'];
+          const boxes = NAMES.filter(fn => fields[fn] !== undefined).map(fn =>
+            `<div class="vital-rg-item">
+              <span class="vital-rg-label">${escHtml(fn)}</span>
+              <span class="vital-rg-value">${escHtml(String(fields[fn]))}</span>
+            </div>`
+          ).join('');
+          const kinmu = fields['勤務区分'];
+          const kHtml = kinmu ? `<div class="vital-rg-item wide">${kinmuBadge(kinmu)}</div>` : '';
+          return `<div class="vital-rg-grid">${kHtml}${boxes}</div>`;
+        }
+
+        let html = '';
+        for (const [date, nameMap] of dateGroups) {
+          html += `<div class="date-group-header">${fmtVDate(date)}</div>`;
+          for (const [nm, recs] of nameMap) {
+            html += `<div class="name-group-header">${escHtml(nm)}</div>`;
+            for (const r of recs) {
+              html += `<div class="vital-rg-card" onclick="vitalSelectRecord(this,'${r.id}')" data-id="${r.id}">
+                ${buildVGrid(r.fields || {})}
+              </div>`;
+            }
           }
         }
+        list.innerHTML = `<div class="vital-rg-area">${html}</div>`;
+
+      } catch (err) {
+        list.innerHTML = `<div class="status-msg" style="color:#e63946"><i class="fa-solid fa-triangle-exclamation"></i> 取得失敗: ${escHtml(err.message)}</div>`;
+      }
+    }
+
+    // ==================== 記録選択・アクションバー ====================
+    // 選択状態を解除してアクションバーを隠す
+    function vitalClearSelection() {
+      vitalSelectedId = null;
+      document.querySelectorAll('.vital-rg-card.selected').forEach(e => e.classList.remove('selected'));
+      document.getElementById('vitalActionBar').classList.add('hidden');
+    }
+
+    // カードタップ：同じ行なら選択解除、別の行なら選択切り替え
+    function vitalSelectRecord(el, id) {
+      if (vitalSelectedId === id) { vitalClearSelection(); return; }
+      document.querySelectorAll('.vital-rg-card.selected').forEach(e => e.classList.remove('selected'));
+      vitalSelectedId = id;
+      el.classList.add('selected');
+      document.getElementById('vitalActionBar').classList.remove('hidden');
+    }
+
+    // 選択中レコードオブジェクトを返す
+    function vitalGetSelectedRecord() {
+      return vitalLoadedRecords.find(r => r.id === vitalSelectedId) || null;
+    }
+
+    // ==================== FABボタン → モード選択モーダルを開く ====================
+    function vitalOnFab() {
+      vitalOpenModal(document.getElementById('vitalModeModal'));
+    }
+
+    // ==================== モード選択（care-record.html の selectMode と同ロジック） ====================
+    // scheduled=入浴予定者一括、all=全入居者から任意一括、individual=個別フォーム
+    async function vitalSelectMode(mode) {
+      vitalCloseModal(document.getElementById('vitalModeModal'));
+
+      if (mode === 'individual') {
+        // 個別モード：通常の登録フォームを開く
+        document.getElementById('vitalAddDate').value = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+        vitalUpdateNameOptions(activeOffice, document.getElementById('vitalAddName'));
+        vitalBuildDynamicFields();
+        document.getElementById('vitalFormMsg').textContent = '';
+        document.getElementById('vitalFormMsg').className   = 'vital-form-msg';
+        vitalOpenModal(document.getElementById('vitalAddModal'));
+        return;
+      }
+
+      const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+      let names = [];
+      let title = '';
+
+      if (mode === 'scheduled') {
+        // バイタルタブ専用：API で本日の入浴予定者を取得する
+        try {
+          const res  = await fetch(`${API_BASE}/api/care/bathing-scheduled?office=${encodeURIComponent(activeOffice)}&date=${todayStr}`);
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+          names = data.names;
+          if (names.length === 0) { alert('本日の入浴予定者が見つかりません。'); return; }
+        } catch (err) {
+          alert('入浴予定者の取得に失敗しました: ' + err.message); return;
+        }
+        title = '入浴者バイタル登録';
+      } else {
+        // 複数モード：vitalOfficeNamesMap から全入居者を取得する
+        names = vitalOfficeNamesMap[activeOffice] || [];
+        if (names.length === 0) { alert('利用者情報が取得できていません。'); return; }
+        title = 'バイタル任意登録';
+      }
+
+      vitalOpenBatchModal(names, todayStr, title);
+    }
+
+    // ==================== 一括入力モーダルを開く ====================
+    // care-record.html の openBatchModal と同ロジック（CSS クラスは vital-batch-* を使用）
+    function vitalOpenBatchModal(names, date, title) {
+      document.getElementById('vitalBatchDate').value = date;
+      document.getElementById('vitalBatchTitle').innerHTML =
+        `<i class="fa-solid fa-pen"></i> ${escHtml(title)}（${names.length}名）`;
+
+      const html = names.map(name => {
+        const safeN = escHtml(name);
+        return `<div class="vital-batch-row">
+          <div class="vital-batch-name">${safeN}</div>
+          <div class="vital-batch-fields">${vitalBuildBatchPersonFields(name)}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('vitalBatchPersonList').innerHTML = html;
+      document.getElementById('vitalBatchFormMsg').textContent  = '';
+      document.getElementById('vitalBatchFormMsg').className    = 'vital-form-msg';
+
+      vitalInitBatchAutoAdvance();
+      vitalOpenModal(document.getElementById('vitalBatchModal'));
+    }
+
+    // ==================== 一括入力：1人分のフィールドHTML生成 ====================
+    // maxlen ありのバイタル項目をグリッドで並べる（care-record.html の buildBatchPersonFields と同ロジック）
+    function vitalBuildBatchPersonFields(personName) {
+      const fields = VITAL_TABLE_DEF.fields;
+      const safeN  = escHtml(personName);
+      const gridFields = fields.filter(f => f.maxlen);
+      let html = '';
+
+      if (gridFields.length > 0) {
+        html += '<div class="vital-input-grid">' +
+          gridFields.map(f => {
+            const ml   = `data-maxlen="${f.maxlen}"`;
+            const im   = f.inputmode ? `inputmode="${f.inputmode}"` : '';
+            const ph   = f.placeholder ? `placeholder="${f.placeholder.replace('例: ', '')}"` : '';
+            const type = f.type === 'text' ? 'text' : 'number';
+            return `<div class="vital-input-item">
+              <span class="vital-input-label">${escHtml(f.name)}</span>
+              <input type="${type}" class="vital-input-field" ${im} ${ml} ${ph}
+                data-person="${safeN}" data-field="${escHtml(f.name)}">
+            </div>`;
+          }).join('') +
+        '</div>';
+      }
+      return html;
+    }
+
+    // ==================== 一括入力：自動フォーカス移動 ====================
+    // 全利用者行をまたいで data-maxlen 入力欄をフラットに繋げる
+    function vitalInitBatchAutoAdvance() {
+      const container = document.getElementById('vitalBatchPersonList');
+      const inputs    = [...container.querySelectorAll('input[data-maxlen]')];
+      inputs.forEach((input, i) => {
+        // 重複リスナーを防ぐため clone で置き換えてから新規リスナーを設定する
+        const fresh = input.cloneNode(true);
+        input.parentNode.replaceChild(fresh, input);
+        inputs[i] = fresh;
+        fresh.addEventListener('input', () => {
+          const maxLen = parseInt(fresh.dataset.maxlen, 10);
+          if (String(fresh.value).length >= maxLen) {
+            const next = inputs[i + 1];
+            if (next) { next.focus(); if (next.select) next.select(); }
+          }
+        });
       });
+    }
+
+    // ==================== 一括入力：送信処理 ====================
+    // 各利用者のバイタル値を並列 POST して結果をまとめて表示する
+    async function vitalSubmitBatch() {
+      const date  = document.getElementById('vitalBatchDate').value;
+      const msgEl = document.getElementById('vitalBatchFormMsg');
+      if (!date) {
+        msgEl.textContent = '日付は必須です。';
+        msgEl.className   = 'vital-form-msg err';
+        return;
+      }
+
+      // 各利用者行からフィールド値を収集する（未入力の人はスキップする）
+      const container = document.getElementById('vitalBatchPersonList');
+      const rows      = [...container.querySelectorAll('.vital-batch-row')];
+      const requests  = rows.map(row => {
+        const name   = row.querySelector('.vital-batch-name')?.textContent?.trim() || '';
+        const fields = {};
+        row.querySelectorAll('[data-field]').forEach(el => {
+          if (el.value !== '') fields[el.dataset.field] = el.value;
+        });
+        return { name, fields };
+      }).filter(r => r.name && Object.keys(r.fields).length > 0);
+
+      if (requests.length === 0) {
+        msgEl.textContent = '入力されたデータがありません。';
+        msgEl.className   = 'vital-form-msg err';
+        return;
+      }
+
+      const btn = document.getElementById('vitalBatchSubmitBtn');
+      btn.disabled    = true;
+      btn.textContent = '登録中...';
+      msgEl.textContent = '';
+
+      try {
+        // 全利用者分を並列で API に送信する
+        const results = await Promise.allSettled(
+          requests.map(({ name, fields }) =>
+            fetch(`${API_BASE}/api/care/record`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ table: 'bathing', date, office: activeOffice, name, fields }),
+            }).then(r => r.json())
+          )
+        );
+
+        const failed = results.filter(r => r.status === 'rejected' || !r.value?.ok);
+        if (failed.length > 0) {
+          msgEl.textContent = `${results.length - failed.length}件登録、${failed.length}件失敗しました。`;
+          msgEl.className   = 'vital-form-msg err';
+        } else {
+          msgEl.textContent = `${results.length}件すべて登録しました！`;
+          msgEl.className   = 'vital-form-msg ok';
+          setTimeout(() => {
+            vitalCloseModal(document.getElementById('vitalBatchModal'));
+            vitalLoadRecords(activeOffice, document.getElementById('vitalSelName').value);
+          }, 1000);
+        }
+      } catch (err) {
+        msgEl.textContent = '登録中にエラーが発生しました: ' + err.message;
+        msgEl.className   = 'vital-form-msg err';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '一括登録する';
+      }
+    }
+
+    // ==================== 動的フィールド生成（追加フォーム） ====================
+    // VITAL_TABLE_DEF.fields に基づき vitalDynamicFields コンテナに入力欄を生成する
+    function vitalBuildDynamicFields() {
+      const container = document.getElementById('vitalDynamicFields');
+      container.innerHTML = VITAL_TABLE_DEF.fields.map(f => {
+        const id = `vdyn-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const ph = f.placeholder ? `placeholder="${f.placeholder}"` : '';
+        const im = f.inputmode   ? `inputmode="${f.inputmode}"`     : '';
+        const ml = f.maxlen      ? `data-maxlen="${f.maxlen}"`      : '';
+        if (f.type === 'number') {
+          return `<div class="vital-fg">
+            <label for="${id}">${f.name}</label>
+            <input type="number" id="${id}" data-field="${f.name}" ${ph} ${im} ${ml}>
+          </div>`;
+        } else {
+          return `<div class="vital-fg">
+            <label for="${id}">${f.name}</label>
+            <input type="text" id="${id}" data-field="${f.name}" ${ph} ${im} ${ml}>
+          </div>`;
+        }
+      }).join('');
+      vitalInitAutoAdvance(container);
+    }
+
+    // ==================== 動的フィールド生成（編集フォーム） ====================
+    // 選択中レコードの値を初期値として埋め込んだ編集フォームを生成する
+    function vitalBuildEditFields(record) {
+      const container = document.getElementById('vitalEditDynamicFields');
+      container.innerHTML = VITAL_TABLE_DEF.fields.map(f => {
+        const id  = `vedit-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const val = record.fields?.[f.name] ?? '';
+        const im  = f.inputmode ? `inputmode="${f.inputmode}"` : '';
+        const ml  = f.maxlen   ? `data-maxlen="${f.maxlen}"`  : '';
+        if (f.type === 'number') {
+          return `<div class="vital-fg">
+            <label for="${id}">${f.name}</label>
+            <input type="number" id="${id}" data-field="${f.name}" value="${val}" ${im} ${ml}>
+          </div>`;
+        } else {
+          return `<div class="vital-fg">
+            <label for="${id}">${f.name}</label>
+            <input type="text" id="${id}" data-field="${f.name}" value="${val}" ${im} ${ml}>
+          </div>`;
+        }
+      }).join('');
+      vitalInitAutoAdvance(container);
+    }
+
+    // ==================== バイタル入力自動フォーカス移動 ====================
+    // data-maxlen を持つ入力欄で桁数に達したら DOM 順で次の入力欄へ移動する
+    // clone で置き換えることで重複リスナーを防ぐ（care-record.html の initAutoAdvance と同ロジック）
+    function vitalInitAutoAdvance(container) {
+      const inputs = [...container.querySelectorAll('input[data-maxlen]')];
+      inputs.forEach((input, i) => {
+        const fresh = input.cloneNode(true);
+        input.parentNode.replaceChild(fresh, input);
+        inputs[i] = fresh;
+        fresh.addEventListener('input', () => {
+          const maxLen = parseInt(fresh.dataset.maxlen, 10);
+          if (String(fresh.value).length >= maxLen) {
+            const next = inputs[i + 1];
+            if (next) { next.focus(); if (next.select) next.select(); }
+          }
+        });
+      });
+    }
+
+    // ==================== アクションバー：編集モーダルを開く ====================
+    function vitalOnEdit() {
+      const r = vitalGetSelectedRecord();
+      if (!r) return;
+      document.getElementById('vitalEditRecordId').value = r.id;
+      document.getElementById('vitalEditDate').value     = r.date || '';
+      document.getElementById('vitalEditName').value     = r.name || '';
+      vitalBuildEditFields(r);
+      document.getElementById('vitalEditFormMsg').textContent = '';
+      document.getElementById('vitalEditFormMsg').className   = 'vital-form-msg';
+      vitalOpenModal(document.getElementById('vitalEditModal'));
+    }
+
+    // ==================== アクションバー：削除 ====================
+    async function vitalOnDelete() {
+      const r = vitalGetSelectedRecord();
+      if (!r) return;
+      if (!confirm(`「${r.name}」のバイタル記録を削除しますか？\nこの操作は元に戻せません。`)) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${r.id}?table=bathing`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        vitalClearSelection();
+        vitalLoadRecords(activeOffice, document.getElementById('vitalSelName').value);
+      } catch (err) {
+        alert('削除に失敗しました: ' + err.message);
+      }
+    }
+
+    // ==================== 追加フォーム送信 ====================
+    document.getElementById('vitalAddForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const date  = document.getElementById('vitalAddDate').value;
+      const name  = document.getElementById('vitalAddName').value;
+      const msgEl = document.getElementById('vitalFormMsg');
+      if (!date || !name) {
+        msgEl.textContent = '日付・氏名は必須です。';
+        msgEl.className   = 'vital-form-msg err';
+        return;
+      }
+
+      // 動的フィールドの値を収集する（空欄は送らない）
+      const fields = {};
+      document.getElementById('vitalDynamicFields').querySelectorAll('[data-field]').forEach(el => {
+        if (el.value !== '') fields[el.dataset.field] = el.value;
+      });
+
+      const btn = document.getElementById('vitalSubmitBtn');
+      btn.disabled    = true;
+      btn.textContent = '登録中...';
+      msgEl.textContent = '';
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ table: 'bathing', date, office: activeOffice, name, fields }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '登録に失敗しました');
+        msgEl.textContent = '登録しました！';
+        msgEl.className   = 'vital-form-msg ok';
+        setTimeout(() => {
+          vitalCloseModal(document.getElementById('vitalAddModal'));
+          vitalLoadRecords(activeOffice, document.getElementById('vitalSelName').value);
+        }, 800);
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className   = 'vital-form-msg err';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '登録する';
+      }
     });
+
+    // ==================== 編集フォーム送信 ====================
+    document.getElementById('vitalEditForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const recId  = document.getElementById('vitalEditRecordId').value;
+      const date   = document.getElementById('vitalEditDate').value;
+      const msgEl  = document.getElementById('vitalEditFormMsg');
+      const fields = {};
+      document.getElementById('vitalEditDynamicFields').querySelectorAll('[data-field]').forEach(el => {
+        if (el.value !== '') fields[el.dataset.field] = el.value;
+      });
+
+      const btn = document.getElementById('vitalEditSubmitBtn');
+      btn.disabled    = true;
+      btn.textContent = '保存中...';
+      msgEl.textContent = '';
+
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${recId}`, {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ table: 'bathing', date, fields }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || '保存に失敗しました');
+        msgEl.textContent = '保存しました！';
+        msgEl.className   = 'vital-form-msg ok';
+        setTimeout(() => {
+          vitalCloseModal(document.getElementById('vitalEditModal'));
+          vitalClearSelection();
+          vitalLoadRecords(activeOffice, document.getElementById('vitalSelName').value);
+        }, 800);
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.className   = 'vital-form-msg err';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '保存する';
+      }
+    });
+
+    // ==================== 氏名フィルター change イベント ====================
+    document.getElementById('vitalSelName').addEventListener('change', () => {
+      vitalLoadRecords(activeOffice, document.getElementById('vitalSelName').value);
+    });
+
+    // ============================================================
+    // 起動
 
     // 管理者モード（?mode=admin）のときのみ一時停止管理タブを表示する
     if (isAdmin) {
