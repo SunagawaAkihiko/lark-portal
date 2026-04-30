@@ -474,7 +474,7 @@
         <i class="fa-solid fa-layer-group"></i> 一括記録作成
       </button>
       <button class="tab-btn" data-tab="individual">
-        <i class="fa-solid fa-pen"></i> 個別・振替・変更
+        <i class="fa-solid fa-pen"></i> 振替・時間変更
       </button>
       <button class="tab-btn hidden" id="pauseTabBtn" data-tab="pause">
         <i class="fa-solid fa-pause"></i> 一時停止管理
@@ -569,7 +569,7 @@
     </div>
   </div>
 
-  <!-- ===== タブ③：個別・振替・変更記録作成 ===== -->
+  <!-- ===== タブ③：振替・時間変更記録作成 ===== -->
   <div id="tab-individual" class="tab-content hidden">
     <div class="create-form">
       <div style="font-size:0.88rem;color:var(--text-muted);line-height:1.5;padding:0.2rem 0.5rem;background:var(--primary-light);border-radius:8px;">
@@ -1531,7 +1531,7 @@
         });
         // 一時停止タブを開いたときにデータを読み込む
         if (tab === 'pause')      loadPauseSettings();
-        // 個別・振替・変更タブを開いたときにメタデータを読み込む
+        // 振替・時間変更タブを開いたときにメタデータを読み込む
         if (tab === 'individual') loadIndivMeta();
       });
     });
@@ -2290,7 +2290,7 @@
     }
 
     // ============================================================
-    // タブ③：個別・振替・変更記録作成
+    // タブ③：振替・時間変更記録作成
     // ============================================================
 
     // 定型文テーブルのキャッシュ（作業項目 → テンプレート文字列配列）
@@ -2466,7 +2466,7 @@
       }
     }
 
-    // 個別・振替・変更記録を保存する
+    // 振替・時間変更記録を保存する
     async function submitIndividual() {
       const bunrui = document.getElementById('indivBunrui').value;
       if (!bunrui) { alert('記録分類を選択してください。'); return; }
