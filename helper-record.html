@@ -976,6 +976,109 @@
     </div>
   </div>
 
+  <!-- ===== 中止記録モーダル ===== -->
+  <div id="chushiModal" class="modal-overlay hidden" onclick="closeChushiModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-ban" style="color:#c62828;"></i> サービス中止</span>
+        <button class="modal-close" onclick="document.getElementById('chushiModal').classList.add('hidden')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- サービス中止理由 -->
+      <div class="form-row">
+        <label class="form-label">サービス中止理由 <span class="form-required">*</span></label>
+        <select id="chushiRiyuu" class="form-select" onchange="onChushiRiyuuChange()">
+          <option value="">選択してください</option>
+          <option>本人・家族希望</option>
+          <option>病院受診の為</option>
+          <option>体調不良の為</option>
+          <option>その他</option>
+        </select>
+      </div>
+
+      <!-- 体調不良の為：詳細・バイタル・対応内容 -->
+      <div id="chushiSection-taichou" class="ijo-section hidden">
+        <!-- 体調不良の詳細 -->
+        <div class="form-row">
+          <label class="form-label">体調不良の詳細 <span class="form-required">*</span></label>
+          <textarea id="chushiTaichouDetail" class="form-input" rows="2" placeholder="体調不良の内容を入力してください"></textarea>
+        </div>
+        <!-- バイタル -->
+        <div class="form-row">
+          <label class="form-label">バイタル <span class="form-required">*</span></label>
+          <div class="vital-input-grid">
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(上)</span>
+              <input type="number" id="chushiKetsuatsuJo" class="vital-input-field" inputmode="numeric" placeholder="120"
+                data-maxlen="3" data-next="chushiKetsuatsuKa">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">血圧(下)</span>
+              <input type="number" id="chushiKetsuatsuKa" class="vital-input-field" inputmode="numeric" placeholder="80"
+                data-maxlen="2" data-next="chushiMyakuhaku">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">脈拍</span>
+              <input type="number" id="chushiMyakuhaku" class="vital-input-field" inputmode="numeric" placeholder="72"
+                data-maxlen="2" data-next="chushiTaion">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">体温(℃)</span>
+              <input type="text" id="chushiTaion" class="vital-input-field" inputmode="decimal" placeholder="36.5"
+                data-maxlen="4" data-next="chushiSpo2">
+            </div>
+            <div class="vital-input-item">
+              <span class="vital-input-label">SPO2(%)</span>
+              <input type="number" id="chushiSpo2" class="vital-input-field" inputmode="numeric" step="1" min="50" max="100" placeholder="98"
+                data-maxlen="3">
+            </div>
+          </div>
+        </div>
+        <!-- 対応内容 -->
+        <div class="form-row">
+          <label class="form-label">対応内容 <span class="form-required">*</span></label>
+          <select id="chushiTaio" class="form-select" onchange="onChushiTaioChange()">
+            <option value="">選択してください</option>
+            <option>頓服服用にて経過観察</option>
+            <option>クーリングにて経過観察</option>
+            <option>かかりつけ医に連絡</option>
+            <option>訪問看護に連絡</option>
+            <option>その他</option>
+          </select>
+        </div>
+        <!-- かかりつけ医・訪問看護を選択したときの指示内容入力欄 -->
+        <div class="form-row hidden" id="chushiShijiRow">
+          <label class="form-label">受けた指示内容詳細 <span class="form-required">*</span></label>
+          <textarea id="chushiShiji" class="form-input" rows="2" placeholder="受けた指示の内容を記入してください"></textarea>
+        </div>
+        <!-- 対応内容「その他」の入力欄 -->
+        <div class="form-row hidden" id="chushiTaioSonotaRow">
+          <label class="form-label">対応内容の詳細 <span class="form-required">*</span></label>
+          <input type="text" id="chushiTaioSonota" class="form-input" placeholder="対応内容を入力してください">
+        </div>
+      </div>
+
+      <!-- その他：中止理由詳細 -->
+      <div id="chushiSection-sonota" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">中止理由詳細 <span class="form-required">*</span></label>
+          <textarea id="chushiSonotaDetail" class="form-input" rows="2" placeholder="中止理由を入力してください"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="chushiSaveBtn" class="btn-save" onclick="submitChushi()">
+          <i class="fa-solid fa-floppy-disk"></i> 保存する
+        </button>
+        <button class="btn-cancel" onclick="document.getElementById('chushiModal').classList.add('hidden')">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 編集モーダル ===== -->
   <div id="editModal" class="modal-overlay hidden" onclick="closeEditModal(event)">
     <div class="modal" onclick="event.stopPropagation()">
@@ -1811,25 +1914,124 @@
       }
     }
 
-    // 中止ボタン：確認後に記録タイプを「中止」に更新する
-    async function onChushi() {
+    // 中止ボタン：中止記録モーダルを開く
+    function onChushi() {
       const r = getSelectedRecord();
       if (!r) return;
-      if (!confirm(`「${r.氏名}」の記録を中止にしますか？`)) return;
+      openChushiModal();
+    }
+
+    // 中止記録モーダルを初期化して表示する
+    function openChushiModal() {
+      // 全入力欄をリセットする
+      ['chushiRiyuu','chushiTaichouDetail',
+       'chushiKetsuatsuJo','chushiKetsuatsuKa','chushiMyakuhaku','chushiTaion','chushiSpo2',
+       'chushiTaio','chushiTaioSonota','chushiShiji','chushiSonotaDetail',
+      ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      // 条件表示欄とセクションを非表示にリセットする
+      ['chushiShijiRow','chushiTaioSonotaRow'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+      );
+      ['chushiSection-taichou','chushiSection-sonota'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+      );
+      document.getElementById('chushiModal').classList.remove('hidden');
+    }
+
+    function closeChushiModal(e) {
+      if (e && e.target !== document.getElementById('chushiModal')) return;
+      document.getElementById('chushiModal').classList.add('hidden');
+    }
+
+    // 中止理由プルダウンの選択に応じてサブ質問を切り替える
+    function onChushiRiyuuChange() {
+      const val = document.getElementById('chushiRiyuu').value;
+      document.getElementById('chushiSection-taichou').classList.toggle('hidden', val !== '体調不良の為');
+      document.getElementById('chushiSection-sonota').classList.toggle('hidden', val !== 'その他');
+    }
+
+    // 対応内容プルダウンの選択に応じて条件欄を切り替える（中止用）
+    function onChushiTaioChange() {
+      const val = document.getElementById('chushiTaio').value;
+      const isRenraku = val === 'かかりつけ医に連絡' || val === '訪問看護に連絡';
+      const isSonota  = val === 'その他';
+      document.getElementById('chushiShijiRow').classList.toggle('hidden', !isRenraku);
+      document.getElementById('chushiTaioSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // 中止記録を保存する：入力値を記録内容テキストに変換してPUTする
+    async function submitChushi() {
+      const r = getSelectedRecord();
+      if (!r) return;
+
+      const riyuu = document.getElementById('chushiRiyuu').value;
+      if (!riyuu) { alert('サービス中止理由を選択してください。'); return; }
+
+      const parts = [`サービス中止理由：${riyuu}`];
+
+      if (riyuu === '体調不良の為') {
+        // 体調不良の詳細（必須）
+        const detail = document.getElementById('chushiTaichouDetail').value.trim();
+        if (!detail) { alert('体調不良の詳細を入力してください。'); return; }
+        parts.push(`体調不良の詳細：${detail}`);
+        // バイタル（全項目必須）
+        const jo  = document.getElementById('chushiKetsuatsuJo').value;
+        const ka  = document.getElementById('chushiKetsuatsuKa').value;
+        const mya = document.getElementById('chushiMyakuhaku').value;
+        const tai = document.getElementById('chushiTaion').value;
+        const spo = document.getElementById('chushiSpo2').value;
+        if (!jo)  { alert('血圧(上)を入力してください。'); return; }
+        if (!ka)  { alert('血圧(下)を入力してください。'); return; }
+        if (!mya) { alert('脈拍を入力してください。'); return; }
+        if (!tai) { alert('体温を入力してください。'); return; }
+        if (!spo) { alert('SPO2を入力してください。'); return; }
+        parts.push(`血圧：${jo}/${ka}`);
+        parts.push(`脈拍：${mya}`);
+        parts.push(`体温：${tai}℃`);
+        parts.push(`SPO2：${spo}%`);
+        // 対応内容（必須）
+        let taio = document.getElementById('chushiTaio').value;
+        if (!taio) { alert('対応内容を選択してください。'); return; }
+        if (taio === 'かかりつけ医に連絡' || taio === '訪問看護に連絡') {
+          const shiji = document.getElementById('chushiShiji').value.trim();
+          if (!shiji) { alert('受けた指示内容詳細を入力してください。'); return; }
+          taio = `${taio}（指示内容：${shiji}）`;
+        } else if (taio === 'その他') {
+          const sonotaDetail = document.getElementById('chushiTaioSonota').value.trim();
+          if (!sonotaDetail) { alert('対応内容の詳細を入力してください。'); return; }
+          taio = `その他（${sonotaDetail}）`;
+        }
+        parts.push(`対応：${taio}`);
+      } else if (riyuu === 'その他') {
+        // 中止理由詳細（必須）
+        const sonotaDetail = document.getElementById('chushiSonotaDetail').value.trim();
+        if (!sonotaDetail) { alert('中止理由詳細を入力してください。'); return; }
+        parts.push(`中止理由詳細：${sonotaDetail}`);
+      }
+
+      const kirokuNaiyou = parts.join('　');
+
+      const btn = document.getElementById('chushiSaveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中...';
       try {
-        const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
+        const res = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録タイプ: '中止' }),
+          body: JSON.stringify({ 記録タイプ: '個別入力', 記録分類: 'サービス中止', 記録内容: kirokuNaiyou }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        // ローカルの記録タイプも更新する
+        // ローカルの記録も更新する
         const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) local.記録タイプ = '中止';
+        if (local) { local.記録タイプ = '個別入力'; local.記録分類 = 'サービス中止'; local.記録内容 = kirokuNaiyou; }
+        document.getElementById('chushiModal').classList.add('hidden');
         clearSelection();
       } catch (err) {
-        alert('中止の設定に失敗しました: ' + err.message);
+        alert('保存に失敗しました: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存する';
       }
     }
 
