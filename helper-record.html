@@ -646,10 +646,12 @@
         </select>
       </div>
 
-      <!-- 提供時間（振替は自動・時間変更は手動入力／振替記録では非表示） -->
+      <!-- 提供時間（振替は自動入力・時間変更は選択式／振替記録では非表示） -->
       <div class="form-row" id="indivTeikyoJikanRow">
-        <label class="form-label">提供時間</label>
-        <input type="text" id="indivTeikyoJikan" class="form-input" placeholder="例: 08:30">
+        <label class="form-label">変更後の提供時間 <span class="form-required">*</span></label>
+        <select id="indivTeikyoJikan" class="form-select">
+          <option value="">選択してください</option>
+        </select>
       </div>
 
       <!-- サービス略称（自動入力・読み取り専用／振替記録では非表示） -->
@@ -2312,6 +2314,19 @@
     // 最後にメタデータをロードした事業所（事業所切り替え時に再取得するためキャッシュする）
     let indivMetaOffice  = null;
 
+    // 提供時間セレクトを0:00〜23:55の5分刻みで初期化する
+    (function buildTeikyoJikanOptions() {
+      const sel = document.getElementById('indivTeikyoJikan');
+      for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 5) {
+          const label = `${h}:${String(m).padStart(2, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = opt.textContent = label;
+          sel.appendChild(opt);
+        }
+      }
+    })();
+
     // 氏名・作業項目・勤務区分・定型文の初期データを取得してセレクトに設定する
     // 事業所が変わった場合はセレクトをリセットして再取得する
     async function loadIndivMeta() {
@@ -2513,11 +2528,15 @@
       const ryakusho    = document.getElementById('indivRyakusho').value;
       let   kirokuNaiyou = document.getElementById('indivKirokuNaiyou').value;
 
-      if (!jisshiDate) { alert('実施日を選択してください。');   return; }
-      if (!name)       { alert('氏名を選択してください。');     return; }
-      if (!sagyo)      { alert('作業項目を選択してください。'); return; }
-      if (!kinmu)      { alert('勤務区分を選択してください。'); return; }
-      if (!staff)      { alert('スタッフを選択してください。'); return; }
+      if (!jisshiDate) { alert('実施日を選択してください。');       return; }
+      if (!name)       { alert('氏名を選択してください。');         return; }
+      if (!sagyo)      { alert('作業項目を選択してください。');     return; }
+      if (!kinmu)      { alert('勤務区分を選択してください。');     return; }
+      if (!staff)      { alert('スタッフを選択してください。');     return; }
+      // 時間変更記録は変更後の提供時間が必須
+      if (bunrui === '時間変更記録' && !teikyoJikan) {
+        alert('変更後の提供時間を選択してください。'); return;
+      }
       // 振替記録・時間変更記録は記録内容が自動入力のため必須チェックを省略する
       if (bunrui !== '振替記録' && bunrui !== '時間変更記録' && !kirokuNaiyou) {
         alert('記録内容を選択してください。'); return;
