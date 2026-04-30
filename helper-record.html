@@ -878,6 +878,16 @@
     // URLパラメータから管理者モードを判定する
     const isAdmin = new URLSearchParams(location.search).get('mode') === 'admin';
 
+    // 勤務区分値→表示対象の雇用形態マッピング
+    // 日勤系と夜勤系で表示するスタッフを絞り込むために使用する
+    const KINMU_EMPLOYMENT_MAP = {
+      '日勤':     ['正社員', '日勤パート', '正社員（日勤夜勤兼務）'],
+      '夜勤担当①': ['正社員（夜勤専従）', '夜勤パート', '正社員（日勤夜勤兼務）'],
+      '夜勤担当②': ['正社員（夜勤専従）', '夜勤パート', '正社員（日勤夜勤兼務）'],
+    };
+    // いずれかの勤務区分に対応する雇用形態の全リスト（勤務区分未選択時に使用）
+    const ALL_ALLOWED_EMPLOYMENT = [...new Set(Object.values(KINMU_EMPLOYMENT_MAP).flat())];
+
     // 事業所ごとの勤務区分選択肢（label: 画面表示、value: Larkに保存する値）
     const KINMU_OPTIONS = {
       '大浦家': [
@@ -971,6 +981,7 @@
     let activeOffice      = '';   // 選択中の事業所
     let officeList        = [];   // 事業所リスト
     let staffList         = [];   // スタッフリスト（全件）
+    let staffAllData      = [];   // 雇用形態付きスタッフ全データ [{ name, offices, employment }]
     let staffByOffice     = {};   // 事業所別スタッフ名リスト { 事業所名: [氏名, ...] }
     let customerList      = [];   // 利用者リスト
     let currentRecords    = [];   // 現在表示中の記録一覧
@@ -1022,8 +1033,9 @@
 
         customerList = data.customerList || [];
 
-        // staffListは { name, offices: [] } の配列。複数事業所対応で各バケットに登録する
-        staffList = data.staffList || [];
+        // staffListは { name, offices, employment } の配列
+        staffList    = data.staffList || [];
+        staffAllData = staffList;
         staffByOffice = {};
         staffList.forEach(({ name, offices }) => {
           if (!name) return;
@@ -1034,8 +1046,8 @@
             staffByOffice[office].push(name);
           });
         });
-        // 現在の事業所でスタッフセレクトを絞り込み更新する
-        updateStaffSelects(activeOffice);
+        // 現在の事業所・勤務区分でスタッフセレクトを絞り込み更新する
+        updateStaffSelects(activeOffice, document.getElementById('createKinmu')?.value || '');
       } catch (err) {
         console.error('[loadMeta] スタッフ・利用者リスト取得失敗:', err);
       }
@@ -1059,17 +1071,26 @@
       if (officeList.length > 0) selectOffice(officeList[0]);
     }
 
-    // 事業所別にスタッフセレクトの選択肢を更新する（記録作成・編集モーダル両方）
-    // 事業所フィールドが未設定のスタッフは全事業所に表示し、完全に0件の場合は全員表示する
-    function updateStaffSelects(office) {
+    // 事業所・勤務区分でスタッフセレクトを絞り込む（記録作成・編集モーダル両方）
+    // kinmu未選択時は許可雇用形態全体、選択時は対応する雇用形態のみ表示する
+    function updateStaffSelects(office, kinmu) {
+      // 勤務区分から許可雇用形態を決定する
+      const allowedEmp = (kinmu && KINMU_EMPLOYMENT_MAP[kinmu])
+        ? KINMU_EMPLOYMENT_MAP[kinmu]
+        : ALL_ALLOWED_EMPLOYMENT;
+
+      // 事業所フィルター：事業所一致 ＋ 事業所未設定スタッフを候補にする
       const matched      = staffByOffice[office] || [];
       const unclassified = staffByOffice['']     || [];
-      // 分類済みスタッフ ＋ 事業所未設定スタッフを合わせる（重複排除）
-      // 分類済みが0件かつ未設定も0件なら全スタッフをフォールバック表示する
-      const combined = [...new Set([...matched, ...unclassified])];
-      const names = combined.length > 0
+      const combined     = [...new Set([...matched, ...unclassified])];
+      const officePool   = combined.length > 0
         ? combined
         : Object.values(staffByOffice).flat();
+
+      // 雇用形態フィルター：staffAllDataのemploymentを参照して絞り込む
+      const empMap = Object.fromEntries(staffAllData.map(s => [s.name, s.employment]));
+      const names  = officePool.filter(n => allowedEmp.includes(empMap[n] || ''));
+
       [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
         if (!sel) return;
         const current = sel.value;
@@ -1079,7 +1100,6 @@
           opt.value = opt.textContent = n;
           sel.appendChild(opt);
         });
-        // 事業所切り替え後も選択中の名前が有効なら保持する
         if (current && names.includes(current)) sel.value = current;
       });
     }
@@ -1092,8 +1112,8 @@
       });
       // 事業所に応じた勤務区分選択肢へ更新する
       updateKinmuSelects(office);
-      // 事業所に応じてスタッフセレクトを絞り込む
-      updateStaffSelects(office);
+      // 事業所に応じてスタッフセレクトを絞り込む（勤務区分も考慮する）
+      updateStaffSelects(office, document.getElementById('createKinmu')?.value || '');
 
       // 記録作成フォームの事業所セレクトも同期する
       const createOfficeEl = document.getElementById('createOffice');
@@ -1862,6 +1882,11 @@
     initOfficeTabs();
     // スタッフ・利用者リストはバックグラウンドで非同期取得する
     loadMeta();
+
+    // 勤務区分変更時にスタッフセレクトを雇用形態で再絞り込みする
+    document.getElementById('createKinmu').addEventListener('change', () => {
+      updateStaffSelects(activeOffice, document.getElementById('createKinmu').value);
+    });
   </script>
 </body>
 </html>
