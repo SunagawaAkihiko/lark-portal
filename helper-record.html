@@ -1022,13 +1022,17 @@
 
         customerList = data.customerList || [];
 
-        // staffListは { name, office } の配列。事業所別マップを構築する
+        // staffListは { name, offices: [] } の配列。複数事業所対応で各バケットに登録する
         staffList = data.staffList || [];
         staffByOffice = {};
-        staffList.forEach(({ name, office }) => {
+        staffList.forEach(({ name, offices }) => {
           if (!name) return;
-          if (!staffByOffice[office]) staffByOffice[office] = [];
-          staffByOffice[office].push(name);
+          // 事業所未設定は '' バケットに入れてフォールバック表示に使う
+          const list = (offices && offices.length > 0) ? offices : [''];
+          list.forEach(office => {
+            if (!staffByOffice[office]) staffByOffice[office] = [];
+            staffByOffice[office].push(name);
+          });
         });
         // 現在の事業所でスタッフセレクトを絞り込み更新する
         updateStaffSelects(activeOffice);
