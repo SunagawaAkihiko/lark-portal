@@ -1325,6 +1325,18 @@
         });
         if (cur && opts.some(o => o.value === cur)) editSel.value = cur;
       }
+      // 振替・時間変更記録用（一括記録と同じラベル表示になるように更新する）
+      const indivKinmuSel = document.getElementById('indivKinmu');
+      if (indivKinmuSel) {
+        const cur = indivKinmuSel.value;
+        indivKinmuSel.innerHTML = '<option value="">選択してください</option>';
+        opts.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value; opt.textContent = o.label;
+          indivKinmuSel.appendChild(opt);
+        });
+        if (cur && opts.some(o => o.value === cur)) indivKinmuSel.value = cur;
+      }
     }
 
     // 勤務区分に対応するバッジスタイルを返す
@@ -2325,20 +2337,12 @@
           nameEl.appendChild(opt);
         });
 
-        // 作業項目セレクトに選択肢を設定する
+        // 作業項目セレクトに選択肢を設定する（定型文設定テーブル由来のキーを使用）
         const sagyoEl = document.getElementById('indivSagyo');
         (data.sagyoKomokuList || []).forEach(k => {
           const opt = document.createElement('option');
           opt.value = opt.textContent = k;
           sagyoEl.appendChild(opt);
-        });
-
-        // 勤務区分セレクトに選択肢を設定する
-        const kinmuEl = document.getElementById('indivKinmu');
-        (data.kinmuList || []).forEach(k => {
-          const opt = document.createElement('option');
-          opt.value = opt.textContent = k;
-          kinmuEl.appendChild(opt);
         });
 
         // スタッフセレクトを現在の事業所で初期化する
