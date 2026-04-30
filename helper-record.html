@@ -593,6 +593,21 @@
         <input type="text" id="indivJikanRiyuu" class="form-input" placeholder="時間変更の理由を入力してください">
       </div>
 
+      <!-- 振替理由（振替記録のみ表示） -->
+      <div class="form-row hidden" id="indivFurikaeRiyuuRow">
+        <label class="form-label">振替理由 <span class="form-required">*</span></label>
+        <select id="indivFurikaeRiyuu" class="form-select" onchange="onIndivFurikaeRiyuuChange()">
+          <option value="">選択してください</option>
+          <option>中止したサービスの振替</option>
+          <option>その他</option>
+        </select>
+      </div>
+      <!-- 振替理由詳細（「その他」のみ表示） -->
+      <div class="form-row hidden" id="indivFurikaeDetailRow">
+        <label class="form-label">振替理由詳細 <span class="form-required">*</span></label>
+        <input type="text" id="indivFurikaeDetail" class="form-input" placeholder="振替理由を入力してください">
+      </div>
+
       <!-- 実施日 -->
       <div class="form-row">
         <label class="form-label">実施日 <span class="form-required">*</span></label>
@@ -631,21 +646,21 @@
         </select>
       </div>
 
-      <!-- 提供時間（振替は自動・時間変更は手動入力） -->
-      <div class="form-row">
+      <!-- 提供時間（振替は自動・時間変更は手動入力／振替記録では非表示） -->
+      <div class="form-row" id="indivTeikyoJikanRow">
         <label class="form-label">提供時間</label>
         <input type="text" id="indivTeikyoJikan" class="form-input" placeholder="例: 08:30">
       </div>
 
-      <!-- サービス略称（自動入力・読み取り専用） -->
-      <div class="form-row">
+      <!-- サービス略称（自動入力・読み取り専用／振替記録では非表示） -->
+      <div class="form-row" id="indivRyakushoRow">
         <label class="form-label">サービス略称</label>
         <input type="text" id="indivRyakusho" class="form-input" readonly
           style="background:#f5f5f5;color:var(--text-muted);">
       </div>
 
-      <!-- 記録内容（定型文テーブルから作業項目で絞り込み選択） -->
-      <div class="form-row">
+      <!-- 記録内容（定型文テーブルから作業項目で絞り込み選択／振替記録では非表示） -->
+      <div class="form-row" id="indivKirokuNaiyouRow">
         <label class="form-label">記録内容 <span class="form-required">*</span></label>
         <select id="indivKirokuNaiyou" class="form-select">
           <option value="">作業項目を選択すると候補が表示されます</option>
@@ -2280,21 +2295,29 @@
 
     // 定型文テーブルのキャッシュ（作業項目 → テンプレート文字列配列）
     let indivTemplateMap = {};
-    // メタデータ取得済みフラグ（タブを開くたびに再取得しないようにする）
-    let indivMetaLoaded  = false;
+    // 最後にメタデータをロードした事業所（事業所切り替え時に再取得するためキャッシュする）
+    let indivMetaOffice  = null;
 
     // 氏名・作業項目・勤務区分・定型文の初期データを取得してセレクトに設定する
+    // 事業所が変わった場合はセレクトをリセットして再取得する
     async function loadIndivMeta() {
-      if (indivMetaLoaded) return;
+      if (indivMetaOffice === activeOffice) return;
+      indivMetaOffice = activeOffice;
+
+      // セレクトをリセットする
+      document.getElementById('indivName').innerHTML  = '<option value="">選択してください</option>';
+      document.getElementById('indivSagyo').innerHTML = '<option value="">選択してください</option>';
+      document.getElementById('indivKinmu').innerHTML = '<option value="">選択してください</option>';
+
       try {
-        const res  = await fetch(`${API_BASE}/api/helper/individual/meta`);
+        const qs   = activeOffice ? `?office=${encodeURIComponent(activeOffice)}` : '';
+        const res  = await fetch(`${API_BASE}/api/helper/individual/meta${qs}`);
         const data = await res.json();
         if (!data.ok) return;
 
         indivTemplateMap = data.templateMap || {};
-        indivMetaLoaded  = true;
 
-        // 氏名セレクトに選択肢を設定する
+        // 氏名セレクトに事業所で絞り込まれた選択肢を設定する
         const nameEl = document.getElementById('indivName');
         (data.names || []).forEach(n => {
           const opt = document.createElement('option');
@@ -2325,16 +2348,29 @@
       }
     }
 
-    // 記録分類変更時：時間変更理由欄の表示切り替えと提供時間の編集可否を制御する
+    // 記録分類変更時：表示項目を切り替える
     function onIndivBunruiChange() {
-      const bunrui  = document.getElementById('indivBunrui').value;
-      const isJikan = bunrui === '時間変更記録';
+      const bunrui    = document.getElementById('indivBunrui').value;
+      const isFurikae = bunrui === '振替記録';
+      const isJikan   = bunrui === '時間変更記録';
+
+      // 振替理由は振替記録のみ表示する
+      document.getElementById('indivFurikaeRiyuuRow').classList.toggle('hidden', !isFurikae);
+      document.getElementById('indivFurikaeDetailRow').classList.add('hidden');
+
+      // 時間変更理由は時間変更記録のみ表示する
       document.getElementById('indivJikanRiyuuRow').classList.toggle('hidden', !isJikan);
-      // 振替記録は提供時間を自動入力のみ（読み取り専用）にし、時間変更記録は手動入力を許可する
-      const jikanEl = document.getElementById('indivTeikyoJikan');
-      jikanEl.readOnly = (bunrui === '振替記録');
-      jikanEl.style.background = (bunrui === '振替記録') ? '#f5f5f5' : '';
-      jikanEl.style.color      = (bunrui === '振替記録') ? 'var(--text-muted)' : '';
+
+      // 提供時間・サービス略称・記録内容は振替記録では非表示（自動入力のため表示不要）
+      document.getElementById('indivTeikyoJikanRow').classList.toggle('hidden', isFurikae);
+      document.getElementById('indivRyakushoRow').classList.toggle('hidden', isFurikae);
+      document.getElementById('indivKirokuNaiyouRow').classList.toggle('hidden', isFurikae);
+    }
+
+    // 振替理由で「その他」を選んだとき振替理由詳細欄を表示する
+    function onIndivFurikaeRiyuuChange() {
+      const isSonota = document.getElementById('indivFurikaeRiyuu').value === 'その他';
+      document.getElementById('indivFurikaeDetailRow').classList.toggle('hidden', !isSonota);
     }
 
     // 氏名・作業項目変更時：記録内容セレクトを更新し顧客別設定を検索する
@@ -2437,8 +2473,19 @@
 
       const jikanRiyuu = document.getElementById('indivJikanRiyuu').value.trim();
       if (bunrui === '時間変更記録' && !jikanRiyuu) {
-        alert('時間変更理由を入力してください。');
-        return;
+        alert('時間変更理由を入力してください。'); return;
+      }
+
+      // 振替理由バリデーション（振替記録のみ）
+      let furikaeRiyuu = '';
+      if (bunrui === '振替記録') {
+        furikaeRiyuu = document.getElementById('indivFurikaeRiyuu').value;
+        if (!furikaeRiyuu) { alert('振替理由を選択してください。'); return; }
+        if (furikaeRiyuu === 'その他') {
+          const detail = document.getElementById('indivFurikaeDetail').value.trim();
+          if (!detail) { alert('振替理由詳細を入力してください。'); return; }
+          furikaeRiyuu = `その他（${detail}）`;
+        }
       }
 
       const jisshiDate  = document.getElementById('indivDate').value;
@@ -2450,13 +2497,22 @@
       const ryakusho    = document.getElementById('indivRyakusho').value;
       let   kirokuNaiyou = document.getElementById('indivKirokuNaiyou').value;
 
-      if (!jisshiDate)   { alert('実施日を選択してください。');   return; }
-      if (!name)         { alert('氏名を選択してください。');     return; }
-      if (!sagyo)        { alert('作業項目を選択してください。'); return; }
-      if (!kinmu)        { alert('勤務区分を選択してください。'); return; }
-      if (!staff)        { alert('スタッフを選択してください。'); return; }
-      if (!kirokuNaiyou) { alert('記録内容を選択してください。'); return; }
+      if (!jisshiDate) { alert('実施日を選択してください。');   return; }
+      if (!name)       { alert('氏名を選択してください。');     return; }
+      if (!sagyo)      { alert('作業項目を選択してください。'); return; }
+      if (!kinmu)      { alert('勤務区分を選択してください。'); return; }
+      if (!staff)      { alert('スタッフを選択してください。'); return; }
+      // 振替記録は記録内容が自動入力のため必須チェックを省略する
+      if (bunrui !== '振替記録' && !kirokuNaiyou) {
+        alert('記録内容を選択してください。'); return;
+      }
 
+      // 振替記録の場合は記録内容に振替理由を追記する
+      if (bunrui === '振替記録' && furikaeRiyuu) {
+        kirokuNaiyou = kirokuNaiyou
+          ? `${kirokuNaiyou}（振替理由：${furikaeRiyuu}）`
+          : `振替理由：${furikaeRiyuu}`;
+      }
       // 時間変更記録の場合は記録内容に時間変更理由を追記する
       if (bunrui === '時間変更記録' && jikanRiyuu) {
         kirokuNaiyou = `${kirokuNaiyou}（時間変更理由：${jikanRiyuu}）`;
@@ -2491,11 +2547,17 @@
 
         // フォームをリセットする（記録分類・実施日は保持して連続入力しやすくする）
         ['indivName','indivSagyo','indivKinmu','indivStaff',
-         'indivTeikyoJikan','indivRyakusho','indivKirokuNaiyou','indivJikanRiyuu'].forEach(id => {
+         'indivTeikyoJikan','indivRyakusho','indivKirokuNaiyou',
+         'indivJikanRiyuu','indivFurikaeRiyuu','indivFurikaeDetail'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
         document.getElementById('indivJikanRiyuuRow').classList.add('hidden');
+        document.getElementById('indivFurikaeRiyuuRow').classList.add('hidden');
+        document.getElementById('indivFurikaeDetailRow').classList.add('hidden');
+        document.getElementById('indivTeikyoJikanRow').classList.remove('hidden');
+        document.getElementById('indivRyakushoRow').classList.remove('hidden');
+        document.getElementById('indivKirokuNaiyouRow').classList.remove('hidden');
         document.getElementById('indivKirokuNaiyou').innerHTML =
           '<option value="">作業項目を選択すると候補が表示されます</option>';
         setTimeout(() => resultEl.classList.add('hidden'), 3000);
