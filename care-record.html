@@ -714,7 +714,8 @@
       weight: {
         label: '体重管理',
         fields: [
-          { name: '体重', type: 'number', placeholder: '例: 55.2', step: '0.1', unit: 'kg' },
+          // noLabel: 表示欄でラベルを省略して値のみ1行表示（行を詰めるため）
+          { name: '体重', type: 'number', placeholder: '例: 55.2', step: '0.1', unit: 'kg', noLabel: true },
         ],
       },
       bowel: {
@@ -734,7 +735,8 @@
       water: {
         label: '水分摂取量',
         fields: [
-          { name: 'ml', type: 'number', placeholder: '例: 800' },
+          // inline: 表示欄でラベルと値を横並びで1行表示（行を詰めるため）
+          { name: 'ml', type: 'number', placeholder: '例: 800', inline: true },
         ],
       },
     };
@@ -925,8 +927,21 @@
             .map(f => {
               const val = r.fields[f.name];
               if (f.type === 'number' || f.type === 'text') {
-                // 数値・体温：大きく中央に、単位は右隣に小さく
                 const unit = f.unit ? `<span class="record-grid-unit">${f.unit}</span>` : '';
+                if (f.noLabel) {
+                  // ラベルなし：値と単位のみを全幅中央表示（体重管理など1行に収める）
+                  return `<div class="record-grid-item wide" style="justify-content:center">
+                    <span class="record-grid-value">${val}${unit}</span>
+                  </div>`;
+                }
+                if (f.inline) {
+                  // インライン：ラベルと値を横並び1行表示（水分摂取量など）
+                  return `<div class="record-grid-item wide">
+                    <span class="record-grid-label">${f.name}</span>
+                    <span class="record-grid-value">${val}${unit}</span>
+                  </div>`;
+                }
+                // 通常：ラベル（上）＋値（下）の2段表示
                 return `<div class="record-grid-item">
                   <span class="record-grid-label">${f.name}</span>
                   <span class="record-grid-value">${val}${unit}</span>
