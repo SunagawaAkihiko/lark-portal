@@ -1794,13 +1794,13 @@
         const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録分類: '異常記録', 記録内容: kirokuNaiyou }),
+          body: JSON.stringify({ 記録タイプ: '個別入力', 記録分類: type, 記録内容: kirokuNaiyou }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
         // ローカルの記録も更新する
         const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) { local.記録分類 = '異常記録'; local.記録内容 = kirokuNaiyou; }
+        if (local) { local.記録タイプ = '個別入力'; local.記録分類 = type; local.記録内容 = kirokuNaiyou; }
         document.getElementById('ijoModal').classList.add('hidden');
         clearSelection();
       } catch (err) {
