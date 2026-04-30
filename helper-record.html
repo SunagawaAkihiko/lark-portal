@@ -1068,6 +1068,14 @@
         </div>
       </div>
 
+      <!-- 補足（全ての中止理由選択時に表示する共通項目） -->
+      <div id="chushiSection-hosoku" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">補足（その他報告事項あれば入力）</label>
+          <textarea id="chushiHosoku" class="form-input" rows="2" placeholder="補足事項があれば入力してください"></textarea>
+        </div>
+      </div>
+
       <div class="modal-footer">
         <button id="chushiSaveBtn" class="btn-save" onclick="submitChushi()">
           <i class="fa-solid fa-floppy-disk"></i> 保存する
@@ -1926,13 +1934,13 @@
       // 全入力欄をリセットする
       ['chushiRiyuu','chushiTaichouDetail',
        'chushiKetsuatsuJo','chushiKetsuatsuKa','chushiMyakuhaku','chushiTaion','chushiSpo2',
-       'chushiTaio','chushiTaioSonota','chushiShiji','chushiSonotaDetail',
+       'chushiTaio','chushiTaioSonota','chushiShiji','chushiSonotaDetail','chushiHosoku',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       // 条件表示欄とセクションを非表示にリセットする
       ['chushiShijiRow','chushiTaioSonotaRow'].forEach(id =>
         document.getElementById(id).classList.add('hidden')
       );
-      ['chushiSection-taichou','chushiSection-sonota'].forEach(id =>
+      ['chushiSection-taichou','chushiSection-sonota','chushiSection-hosoku'].forEach(id =>
         document.getElementById(id).classList.add('hidden')
       );
       document.getElementById('chushiModal').classList.remove('hidden');
@@ -1948,6 +1956,8 @@
       const val = document.getElementById('chushiRiyuu').value;
       document.getElementById('chushiSection-taichou').classList.toggle('hidden', val !== '体調不良の為');
       document.getElementById('chushiSection-sonota').classList.toggle('hidden', val !== 'その他');
+      // 補足は中止理由が選択されたら表示する
+      document.getElementById('chushiSection-hosoku').classList.toggle('hidden', !val);
     }
 
     // 対応内容プルダウンの選択に応じて条件欄を切り替える（中止用）
@@ -2008,6 +2018,10 @@
         if (!sonotaDetail) { alert('中止理由詳細を入力してください。'); return; }
         parts.push(`中止理由詳細：${sonotaDetail}`);
       }
+
+      // 補足（任意）
+      const hosoku = document.getElementById('chushiHosoku').value.trim();
+      if (hosoku) parts.push(`補足：${hosoku}`);
 
       const kirokuNaiyou = parts.join('　');
 
