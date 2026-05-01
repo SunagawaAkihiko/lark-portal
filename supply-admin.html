@@ -158,6 +158,19 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .empty-state i { font-size: 2.2rem; opacity: 0.35; display: block; margin-bottom: 0.6rem; }
 
+    /* ==================== 月合計カード ==================== */
+    .total-card {
+      background: var(--primary-color);
+      color: white;
+      border-radius: 10px;
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .total-card-label { font-size: 0.82rem; font-weight: 700; opacity: 0.9; }
+    .total-card-amount { font-size: 1.15rem; font-weight: 700; }
+
     /* ==================== 件数バナー ==================== */
     .count-banner { font-size: 0.78rem; color: var(--text-muted); padding: 0.1rem 0.2rem; }
 
@@ -176,7 +189,12 @@
       font-size: 0.82rem;
       font-weight: 700;
       color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+    /* 氏名グループ内の小計 */
+    .name-group-total { font-size: 0.78rem; font-weight: 400; opacity: 0.9; }
     /* 1商品1行 */
     .record-item {
       display: flex;
@@ -719,9 +737,28 @@
       groups.get(r.name).push(r);
     }
 
-    let html = `<div class="count-banner">${records.length}件表示中</div><div class="records-area">`;
+    // 月合計金額を計算する（単価不明のレコードは0として加算）
+    const grandTotal   = records.reduce((sum, r) => sum + (r.subtotal || 0), 0);
+    const hasAnyPrice  = records.some(r => r.subtotal != null);
+    const monthInput   = document.getElementById('monthInput').value;
+    const monthLabel   = monthInput
+      ? `${monthInput.split('-')[0]}年${parseInt(monthInput.split('-')[1], 10)}月`
+      : '期間';
+    const totalLabel   = hasAnyPrice ? `¥${grandTotal.toLocaleString()}` : '—';
+
+    let html = `
+      <div class="total-card">
+        <span class="total-card-label"><i class="fa-solid fa-calculator"></i> ${escHtml(monthLabel)} 合計</span>
+        <span class="total-card-amount">${totalLabel}</span>
+      </div>
+      <div class="count-banner">${records.length}件表示中</div>
+      <div class="records-area">`;
     for (const [name, recs] of groups) {
-      html += `<div class="name-group-header">${escHtml(name)}</div>`;
+      // 氏名ごとの合計金額を計算する
+      const nameTotal      = recs.reduce((sum, r) => sum + (r.subtotal || 0), 0);
+      const hasNamePrice   = recs.some(r => r.subtotal != null);
+      const nameTotalLabel = hasNamePrice ? `¥${nameTotal.toLocaleString()}` : '';
+      html += `<div class="name-group-header">${escHtml(name)}<span class="name-group-total">${nameTotalLabel}</span></div>`;
       for (const r of recs) {
         // 商品名（その他の場合はotherProductを表示する）
         const productLabel = r.product
