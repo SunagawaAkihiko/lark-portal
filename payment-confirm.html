@@ -149,6 +149,7 @@
       background: white; border-radius: 20px 20px 0 0;
       padding: 1.25rem 1.25rem 2.5rem;
       display: flex; flex-direction: column; gap: 1rem;
+      overflow: hidden;
     }
     .modal-handle {
       width: 40px; height: 4px; border-radius: 2px;
@@ -173,7 +174,8 @@
     }
     .field-label .required { color: var(--primary-color); margin-left: 0.3rem; }
     .field-input, .field-select {
-      width: 100%; padding: 0.7rem 0.9rem;
+      width: 100%; min-width: 0; max-width: 100%;
+      padding: 0.7rem 0.9rem;
       border: 1.5px solid var(--border-color); border-radius: 10px;
       font-family: inherit; font-size: 1rem; color: var(--text-color); background: white;
     }
