@@ -244,43 +244,7 @@
     .row-icon-btn.edit:active { border-color: #5c6bc0; color: #5c6bc0; background: #e8eaf6; }
     .row-icon-btn.del:active  { border-color: #c62828; color: #c62828; background: #ffebee; }
 
-    /* ==================== マスタ管理：商品カード ==================== */
-    .master-list { display: flex; flex-direction: column; gap: 0.5rem; }
-    .master-card {
-      background: white;
-      border: 1.5px solid var(--border-color);
-      border-radius: 10px;
-      padding: 0.65rem 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-    .master-icon {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      background: var(--primary-light);
-      color: var(--primary-color);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.88rem;
-      flex-shrink: 0;
-    }
-    .master-info { flex: 1; min-width: 0; }
-    .master-name { font-size: 0.93rem; font-weight: 700; color: var(--text-color); }
-    .master-price { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
-    .master-price span { color: var(--primary-color); font-weight: 700; }
-    .master-actions { display: flex; gap: 0.4rem; }
-    .icon-btn {
-      width: 34px; height: 34px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 8px;
-      background: var(--card-bg);
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .icon-btn.edit:active { border-color: #5c6bc0; color: #5c6bc0; background: #e8eaf6; }
-    .icon-btn.del:active  { border-color: #c62828; color: #c62828; background: #ffebee; }
+    /* マスタ管理は提供履歴と同じ .records-area / .record-item を流用するため専用スタイル不要 */
 
     /* ==================== FABボタン ==================== */
     .fab {
@@ -797,7 +761,7 @@
     }
   }
 
-  /* マスタ一覧を描画する */
+  /* マスタ一覧を描画する（提供履歴と同じ records-area / record-item スタイルを流用） */
   function renderMasters() {
     const listEl  = document.getElementById('masterList');
     const emptyEl = document.getElementById('masterEmpty');
@@ -807,25 +771,25 @@
       return;
     }
     emptyEl.classList.add('hidden');
-    listEl.innerHTML = masterCache.map(m => {
-      const priceLabel = m.price != null ? `¥${m.price.toLocaleString()}` : '未設定';
+    const rows = masterCache.map(m => {
+      const priceLabel = m.price != null
+        ? `¥${m.price.toLocaleString()}`
+        : '<span style="color:var(--text-muted);">未設定</span>';
       return `
-        <div class="master-card">
-          <div class="master-icon"><i class="fa-solid fa-box"></i></div>
-          <div class="master-info">
-            <div class="master-name">${escHtml(m.name)}</div>
-            <div class="master-price">単価 <span>${priceLabel}</span></div>
-          </div>
-          <div class="master-actions">
-            <button class="icon-btn edit" onclick="openMasterEditModal('${m.id}','${escAttr(m.name)}',${m.price ?? ''})">
+        <div class="record-item">
+          <span class="supply-product">${escHtml(m.name)}</span>
+          <span class="supply-subtotal">${priceLabel}</span>
+          <div class="supply-actions">
+            <button class="row-icon-btn edit" onclick="openMasterEditModal('${m.id}','${escAttr(m.name)}',${m.price ?? ''})">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button class="icon-btn del" onclick="openMasterDeleteModal('${m.id}','${escAttr(m.name)}')">
+            <button class="row-icon-btn del" onclick="openMasterDeleteModal('${m.id}','${escAttr(m.name)}')">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </div>`;
     }).join('');
+    listEl.innerHTML = `<div class="records-area">${rows}</div>`;
     listEl.classList.remove('hidden');
   }
 
