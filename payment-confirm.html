@@ -317,7 +317,11 @@
       if (!recordsRes.ok) throw new Error(recordsRes.error);
 
       allStaff   = metaRes.staffList;
-      offices    = metaRes.officeOptions;
+      // 事業所タブは顧客テーブルの「事業所」選択肢を優先し、取得できなければメタから使う
+      // （顧客テーブルの値と確実に一致させるため）
+      offices    = (recordsRes.officeOptions && recordsRes.officeOptions.length > 0)
+                   ? recordsRes.officeOptions
+                   : metaRes.officeOptions;
       allRecords = recordsRes.records;
 
       buildTabs();
