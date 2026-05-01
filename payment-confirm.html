@@ -292,8 +292,7 @@
 
   // ===== 状態管理 =====
   let allStaff     = [];   // 全スタッフデータ { name, offices[] }
-  let allRecords   = [];   // 全未入金レコード { recordId, name, month, amount }
-  let allCustomers = [];   // 全顧客データ { name, office }
+  let allRecords   = [];   // 全未入金レコード { recordId, name, month, amount, office }
   let offices      = [];   // 事業所一覧（順序付き）
   let activeOffice = '';   // 選択中の事業所
   let activeRecord = null; // モーダルで処理中のレコード
@@ -308,21 +307,18 @@
     document.getElementById('fieldPayDate').value = `${y}-${m}-${d}`;
 
     try {
-      // メタ情報・顧客・入金レコードを並列取得する
-      const [metaRes, customersRes, recordsRes] = await Promise.all([
+      // メタ情報と入金レコードを並列取得する（顧客テーブルとの結合はサーバー側で実施）
+      const [metaRes, recordsRes] = await Promise.all([
         fetch(`${API_BASE}/api/purchase-request/meta`).then(r => r.json()),
-        fetch(`${API_BASE}/api/customers/get`).then(r => r.json()),
         fetch(`${API_BASE}/api/payment/records`).then(r => r.json()),
       ]);
 
-      if (!metaRes.ok)      throw new Error(metaRes.error);
-      if (!customersRes.ok) throw new Error(customersRes.error);
-      if (!recordsRes.ok)   throw new Error(recordsRes.error);
+      if (!metaRes.ok)    throw new Error(metaRes.error);
+      if (!recordsRes.ok) throw new Error(recordsRes.error);
 
-      allStaff     = metaRes.staffList;
-      offices      = metaRes.officeOptions;
-      allCustomers = customersRes.data;
-      allRecords   = recordsRes.records;
+      allStaff   = metaRes.staffList;
+      offices    = metaRes.officeOptions;
+      allRecords = recordsRes.records;
 
       buildTabs();
       buildMonthFilter();
@@ -377,23 +373,13 @@
     renderCards();
   }
 
-  // ===== 選択中事業所の顧客名セットを返す =====
-  function getOfficeCustomerNames() {
-    return new Set(
-      allCustomers
-        .filter(c => c.office === activeOffice && c.status !== '終了')
-        .map(c => c.name)
-    );
-  }
-
   // ===== カード一覧を描画する =====
   function renderCards() {
-    const customerNames = getOfficeCustomerNames();
     const selectedMonth = document.getElementById('monthFilter').value;
 
-    // 選択中の事業所に属する利用者かつ選択月のレコードに絞り込む
+    // サーバー側で付与された office フィールドで事業所フィルタをかける
     const filtered = allRecords.filter(r => {
-      if (!customerNames.has(r.name)) return false;
+      if (r.office !== activeOffice) return false;
       if (selectedMonth && r.month !== selectedMonth) return false;
       return true;
     });
