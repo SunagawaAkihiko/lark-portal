@@ -123,17 +123,19 @@
       background: var(--yellow-light); color: #b07b00;
     }
 
-    /* カード情報 */
-    .card-info { flex: 1; min-width: 0; }
+    /* カード情報（1行レイアウト） */
+    .card-month {
+      flex-shrink: 0;
+      font-size: 0.88rem; color: var(--text-muted); white-space: nowrap;
+    }
     .card-name {
+      flex: 1; min-width: 0;
       font-size: 1rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .card-month { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
 
-    /* 金額 */
-    .card-amount { flex-shrink: 0; text-align: right; }
-    .card-amount-label { font-size: 0.7rem; color: var(--text-muted); }
+    /* 金額（ラベルなし） */
+    .card-amount { flex-shrink: 0; }
     .card-amount-value { font-size: 1.05rem; font-weight: 700; }
 
     /* ===== モーダル ===== */
@@ -410,12 +412,9 @@
       card.innerHTML = `
         <div class="payment-card-body">
           <span class="status-badge">未入金</span>
-          <div class="card-info">
-            <div class="card-name">${record.name}</div>
-            <div class="card-month">${record.month || '―'}</div>
-          </div>
+          <span class="card-month">${record.month || '―'}</span>
+          <span class="card-name">${record.name}</span>
           <div class="card-amount">
-            <div class="card-amount-label">請求金額</div>
             <div class="card-amount-value">${record.amount != null ? '¥' + record.amount.toLocaleString() : '―'}</div>
           </div>
         </div>`;
