@@ -20,6 +20,7 @@
       --yellow-light:  #fdf5e0;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; }
     body {
       font-family: 'Zen Kaku Gothic New', sans-serif;
       background: var(--bg-color);
@@ -174,10 +175,12 @@
     }
     .field-label .required { color: var(--primary-color); margin-left: 0.3rem; }
     .field-input, .field-select {
+      display: block;
       width: 100%; min-width: 0; max-width: 100%;
       padding: 0.7rem 0.9rem;
       border: 1.5px solid var(--border-color); border-radius: 10px;
-      font-family: inherit; font-size: 1rem; color: var(--text-color); background: white;
+      font-family: inherit; font-size: 16px; color: var(--text-color); background: white;
+      -webkit-appearance: none; appearance: none;
     }
     .field-input:focus, .field-select:focus {
       outline: none; border-color: var(--primary-color);
