@@ -180,8 +180,8 @@
       align-items: center;
       justify-content: space-between;
     }
-    /* 氏名グループ内の小計（氏名と同じフォントサイズ） */
-    .name-group-total { font-size: 0.82rem; font-weight: 700; opacity: 0.9; }
+    /* 氏名グループ内の小計 */
+    .name-group-total { font-size: 0.95rem; font-weight: 700; opacity: 0.9; }
     /* 1商品1行 */
     .record-item {
       display: flex;
@@ -729,7 +729,7 @@
       // 氏名ごとの合計金額を計算する
       const nameTotal      = recs.reduce((sum, r) => sum + (r.subtotal || 0), 0);
       const hasNamePrice   = recs.some(r => r.subtotal != null);
-      const nameTotalLabel = hasNamePrice ? `¥${nameTotal.toLocaleString()}` : '';
+      const nameTotalLabel = hasNamePrice ? `合計：¥${nameTotal.toLocaleString()}` : '';
       html += `<div class="name-group-header">${escHtml(name)}<span class="name-group-total">${nameTotalLabel}</span></div>`;
       for (const r of recs) {
         // 商品名（その他の場合はotherProductを表示する）
