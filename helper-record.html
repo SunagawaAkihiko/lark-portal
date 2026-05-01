@@ -2495,6 +2495,9 @@
           作業項目:     document.getElementById('editSagyou').value,
           サービス略称: document.getElementById('editServiceName').value,
           記録内容:     document.getElementById('editContent').value,
+          // バイタル自動転記のため氏名と事業所を送信する
+          name:   document.getElementById('editName').value,
+          office: activeOffice,
         };
 
         const res  = await fetch(`${API_BASE}/api/helper/records/${recordId}`, {
@@ -2849,6 +2852,8 @@
             スタッフ:    staff,
             サービス略称: ryakusho,
             記録内容:    kirokuNaiyou,
+            // バイタル自動転記のため事業所を送信する
+            事業所:      activeOffice,
           }),
         });
         const data = await res.json();
@@ -3625,7 +3630,12 @@
         const res  = await fetch(`${API_BASE}/api/care/record/${recId}`, {
           method:  'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ table: 'bathing', date, fields }),
+          // name・office はバイタル→ヘルパー記録への自動転記に必要
+          body:    JSON.stringify({
+            table: 'bathing', date, fields,
+            name:   document.getElementById('vitalEditName').value,
+            office: activeOffice,
+          }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || '保存に失敗しました');

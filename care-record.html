@@ -1172,7 +1172,12 @@
         const res  = await fetch(`${API_BASE}/api/care/record/${recId}`, {
           method:  'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ table: currentTable, date, fields }),
+          // name・office はバイタル→ヘルパー記録への自動転記に必要（bathing更新時に使用）
+          body:    JSON.stringify({
+            table: currentTable, date, fields,
+            name:   document.getElementById('edit-name').value,
+            office: currentOffice,
+          }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || '保存に失敗しました');
