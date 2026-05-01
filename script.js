@@ -84,6 +84,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "物品提供管理",
+        description: "入居者への物品提供履歴の確認・編集と消耗品マスタの商品登録",
+        icon: "fa-box-open",
+        url: "supply-admin.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "利用者情報",
         description: "利用者情報の閲覧・薬手帳の登録ができます",
         icon: "fa-address-card",

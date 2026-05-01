@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>物品提供管理</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ==================== 変数・リセット ==================== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 5rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ==================== 固定ヘッダー ==================== */
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 21;
+      box-shadow: 0 2px 6px rgba(139,115,95,0.12);
+    }
+
+    /* ==================== 事業所タブ ==================== */
+    .office-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .office-tabs-label {
+      width: 100%;
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .office-tab {
+      flex: 1;
+      padding: 0.55rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* ==================== タブバー ==================== */
+    .tab-bar {
+      display: flex;
+      background: #ede0d4;
+      padding: 0.45rem 0.7rem;
+      gap: 0.4rem;
+      border-bottom: 2px solid #c9a98a;
+    }
+    .tab-btn {
+      white-space: nowrap;
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      border: 1.5px solid #9a7a6b;
+      background: #f5ebe0;
+      color: #6b4f3a;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .tab-btn.active { background: #6b4f3a; color: white; border-color: #6b4f3a; }
+
+    /* ==================== フィルターバー ==================== */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: var(--bg-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .filter-bar input[type="month"],
+    .filter-bar select {
+      flex: 1;
+      padding: 0.55rem 0.5rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .filter-bar input[type="month"] { max-width: 150px; }
+    .filter-bar select {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="5"><path fill="%23888" d="M0 0l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 0.6rem center;
+      background-size: 10px 5px;
+      background-color: var(--card-bg);
+    }
+    .all-btn {
+      padding: 0.55rem 0.9rem;
+      border: 1.5px solid var(--primary-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--primary-color);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ==================== メインコンテンツ ==================== */
+    .main-content {
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    /* ==================== ローディング・空状態 ==================== */
+    .loading-state, .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 34px; height: 34px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state i { font-size: 2.2rem; opacity: 0.35; display: block; margin-bottom: 0.6rem; }
+
+    /* ==================== 件数バナー ==================== */
+    .count-banner { font-size: 0.78rem; color: var(--text-muted); padding: 0.1rem 0.2rem; }
+
+    /* ==================== 提供履歴（helper-record 統一デザイン） ==================== */
+    .records-area {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    /* 氏名グループのヘッダー帯（オレンジ系） */
+    .name-group-header {
+      padding: 0.22rem 1.1rem;
+      background: #e8a070;
+      border-bottom: 1px solid #c8784a;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    /* 1商品1行 */
+    .record-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .record-item:last-child { border-bottom: none; }
+    /* 提供日 */
+    .supply-date {
+      font-size: 0.78rem;
+      color: var(--text-color);
+      white-space: nowrap;
+      flex-shrink: 0;
+      width: 5.5rem;
+    }
+    /* 商品名 */
+    .supply-product {
+      flex: 1;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-color);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 個数 */
+    .supply-count {
+      font-size: 0.82rem;
+      color: var(--text-color);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* 小計金額 */
+    .supply-subtotal {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 4rem;
+      text-align: right;
+    }
+    /* 編集・削除ボタン */
+    .supply-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+    .row-icon-btn {
+      width: 28px; height: 28px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .row-icon-btn.edit:active { border-color: #5c6bc0; color: #5c6bc0; background: #e8eaf6; }
+    .row-icon-btn.del:active  { border-color: #c62828; color: #c62828; background: #ffebee; }
+
+    /* ==================== マスタ管理：商品カード ==================== */
+    .master-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .master-card {
+      background: white;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .master-icon {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: var(--primary-light);
+      color: var(--primary-color);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.88rem;
+      flex-shrink: 0;
+    }
+    .master-info { flex: 1; min-width: 0; }
+    .master-name { font-size: 0.93rem; font-weight: 700; color: var(--text-color); }
+    .master-price { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
+    .master-price span { color: var(--primary-color); font-weight: 700; }
+    .master-actions { display: flex; gap: 0.4rem; }
+    .icon-btn {
+      width: 34px; height: 34px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn.edit:active { border-color: #5c6bc0; color: #5c6bc0; background: #e8eaf6; }
+    .icon-btn.del:active  { border-color: #c62828; color: #c62828; background: #ffebee; }
+
+    /* ==================== FABボタン ==================== */
+    .fab {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      z-index: 20;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(231,111,81,0.45);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s;
+    }
+    .fab:active { transform: scale(0.93); }
+
+    /* ==================== モーダル ==================== */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(74,63,53,0.45);
+      z-index: 40;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.center { align-items: center; }
+    .modal-sheet {
+      background: white;
+      border-radius: 18px 18px 0 0;
+      padding: 1.4rem 1.2rem 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    .modal-overlay.center .modal-sheet { border-radius: 16px; margin: 1rem; }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+    .modal-title {
+      font-size: 1rem; font-weight: 700; color: var(--text-color);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .modal-close {
+      width: 32px; height: 32px;
+      border: none; border-radius: 50%;
+      background: var(--card-bg); color: var(--text-muted);
+      font-size: 0.9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select {
+      width: 100%;
+      padding: 0.7rem 0.8rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text-color);
+      background: var(--card-bg);
+      -webkit-appearance: none;
+    }
+    .form-group input:focus { outline: none; border-color: var(--primary-color); }
+    .price-wrap { position: relative; }
+    .price-wrap::after {
+      content: '円';
+      position: absolute; right: 0.9rem; top: 50%; transform: translateY(-50%);
+      font-size: 0.88rem; color: var(--text-muted); pointer-events: none;
+    }
+    .price-wrap input { padding-right: 2.4rem; }
+    .form-msg { font-size: 0.82rem; margin-top: 0.5rem; min-height: 1.2em; }
+    .form-msg.ok  { color: #2e7d32; }
+    .form-msg.err { color: #c62828; }
+    .submit-btn {
+      width: 100%; padding: 0.85rem;
+      border: none; border-radius: 12px;
+      background: var(--primary-color); color: white;
+      font-family: inherit; font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .submit-btn:disabled { opacity: 0.6; }
+    /* 削除確認 */
+    .confirm-body {
+      font-size: 0.92rem; color: var(--text-color);
+      line-height: 1.6; margin-bottom: 1.2rem;
+    }
+    .confirm-body strong { color: var(--primary-color); }
+    .confirm-btns { display: flex; gap: 0.7rem; }
+    .confirm-btns button {
+      flex: 1; padding: 0.8rem; border-radius: 10px;
+      border: none; font-family: inherit;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-cancel { background: var(--card-bg); color: var(--text-muted); border: 1.5px solid var(--border-color) !important; }
+    .btn-delete { background: #c62828; color: white; }
+    .btn-delete:disabled { opacity: 0.6; }
+  </style>
+</head>
+<body>
+
+<!-- ==================== 固定ヘッダー ==================== -->
+<div class="sticky-header">
+
+  <!-- 事業所タブ -->
+  <div class="office-tabs" id="officeTabs">
+    <div class="office-tabs-label">
+      <i class="fa-solid fa-box-open"></i> 物品提供管理
+    </div>
+    <!-- JSで生成 -->
+  </div>
+
+  <!-- タブバー -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('history', this)">
+      <i class="fa-solid fa-clock-rotate-left"></i> 提供履歴
+    </button>
+    <button class="tab-btn" onclick="switchTab('master', this)">
+      <i class="fa-solid fa-list-check"></i> マスタ管理
+    </button>
+  </div>
+
+  <!-- フィルターバー（提供履歴タブ用） -->
+  <div class="filter-bar" id="filterBar">
+    <input type="month" id="monthInput">
+    <select id="nameSelect">
+      <option value="">氏名（全員）</option>
+    </select>
+    <button class="all-btn" onclick="showAll()">全員</button>
+  </div>
+
+</div>
+
+
+<!-- ==================== 提供履歴タブ ==================== -->
+<div class="main-content" id="tabHistory">
+  <div class="loading-state" id="historyLoading">
+    <div class="spinner"></div>読み込み中...
+  </div>
+  <div class="hidden" id="historyContent"></div>
+</div>
+
+
+<!-- ==================== マスタ管理タブ ==================== -->
+<div class="main-content hidden" id="tabMaster">
+  <div class="loading-state" id="masterLoading">
+    <div class="spinner"></div>読み込み中...
+  </div>
+  <div class="master-list hidden" id="masterList"></div>
+  <div class="empty-state hidden" id="masterEmpty">
+    <i class="fa-solid fa-box-open"></i>
+    <p>登録された商品がありません</p>
+  </div>
+</div>
+
+
+<!-- ==================== FAB（マスタ管理タブ用） ==================== -->
+<button class="fab hidden" id="masterFab" onclick="openMasterAddModal()">
+  <i class="fa-solid fa-plus"></i>
+</button>
+
+
+<!-- ==================== モーダル：履歴の商品を編集 ==================== -->
+<div class="modal-overlay hidden" id="editHistoryModal" onclick="closeByOverlay(event,'editHistoryModal')">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fa-solid fa-pen"></i> 提供内容を編集</span>
+      <button class="modal-close" onclick="closeModal('editHistoryModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="editHistoryRecordId">
+    <div class="form-group">
+      <label>商品</label>
+      <select id="editHistoryProduct"></select>
+    </div>
+    <div class="form-group" id="editHistoryOtherGroup" style="display:none">
+      <label>その他（商品名）</label>
+      <input type="text" id="editHistoryOtherProduct" placeholder="例: スキンケアクリーム">
+    </div>
+    <div class="form-group">
+      <label>個数</label>
+      <input type="number" id="editHistoryCount" min="1" value="1">
+    </div>
+    <button class="submit-btn" id="editHistorySubmitBtn" onclick="submitEditHistory()">
+      <i class="fa-solid fa-check"></i> 保存する
+    </button>
+    <div class="form-msg" id="editHistoryMsg"></div>
+  </div>
+</div>
+
+
+<!-- ==================== モーダル：履歴削除確認 ==================== -->
+<div class="modal-overlay center hidden" id="deleteHistoryModal" onclick="closeByOverlay(event,'deleteHistoryModal')">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fa-solid fa-trash" style="color:#c62828;"></i> 提供履歴を削除</span>
+      <button class="modal-close" onclick="closeModal('deleteHistoryModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="deleteHistoryRecordId">
+    <p class="confirm-body" id="deleteHistoryBody"></p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeModal('deleteHistoryModal')">キャンセル</button>
+      <button class="btn-delete" id="deleteHistoryBtn" onclick="submitDeleteHistory()">
+        <i class="fa-solid fa-trash"></i> 削除する
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== モーダル：マスタ商品を追加 ==================== -->
+<div class="modal-overlay hidden" id="masterAddModal" onclick="closeByOverlay(event,'masterAddModal')">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fa-solid fa-plus"></i> 商品を追加</span>
+      <button class="modal-close" onclick="closeModal('masterAddModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="form-group">
+      <label>商品名</label>
+      <input type="text" id="masterAddName" placeholder="例: おむつ Sサイズ">
+    </div>
+    <div class="form-group">
+      <label>単価（円）</label>
+      <div class="price-wrap">
+        <input type="number" id="masterAddPrice" min="0" placeholder="例: 800">
+      </div>
+    </div>
+    <button class="submit-btn" id="masterAddSubmitBtn" onclick="submitMasterAdd()">
+      <i class="fa-solid fa-check"></i> 登録する
+    </button>
+    <div class="form-msg" id="masterAddMsg"></div>
+  </div>
+</div>
+
+
+<!-- ==================== モーダル：マスタ商品を編集 ==================== -->
+<div class="modal-overlay hidden" id="masterEditModal" onclick="closeByOverlay(event,'masterEditModal')">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fa-solid fa-pen"></i> 商品を編集</span>
+      <button class="modal-close" onclick="closeModal('masterEditModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="masterEditId">
+    <div class="form-group">
+      <label>商品名</label>
+      <input type="text" id="masterEditName">
+    </div>
+    <div class="form-group">
+      <label>単価（円）</label>
+      <div class="price-wrap">
+        <input type="number" id="masterEditPrice" min="0">
+      </div>
+    </div>
+    <button class="submit-btn" id="masterEditSubmitBtn" onclick="submitMasterEdit()">
+      <i class="fa-solid fa-check"></i> 保存する
+    </button>
+    <div class="form-msg" id="masterEditMsg"></div>
+  </div>
+</div>
+
+
+<!-- ==================== モーダル：マスタ商品削除確認 ==================== -->
+<div class="modal-overlay center hidden" id="masterDeleteModal" onclick="closeByOverlay(event,'masterDeleteModal')">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fa-solid fa-trash" style="color:#c62828;"></i> 商品を削除</span>
+      <button class="modal-close" onclick="closeModal('masterDeleteModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="masterDeleteId">
+    <p class="confirm-body">
+      <strong id="masterDeleteName"></strong> をマスタから削除しますか？<br>
+      <span style="font-size:0.82rem;color:var(--text-muted);">※ 過去の提供履歴には影響しません。</span>
+    </p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeModal('masterDeleteModal')">キャンセル</button>
+      <button class="btn-delete" id="masterDeleteBtn" onclick="submitMasterDelete()">
+        <i class="fa-solid fa-trash"></i> 削除する
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  const API_BASE = 'https://attendance-app-irf1.onrender.com';
+
+  /* ==================== 状態管理 ==================== */
+  let activeOffice  = '';
+  let currentTab    = 'history';
+  let officeOptions = [];
+  // マスタ一覧（id, name, price）をキャッシュしてセレクトに使う
+  let masterCache   = [];
+
+  /* ==================== 初期化 ==================== */
+  window.addEventListener('DOMContentLoaded', async () => {
+    // 今月をデフォルト月として設定する
+    const now = new Date();
+    document.getElementById('monthInput').value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // メタ情報から事業所一覧を取得して事業所タブを生成する
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/meta`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      officeOptions = data.officeOptions || [];
+    } catch (e) {
+      officeOptions = [];
+    }
+
+    // 事業所タブを生成する
+    const tabsEl = document.getElementById('officeTabs');
+    if (officeOptions.length === 0) {
+      tabsEl.innerHTML += `<span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">事業所情報を取得できませんでした</span>`;
+    } else {
+      officeOptions.forEach((office, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'office-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = office;
+        btn.addEventListener('click', () => selectOffice(office, btn));
+        tabsEl.appendChild(btn);
+      });
+      activeOffice = officeOptions[0];
+    }
+
+    // マスタをロードしてセレクト選択肢を準備する
+    await loadMasters(false);
+
+    // 氏名セレクトにchange時のリロードを設定する
+    document.getElementById('nameSelect').addEventListener('change', () => {
+      if (currentTab === 'history') loadHistory();
+    });
+    document.getElementById('monthInput').addEventListener('change', () => {
+      if (currentTab === 'history') loadHistory();
+    });
+    // 編集モーダルの商品セレクト変更でその他テキストを切り替える
+    document.getElementById('editHistoryProduct').addEventListener('change', () => {
+      const isOther = document.getElementById('editHistoryProduct').value === 'その他';
+      document.getElementById('editHistoryOtherGroup').style.display = isOther ? '' : 'none';
+    });
+
+    // 初期データをロードする
+    if (activeOffice) loadHistory();
+  });
+
+  /* ==================== 事業所タブ ==================== */
+  function selectOffice(office, btn) {
+    document.querySelectorAll('.office-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeOffice = office;
+    if (currentTab === 'history') loadHistory();
+  }
+
+  /* ==================== タブ切り替え ==================== */
+  function switchTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.getElementById('tabHistory').classList.toggle('hidden', tab !== 'history');
+    document.getElementById('tabMaster').classList.toggle('hidden', tab !== 'master');
+    document.getElementById('filterBar').classList.toggle('hidden', tab !== 'history');
+    document.getElementById('masterFab').classList.toggle('hidden', tab !== 'master');
+
+    if (tab === 'history') loadHistory();
+    if (tab === 'master')  loadMasters(true);
+  }
+
+  /* ==================== フィルター「全員」ボタン ==================== */
+  function showAll() {
+    document.getElementById('nameSelect').value = '';
+    loadHistory();
+  }
+
+  /* ==================== 提供履歴をロード ==================== */
+  async function loadHistory() {
+    if (!activeOffice) return;
+    const month = document.getElementById('monthInput').value;
+    const name  = document.getElementById('nameSelect').value;
+
+    // ローディング表示に切り替える
+    document.getElementById('historyLoading').classList.remove('hidden');
+    document.getElementById('historyContent').classList.add('hidden');
+
+    try {
+      const params = new URLSearchParams({ office: activeOffice });
+      if (month) params.set('month', month);
+      if (name)  params.set('name', name);
+
+      const res  = await fetch(`${API_BASE}/api/consumables/history?${params}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      // 氏名セレクトの選択肢を更新する（月フィルタ後の氏名一覧）
+      updateNameSelect(data.records, name);
+
+      renderHistory(data.records);
+    } catch (e) {
+      document.getElementById('historyContent').innerHTML =
+        `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>${escHtml(e.message)}</p></div>`;
+      document.getElementById('historyContent').classList.remove('hidden');
+    } finally {
+      document.getElementById('historyLoading').classList.add('hidden');
+    }
+  }
+
+  /* 氏名セレクトの選択肢を再構築する */
+  function updateNameSelect(records, currentName) {
+    const names = [...new Set(records.map(r => r.name))].sort((a, b) => a.localeCompare(b, 'ja'));
+    const sel   = document.getElementById('nameSelect');
+    const prev  = sel.value;
+    sel.innerHTML = '<option value="">氏名（全員）</option>';
+    names.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n;
+      if (n === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  /* 提供履歴をHTMLに描画する（氏名グループ形式） */
+  function renderHistory(records) {
+    const el = document.getElementById('historyContent');
+    if (records.length === 0) {
+      el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-box-open"></i><p>該当する記録がありません</p></div>`;
+      el.classList.remove('hidden');
+      return;
+    }
+
+    // 氏名でグループ化する（サーバーが名前順にソート済み）
+    const groups = new Map();
+    for (const r of records) {
+      if (!groups.has(r.name)) groups.set(r.name, []);
+      groups.get(r.name).push(r);
+    }
+
+    let html = `<div class="count-banner">${records.length}件表示中</div><div class="records-area">`;
+    for (const [name, recs] of groups) {
+      html += `<div class="name-group-header">${escHtml(name)}</div>`;
+      for (const r of recs) {
+        // 商品名（その他の場合はotherProductを表示する）
+        const productLabel = r.product
+          ? escHtml(r.product)
+          : `${escHtml(r.otherProduct)}<span style="font-size:0.72rem;color:rgba(255,255,255,0.7);font-weight:400;"> （その他）</span>`;
+
+        // 小計（値段が不明な場合は「—」を表示する）
+        const subtotalLabel = r.subtotal != null
+          ? `¥${r.subtotal.toLocaleString()}`
+          : '<span style="color:var(--text-muted);">—</span>';
+
+        // 日付を "MM/DD（曜）" 形式に変換する
+        const dateFmt = formatDate(r.date);
+
+        html += `
+          <div class="record-item">
+            <span class="supply-date">${dateFmt}</span>
+            <span class="supply-product">${productLabel}</span>
+            <span class="supply-count">${r.count}個</span>
+            <span class="supply-subtotal">${subtotalLabel}</span>
+            <div class="supply-actions">
+              <button class="row-icon-btn edit" onclick="openEditHistoryModal('${r.id}','${escAttr(r.product)}','${escAttr(r.otherProduct)}',${r.count})">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="row-icon-btn del" onclick="openDeleteHistoryModal('${r.id}','${escAttr(name)}','${escAttr(r.product || r.otherProduct)}')">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>`;
+      }
+    }
+    html += '</div>';
+    el.innerHTML = html;
+    el.classList.remove('hidden');
+  }
+
+  /* ==================== マスタ一覧をロード ==================== */
+  async function loadMasters(showUi) {
+    if (showUi) {
+      document.getElementById('masterLoading').classList.remove('hidden');
+      document.getElementById('masterList').classList.add('hidden');
+      document.getElementById('masterEmpty').classList.add('hidden');
+    }
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/master-list`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      masterCache = data.masters || [];
+      if (showUi) renderMasters();
+      // 編集モーダルの商品セレクトを更新する
+      buildProductSelect();
+    } catch (e) {
+      if (showUi) {
+        document.getElementById('masterList').innerHTML =
+          `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>${escHtml(e.message)}</p></div>`;
+        document.getElementById('masterList').classList.remove('hidden');
+      }
+    } finally {
+      if (showUi) document.getElementById('masterLoading').classList.add('hidden');
+    }
+  }
+
+  /* マスタ一覧を描画する */
+  function renderMasters() {
+    const listEl  = document.getElementById('masterList');
+    const emptyEl = document.getElementById('masterEmpty');
+    if (masterCache.length === 0) {
+      listEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    emptyEl.classList.add('hidden');
+    listEl.innerHTML = masterCache.map(m => {
+      const priceLabel = m.price != null ? `¥${m.price.toLocaleString()}` : '未設定';
+      return `
+        <div class="master-card">
+          <div class="master-icon"><i class="fa-solid fa-box"></i></div>
+          <div class="master-info">
+            <div class="master-name">${escHtml(m.name)}</div>
+            <div class="master-price">単価 <span>${priceLabel}</span></div>
+          </div>
+          <div class="master-actions">
+            <button class="icon-btn edit" onclick="openMasterEditModal('${m.id}','${escAttr(m.name)}',${m.price ?? ''})">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="icon-btn del" onclick="openMasterDeleteModal('${m.id}','${escAttr(m.name)}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    listEl.classList.remove('hidden');
+  }
+
+  /* 履歴編集モーダルの商品セレクトを構築する */
+  function buildProductSelect() {
+    const sel = document.getElementById('editHistoryProduct');
+    sel.innerHTML = masterCache.map(m =>
+      `<option value="${escAttr(m.name)}">${escHtml(m.name)}</option>`
+    ).join('') + '<option value="その他">その他</option>';
+  }
+
+  /* ==================== 提供履歴：編集モーダル ==================== */
+  function openEditHistoryModal(id, product, otherProduct, count) {
+    document.getElementById('editHistoryRecordId').value = id;
+    const sel = document.getElementById('editHistoryProduct');
+    // 商品が空（その他）の場合は「その他」を選択する
+    if (!product || !Array.from(sel.options).some(o => o.value === product)) {
+      sel.value = 'その他';
+      document.getElementById('editHistoryOtherGroup').style.display = '';
+      document.getElementById('editHistoryOtherProduct').value = otherProduct || '';
+    } else {
+      sel.value = product;
+      document.getElementById('editHistoryOtherGroup').style.display = 'none';
+    }
+    document.getElementById('editHistoryCount').value = count || 1;
+    document.getElementById('editHistoryMsg').textContent = '';
+    document.getElementById('editHistoryMsg').className = 'form-msg';
+    document.getElementById('editHistorySubmitBtn').disabled = false;
+    openModal('editHistoryModal');
+  }
+
+  async function submitEditHistory() {
+    const id          = document.getElementById('editHistoryRecordId').value;
+    const product     = document.getElementById('editHistoryProduct').value;
+    const otherProduct = document.getElementById('editHistoryOtherProduct').value;
+    const count       = document.getElementById('editHistoryCount').value;
+    const btn         = document.getElementById('editHistorySubmitBtn');
+    const msgEl       = document.getElementById('editHistoryMsg');
+
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    msgEl.textContent = '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/records/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product, otherProduct, count }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '保存に失敗しました');
+      msgEl.textContent = '保存しました！';
+      msgEl.className = 'form-msg ok';
+      setTimeout(() => { closeModal('editHistoryModal'); loadHistory(); }, 700);
+    } catch (e) {
+      msgEl.textContent = e.message;
+      msgEl.className = 'form-msg err';
+      btn.disabled = false;
+      btn.textContent = '保存する';
+    }
+  }
+
+  /* ==================== 提供履歴：削除モーダル ==================== */
+  function openDeleteHistoryModal(id, name, product) {
+    document.getElementById('deleteHistoryRecordId').value = id;
+    document.getElementById('deleteHistoryBody').innerHTML =
+      `<strong>「${escHtml(name)}」</strong> への <strong>「${escHtml(product)}」</strong> 提供記録を削除しますか？<br>` +
+      `<span style="font-size:0.82rem;color:var(--text-muted);">この操作は元に戻せません。</span>`;
+    document.getElementById('deleteHistoryBtn').disabled = false;
+    openModal('deleteHistoryModal');
+  }
+
+  async function submitDeleteHistory() {
+    const id  = document.getElementById('deleteHistoryRecordId').value;
+    const btn = document.getElementById('deleteHistoryBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/records/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '削除に失敗しました');
+      closeModal('deleteHistoryModal');
+      loadHistory();
+    } catch (e) {
+      alert(e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-trash"></i> 削除する';
+    }
+  }
+
+  /* ==================== マスタ：追加モーダル ==================== */
+  function openMasterAddModal() {
+    document.getElementById('masterAddName').value  = '';
+    document.getElementById('masterAddPrice').value = '';
+    document.getElementById('masterAddMsg').textContent = '';
+    document.getElementById('masterAddMsg').className = 'form-msg';
+    document.getElementById('masterAddSubmitBtn').disabled = false;
+    document.getElementById('masterAddSubmitBtn').innerHTML = '<i class="fa-solid fa-check"></i> 登録する';
+    openModal('masterAddModal');
+  }
+
+  async function submitMasterAdd() {
+    const name  = document.getElementById('masterAddName').value.trim();
+    const price = document.getElementById('masterAddPrice').value;
+    const btn   = document.getElementById('masterAddSubmitBtn');
+    const msgEl = document.getElementById('masterAddMsg');
+    if (!name) { msgEl.textContent = '商品名を入力してください'; msgEl.className = 'form-msg err'; return; }
+
+    btn.disabled = true;
+    btn.textContent = '登録中...';
+    msgEl.textContent = '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/master`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '登録に失敗しました');
+      msgEl.textContent = '登録しました！';
+      msgEl.className = 'form-msg ok';
+      await loadMasters(false);
+      renderMasters();
+      setTimeout(() => closeModal('masterAddModal'), 700);
+    } catch (e) {
+      msgEl.textContent = e.message;
+      msgEl.className = 'form-msg err';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 登録する';
+    }
+  }
+
+  /* ==================== マスタ：編集モーダル ==================== */
+  function openMasterEditModal(id, name, price) {
+    document.getElementById('masterEditId').value    = id;
+    document.getElementById('masterEditName').value  = name;
+    document.getElementById('masterEditPrice').value = price !== '' ? price : '';
+    document.getElementById('masterEditMsg').textContent = '';
+    document.getElementById('masterEditMsg').className = 'form-msg';
+    document.getElementById('masterEditSubmitBtn').disabled = false;
+    document.getElementById('masterEditSubmitBtn').innerHTML = '<i class="fa-solid fa-check"></i> 保存する';
+    openModal('masterEditModal');
+  }
+
+  async function submitMasterEdit() {
+    const id    = document.getElementById('masterEditId').value;
+    const name  = document.getElementById('masterEditName').value.trim();
+    const price = document.getElementById('masterEditPrice').value;
+    const btn   = document.getElementById('masterEditSubmitBtn');
+    const msgEl = document.getElementById('masterEditMsg');
+    if (!name) { msgEl.textContent = '商品名を入力してください'; msgEl.className = 'form-msg err'; return; }
+
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    msgEl.textContent = '';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/master/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '保存に失敗しました');
+      msgEl.textContent = '保存しました！';
+      msgEl.className = 'form-msg ok';
+      await loadMasters(false);
+      renderMasters();
+      setTimeout(() => closeModal('masterEditModal'), 700);
+    } catch (e) {
+      msgEl.textContent = e.message;
+      msgEl.className = 'form-msg err';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存する';
+    }
+  }
+
+  /* ==================== マスタ：削除モーダル ==================== */
+  function openMasterDeleteModal(id, name) {
+    document.getElementById('masterDeleteId').value = id;
+    document.getElementById('masterDeleteName').textContent = `「${name}」`;
+    document.getElementById('masterDeleteBtn').disabled = false;
+    document.getElementById('masterDeleteBtn').innerHTML = '<i class="fa-solid fa-trash"></i> 削除する';
+    openModal('masterDeleteModal');
+  }
+
+  async function submitMasterDelete() {
+    const id  = document.getElementById('masterDeleteId').value;
+    const btn = document.getElementById('masterDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/master/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '削除に失敗しました');
+      closeModal('masterDeleteModal');
+      await loadMasters(false);
+      renderMasters();
+    } catch (e) {
+      alert(e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-trash"></i> 削除する';
+    }
+  }
+
+  /* ==================== モーダル共通 ==================== */
+  function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+  function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+  function closeByOverlay(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+  /* ==================== ユーティリティ ==================== */
+  /* "YYYY-MM-DD" を "MM/DD（曜）" 形式に変換する */
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d    = new Date(dateStr + 'T00:00:00+09:00');
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    const yobi = ['日','月','火','水','木','金','土'][d.getDay()];
+    return `${mm}/${dd}（${yobi}）`;
+  }
+
+  /* HTML特殊文字をエスケープする */
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  /* HTML属性値用エスケープ（onclick文字列に使う） */
+  function escAttr(s) {
+    return String(s || '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>
