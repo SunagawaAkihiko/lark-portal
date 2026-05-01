@@ -287,15 +287,19 @@
       position: fixed;
       bottom: 1.5rem; right: 1.5rem;
       z-index: 20;
-      width: 56px; height: 56px;
-      border-radius: 50%;
+      height: 48px;
+      padding: 0 1.2rem;
+      border-radius: 24px;
       background: var(--primary-color);
       color: white;
       border: none;
-      font-size: 1.4rem;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(231,111,81,0.45);
       display: flex; align-items: center; justify-content: center;
+      gap: 0.4rem;
       transition: transform 0.15s;
     }
     .fab:active { transform: scale(0.93); }
@@ -444,9 +448,9 @@
 </div>
 
 
-<!-- ==================== FAB（マスタ管理タブ用） ==================== -->
+<!-- ==================== 登録ボタン（マスタ管理タブ用） ==================== -->
 <button class="fab hidden" id="masterFab" onclick="openMasterAddModal()">
-  <i class="fa-solid fa-plus"></i>
+  <i class="fa-solid fa-plus"></i> 登録
 </button>
 
 
