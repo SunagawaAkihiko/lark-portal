@@ -257,9 +257,13 @@
     .leave-card .lc-nums .rem { font-size: 1.1rem; font-weight: 700; color: var(--text); }
     .leave-card .lc-next { font-size: 0.76rem; color: var(--muted); margin-bottom: 0.4rem; }
     .leave-card .lc-expiring {
-      font-size: 0.76rem; color: #b7610a; background: #fff3e0;
+      font-size: 0.76rem; color: var(--muted);
+      padding: 0.2rem 0; margin-bottom: 0.5rem;
+    }
+    .leave-card .lc-expiring.warn {
+      color: #b7610a; background: #fff3e0;
       border: 1px solid #ffcc80; border-radius: 5px;
-      padding: 0.2rem 0.5rem; margin-bottom: 0.5rem;
+      padding: 0.2rem 0.5rem;
     }
     .leave-card .btn-grant {
       width: 100%; padding: 0.35rem;
@@ -1003,7 +1007,9 @@ function renderLeaveGrid(data) {
         <span>付与 <b>${total}</b>日 ／ 取得 <b>${used}</b>日</span>
       </div>
       ${d.nextGrantDate ? `<div class="lc-next"><i class="fa-regular fa-calendar-plus"></i> 次回付与予定: ${d.nextGrantDate}</div>` : ''}
-      ${d.expiringDays > 0 ? `<div class="lc-expiring"><i class="fa-solid fa-triangle-exclamation"></i> 次回付与日までに <b>${d.expiringDays}日</b> 失効予定</div>` : ''}
+      <div class="lc-expiring ${d.expiringDays > 0 ? 'warn' : ''}">
+        <i class="fa-solid fa-hourglass-half"></i> 次回付与日に失効予定: <b>${d.expiringDays}日</b>
+      </div>
       <button class="btn-grant" onclick="openGrantModal('${d.openId}','${d.staffName}')">
         <i class="fa-solid fa-plus"></i> 特別付与
       </button>
