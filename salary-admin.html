@@ -944,7 +944,7 @@ function renderKintaiTable(records, month, staffName) {
     records.forEach(r => { byDate[r.date] = r; });
 
     let html = `<thead><tr>
-      <th>日付</th><th>曜</th><th>出勤</th><th>退勤</th>
+      <th>日付</th><th>出勤</th><th>退勤</th>
       <th>実働時間</th><th>残業</th><th>遅刻</th><th>早退</th>
     </tr></thead><tbody>`;
 
@@ -962,13 +962,11 @@ function renderKintaiTable(records, month, staffName) {
         // 有休・欠勤行: 出勤欄にバッジを表示し、その他は空欄にする
         html += `<tr class="${rowCls}">
           <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
-          <td>${dow===0||dow===6 ? '休' : ''}</td>
           <td colspan="6">${leaveBadge(rec.leaveType)}</td>
         </tr>`;
       } else {
         html += `<tr class="${rowCls}">
           <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
-          <td>${dow===0||dow===6 ? '休' : ''}</td>
           <td class="col-attend">${rec?.attendTime || ''}</td>
           <td class="col-leave">${rec?.leaveTime   || ''}</td>
           <td>${rec?.workingHours || ''}</td>
@@ -989,7 +987,7 @@ function renderKintaiTable(records, month, staffName) {
     if (yuukyuDays > 0) summary += ` / 有休 ${yuukyuDays}日`;
     if (kekkinDays > 0) summary += ` / 欠勤 ${kekkinDays}日`;
     html += `</tbody><tfoot><tr class="summary-row">
-      <td colspan="2" style="text-align:left">合計</td>
+      <td style="text-align:left">合計</td>
       <td colspan="3">${summary}</td>
       <td></td>
       <td>${lateTimes > 0 ? lateTimes+'回' : ''}</td>
