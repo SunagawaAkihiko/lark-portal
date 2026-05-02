@@ -830,7 +830,6 @@ async function downloadSalary() {
   const label  = document.getElementById('salary-print-label').textContent;
   const scroll = document.getElementById('salary-scroll');
 
-  // ボタンを無効化して処理中表示にする
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
@@ -839,6 +838,16 @@ async function downloadSalary() {
   const prevMaxHeight = scroll.style.maxHeight;
   scroll.style.overflow  = 'visible';
   scroll.style.maxHeight = 'none';
+
+  // position:sticky の列はPDF上で重複描画されるため一時的に static にリセットする
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = 'pdf-sticky-reset';
+  tmpStyle.textContent = `
+    .salary-table .col-sec,
+    .salary-table .col-item,
+    .salary-table thead th { position: static !important; left: auto !important; top: auto !important; }
+  `;
+  document.head.appendChild(tmpStyle);
 
   // 印刷ヘッダーにタイトルをセットして一時表示する
   const header = scroll.querySelector('.salary-print-header');
@@ -850,16 +859,17 @@ async function downloadSalary() {
 
   try {
     await html2pdf().set({
-      margin:     [8, 8, 8, 8],
-      filename:   `${label}.pdf`,
+      margin:      [8, 8, 8, 8],
+      filename:    `${label}.pdf`,
       html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:      { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak:  { mode: ['avoid-all', 'css', 'legacy'] },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      pagebreak:   { mode: ['css', 'legacy'] },
     }).from(scroll).save();
   } finally {
     // 必ず元の状態に戻す
     scroll.style.overflow  = prevOverflow;
     scroll.style.maxHeight = prevMaxHeight;
+    document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDFダウンロード';
@@ -1131,7 +1141,6 @@ async function downloadKintai() {
   const label  = document.getElementById('kintai-print-label').textContent;
   const scroll = document.getElementById('kintai-scroll');
 
-  // ボタンを無効化して処理中表示にする
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
@@ -1141,22 +1150,31 @@ async function downloadKintai() {
   scroll.style.overflow  = 'visible';
   scroll.style.maxHeight = 'none';
 
+  // position:sticky のヘッダー行はPDF上で重複描画されるため一時的に static にリセットする
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = 'pdf-sticky-reset';
+  tmpStyle.textContent = `
+    .kintai-table thead th { position: static !important; top: auto !important; }
+  `;
+  document.head.appendChild(tmpStyle);
+
   // 印刷ヘッダーを一時表示する
   const header = scroll.querySelector('.kintai-print-header');
   if (header) header.style.display = 'block';
 
   try {
     await html2pdf().set({
-      margin:     [8, 8, 8, 8],
-      filename:   `${label}.pdf`,
+      margin:      [8, 8, 8, 8],
+      filename:    `${label}.pdf`,
       html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:      { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak:  { mode: ['avoid-all', 'css', 'legacy'] },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      pagebreak:   { mode: ['css', 'legacy'] },
     }).from(scroll).save();
   } finally {
     // 必ず元の状態に戻す
     scroll.style.overflow  = prevOverflow;
     scroll.style.maxHeight = prevMaxHeight;
+    document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDFダウンロード';
