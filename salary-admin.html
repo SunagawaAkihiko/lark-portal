@@ -463,7 +463,7 @@
 <!-- 有休付与モーダル -->
 <div class="modal-overlay hidden" id="grant-modal">
   <div class="modal-box">
-    <h3><i class="fa-solid fa-plus-circle"></i> 有休付与</h3>
+    <h3><i class="fa-solid fa-plus-circle"></i> 特別付与</h3>
     <div class="modal-field">
       <label>スタッフ</label>
       <input type="text" id="grant-staff-name" readonly>
@@ -991,12 +991,15 @@ function renderLeaveGrid(data) {
       <div class="lc-name"><i class="fa-solid fa-user" style="opacity:.5;margin-right:.3rem"></i>${d.staffName}</div>
       <div class="lc-bar-wrap"><div class="lc-bar" style="width:${pct.toFixed(1)}%"></div></div>
       <div class="lc-nums">
+        <span style="font-size:0.72rem;color:var(--muted)">有効期間内</span>
+        <span style="margin-left:auto"><span class="rem" style="color:${remColor}">${rem}</span> 日残</span>
+      </div>
+      <div class="lc-nums" style="margin-top:0.15rem">
         <span>付与 <b>${total}</b>日 ／ 取得 <b>${used}</b>日</span>
-        <span><span class="rem" style="color:${remColor}">${rem}</span> 日残</span>
       </div>
       ${d.nextGrantDate ? `<div class="lc-next"><i class="fa-regular fa-calendar-plus"></i> 次回付与予定: ${d.nextGrantDate}</div>` : ''}
       <button class="btn-grant" onclick="openGrantModal('${d.openId}','${d.staffName}')">
-        <i class="fa-solid fa-plus"></i> 有休付与
+        <i class="fa-solid fa-plus"></i> 特別付与
       </button>
     `;
     grid.appendChild(card);
