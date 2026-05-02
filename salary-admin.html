@@ -879,18 +879,14 @@ async function renderToPdf(element, filename) {
 }
 
 async function downloadSalary() {
-  const btn    = document.getElementById('salary-pdf-btn');
-  const label  = document.getElementById('salary-print-label').textContent;
-  const scroll = document.getElementById('salary-scroll');
+  const btn        = document.getElementById('salary-pdf-btn');
+  const label      = document.getElementById('salary-print-label').textContent;
+  const scroll     = document.getElementById('salary-scroll');
+  const tabContent = scroll.closest('.tab-content');
+  const body       = document.body;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
-
-  // スクロールコンテナを一時的に解除してコンテンツ全体をキャプチャできるようにする
-  const prevOverflow  = scroll.style.overflow;
-  const prevMaxHeight = scroll.style.maxHeight;
-  scroll.style.overflow  = 'visible';
-  scroll.style.maxHeight = 'none';
 
   // position:sticky の列はキャプチャ時に重複描画されるため一時的に static にリセットする
   const tmpStyle = document.createElement('style');
@@ -910,12 +906,39 @@ async function downloadSalary() {
     header.style.display = 'block';
   }
 
+  // html2canvasがコンテンツ全体をキャプチャできるよう body・tabContent・scroll の
+  // flex制約・overflow・height を一時解除する（解除しないと表示領域分しかキャプチャされない）
+  const saved = {
+    bodyH:   body.style.height,       bodyOv:  body.style.overflow,
+    tabFlex: tabContent.style.flex,   tabH:    tabContent.style.height,  tabOv: tabContent.style.overflow,
+    sFlx:    scroll.style.flex,       sH:      scroll.style.height,
+    sW:      scroll.style.width,      sOv:     scroll.style.overflow,    sMxH:  scroll.style.maxHeight,
+  };
+  body.style.height         = 'auto';
+  body.style.overflow       = 'visible';
+  tabContent.style.flex     = 'none';
+  tabContent.style.height   = 'auto';
+  tabContent.style.overflow = 'visible';
+  scroll.style.flex         = 'none';
+  scroll.style.height       = 'auto';
+  scroll.style.width        = 'max-content';
+  scroll.style.overflow     = 'visible';
+  scroll.style.maxHeight    = 'none';
+
   try {
     await renderToPdf(scroll, `${label}.pdf`);
   } finally {
     // 必ず元の状態に戻す
-    scroll.style.overflow  = prevOverflow;
-    scroll.style.maxHeight = prevMaxHeight;
+    body.style.height         = saved.bodyH;
+    body.style.overflow       = saved.bodyOv;
+    tabContent.style.flex     = saved.tabFlex;
+    tabContent.style.height   = saved.tabH;
+    tabContent.style.overflow = saved.tabOv;
+    scroll.style.flex         = saved.sFlx;
+    scroll.style.height       = saved.sH;
+    scroll.style.width        = saved.sW;
+    scroll.style.overflow     = saved.sOv;
+    scroll.style.maxHeight    = saved.sMxH;
     document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
@@ -1184,18 +1207,14 @@ function renderKintaiTable(records, month, staffName) {
 }
 
 async function downloadKintai() {
-  const btn    = document.getElementById('kintai-pdf-btn');
-  const label  = document.getElementById('kintai-print-label').textContent;
-  const scroll = document.getElementById('kintai-scroll');
+  const btn        = document.getElementById('kintai-pdf-btn');
+  const label      = document.getElementById('kintai-print-label').textContent;
+  const scroll     = document.getElementById('kintai-scroll');
+  const tabContent = scroll.closest('.tab-content');
+  const body       = document.body;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
-
-  // スクロールコンテナを一時的に解除してコンテンツ全体をPDF化できるようにする
-  const prevOverflow  = scroll.style.overflow;
-  const prevMaxHeight = scroll.style.maxHeight;
-  scroll.style.overflow  = 'visible';
-  scroll.style.maxHeight = 'none';
 
   // position:sticky のヘッダー行はキャプチャ時に重複描画されるため一時的に static にリセットする
   const tmpStyle = document.createElement('style');
@@ -1209,12 +1228,39 @@ async function downloadKintai() {
   const header = scroll.querySelector('.kintai-print-header');
   if (header) header.style.display = 'block';
 
+  // html2canvasがコンテンツ全体をキャプチャできるよう body・tabContent・scroll の
+  // flex制約・overflow・height を一時解除する
+  const saved = {
+    bodyH:   body.style.height,       bodyOv:  body.style.overflow,
+    tabFlex: tabContent.style.flex,   tabH:    tabContent.style.height,  tabOv: tabContent.style.overflow,
+    sFlx:    scroll.style.flex,       sH:      scroll.style.height,
+    sW:      scroll.style.width,      sOv:     scroll.style.overflow,    sMxH:  scroll.style.maxHeight,
+  };
+  body.style.height         = 'auto';
+  body.style.overflow       = 'visible';
+  tabContent.style.flex     = 'none';
+  tabContent.style.height   = 'auto';
+  tabContent.style.overflow = 'visible';
+  scroll.style.flex         = 'none';
+  scroll.style.height       = 'auto';
+  scroll.style.width        = 'max-content';
+  scroll.style.overflow     = 'visible';
+  scroll.style.maxHeight    = 'none';
+
   try {
     await renderToPdf(scroll, `${label}.pdf`);
   } finally {
     // 必ず元の状態に戻す
-    scroll.style.overflow  = prevOverflow;
-    scroll.style.maxHeight = prevMaxHeight;
+    body.style.height         = saved.bodyH;
+    body.style.overflow       = saved.bodyOv;
+    tabContent.style.flex     = saved.tabFlex;
+    tabContent.style.height   = saved.tabH;
+    tabContent.style.overflow = saved.tabOv;
+    scroll.style.flex         = saved.sFlx;
+    scroll.style.height       = saved.sH;
+    scroll.style.width        = saved.sW;
+    scroll.style.overflow     = saved.sOv;
+    scroll.style.maxHeight    = saved.sMxH;
     document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
