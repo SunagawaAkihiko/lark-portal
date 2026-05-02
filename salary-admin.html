@@ -6,8 +6,9 @@
   <title>給与・出勤管理</title>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- PDFダウンロード用ライブラリ（html2canvas + jsPDF のバンドル） -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- PDFダウンロード用ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     /* ==================== 変数・リセット ==================== */
     :root {
@@ -825,6 +826,58 @@ function renderSalaryTable(rows, month) {
   tbl.innerHTML = html;
 }
 
+// ============================================================
+// 共通PDFレンダラー:
+//   - 縦方向はA4横1ページに必ず収める（スケール自動計算）
+//   - 横方向が溢れた場合は次ページへ水平分割して追加する
+// ============================================================
+async function renderToPdf(element, filename) {
+  // A4横向き・余白8mm後の利用可能寸法（mm）
+  const PAGE_W = 281; // 297 - 8*2
+  const PAGE_H = 194; // 210 - 8*2
+  const MARGIN = 8;
+
+  // html2canvas でフル解像度キャプチャ（scale:2 = 高解像度）
+  const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+
+  // CSSピクセル換算（scale:2 なので÷2）
+  const csW = canvas.width  / 2;
+  const csH = canvas.height / 2;
+
+  // 幅に合わせたスケール係数（mm/cssPixel）
+  const scaleW = PAGE_W / csW;
+  // 幅で合わせたとき縦が収まらない場合は縦優先スケールに切り替える
+  const finalScale = csH * scaleW > PAGE_H ? PAGE_H / csH : scaleW;
+
+  // 1ページあたりのCSSピクセル幅
+  const pageW_px = PAGE_W / finalScale;
+  const numPages = Math.ceil(csW / pageW_px);
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+
+  for (let i = 0; i < numPages; i++) {
+    if (i > 0) pdf.addPage();
+
+    // このページで切り取るキャンバス領域（scale:2座標系）
+    const srcX = Math.round(i * pageW_px * 2);
+    const srcW = Math.round(Math.min(pageW_px, csW - i * pageW_px) * 2);
+
+    // スライスキャンバスを作成してPDFへ追加
+    const slice = document.createElement('canvas');
+    slice.width  = srcW;
+    slice.height = canvas.height;
+    slice.getContext('2d').drawImage(canvas, srcX, 0, srcW, canvas.height, 0, 0, srcW, canvas.height);
+
+    // スライス幅に対応するmm幅（最終ページは短くなる）
+    const imgW = (srcW / 2) * finalScale;
+    const imgH = csH * finalScale;
+    pdf.addImage(slice.toDataURL('image/png'), 'PNG', MARGIN, MARGIN, imgW, imgH);
+  }
+
+  pdf.save(filename);
+}
+
 async function downloadSalary() {
   const btn    = document.getElementById('salary-pdf-btn');
   const label  = document.getElementById('salary-print-label').textContent;
@@ -833,13 +886,13 @@ async function downloadSalary() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-  // スクロールコンテナを一時的に解除してコンテンツ全体をPDF化できるようにする
+  // スクロールコンテナを一時的に解除してコンテンツ全体をキャプチャできるようにする
   const prevOverflow  = scroll.style.overflow;
   const prevMaxHeight = scroll.style.maxHeight;
   scroll.style.overflow  = 'visible';
   scroll.style.maxHeight = 'none';
 
-  // position:sticky の列はPDF上で重複描画されるため一時的に static にリセットする
+  // position:sticky の列はキャプチャ時に重複描画されるため一時的に static にリセットする
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
@@ -858,13 +911,7 @@ async function downloadSalary() {
   }
 
   try {
-    await html2pdf().set({
-      margin:      [8, 8, 8, 8],
-      filename:    `${label}.pdf`,
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak:   { mode: ['css', 'legacy'] },
-    }).from(scroll).save();
+    await renderToPdf(scroll, `${label}.pdf`);
   } finally {
     // 必ず元の状態に戻す
     scroll.style.overflow  = prevOverflow;
@@ -1150,7 +1197,7 @@ async function downloadKintai() {
   scroll.style.overflow  = 'visible';
   scroll.style.maxHeight = 'none';
 
-  // position:sticky のヘッダー行はPDF上で重複描画されるため一時的に static にリセットする
+  // position:sticky のヘッダー行はキャプチャ時に重複描画されるため一時的に static にリセットする
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
@@ -1163,13 +1210,7 @@ async function downloadKintai() {
   if (header) header.style.display = 'block';
 
   try {
-    await html2pdf().set({
-      margin:      [8, 8, 8, 8],
-      filename:    `${label}.pdf`,
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak:   { mode: ['css', 'legacy'] },
-    }).from(scroll).save();
+    await renderToPdf(scroll, `${label}.pdf`);
   } finally {
     // 必ず元の状態に戻す
     scroll.style.overflow  = prevOverflow;
