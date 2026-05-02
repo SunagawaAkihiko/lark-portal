@@ -965,6 +965,21 @@ function renderKintaiTable(records, month, staffName) {
     : type === '欠勤' ? '<span class="leave-badge kekkin">欠勤</span>'
     : '';
 
+  // "H:MM" 形式を分に変換するヘルパー（実働時間の合計計算に使用）
+  const hhmmToMin = str => {
+    if (!str) return 0;
+    const [h, m] = str.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  // 分を "H:MM" 形式に変換するヘルパー
+  const minToHhmm = total => {
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return `${h}:${String(m).padStart(2, '0')}`;
+  };
+  // 小数時間（残業など）を "H:MM" 形式に変換するヘルパー
+  const hoursToHhmm = h => minToHhmm(Math.round(h * 60));
+
   if (staffName) {
     // 1人の日別一覧
     const byDate = {};
@@ -997,7 +1012,7 @@ function renderKintaiTable(records, month, staffName) {
           <td class="col-attend">${rec?.attendTime || ''}</td>
           <td class="col-leave">${rec?.leaveTime   || ''}</td>
           <td>${rec?.workingHours || ''}</td>
-          <td>${rec?.overtime     || ''}</td>
+          <td>${rec?.overtime ? hoursToHhmm(rec.overtime) : ''}</td>
           <td style="${rec?.lateMin?'color:#e74c3c;font-weight:700':''}">
             ${rec?.lateMin ? rec.lateMin+'分' : ''}</td>
           <td>${rec?.earlyMin ? rec.earlyMin+'分' : ''}</td>
@@ -1005,13 +1020,18 @@ function renderKintaiTable(records, month, staffName) {
       }
     }
 
-    // 集計行（日勤・夜勤・有休・欠勤・遅刻回数をカウント）
-    const dayDays    = records.filter(r => !r.leaveType && (r.dayCount || 0) > 0).length;
-    const nightDays  = records.filter(r => !r.leaveType && (r.nightCount || 0) > 0).length;
-    const workDays   = dayDays + nightDays;
-    const yuukyuDays = records.filter(r => r.leaveType === '有休').length;
-    const kekkinDays = records.filter(r => r.leaveType === '欠勤').length;
-    const lateTimes  = records.filter(r => r.lateMin > 0).length;
+    // 出勤日数・有休・欠勤をカウントする
+    const workRecs    = records.filter(r => !r.leaveType);
+    const dayDays     = workRecs.filter(r => (r.dayCount   || 0) > 0).length;
+    const nightDays   = workRecs.filter(r => (r.nightCount || 0) > 0).length;
+    const workDays    = dayDays + nightDays;
+    const yuukyuDays  = records.filter(r => r.leaveType === '有休').length;
+    const kekkinDays  = records.filter(r => r.leaveType === '欠勤').length;
+    // 実働時間・残業・遅刻・早退の合計を計算する
+    const workMinTotal     = workRecs.reduce((s, r) => s + hhmmToMin(r.workingHours), 0);
+    const overtimeHTotal   = workRecs.reduce((s, r) => s + (r.overtime  || 0), 0);
+    const lateMinTotal     = records.reduce((s, r) => s + (r.lateMin  || 0), 0);
+    const earlyMinTotal    = records.reduce((s, r) => s + (r.earlyMin || 0), 0);
     let summaryParts = [];
     if (dayDays > 0)    summaryParts.push(`日勤 ${dayDays}日`);
     if (nightDays > 0)  summaryParts.push(`夜勤 ${nightDays}日`);
@@ -1020,10 +1040,11 @@ function renderKintaiTable(records, month, staffName) {
     if (kekkinDays > 0) summaryParts.push(`欠勤 ${kekkinDays}日`);
     html += `</tbody><tfoot><tr class="summary-row">
       <td style="text-align:left">合計</td>
-      <td colspan="3">${summaryParts.join(' / ')}</td>
-      <td></td>
-      <td>${lateTimes > 0 ? lateTimes+'回' : ''}</td>
-      <td></td>
+      <td colspan="2">${summaryParts.join(' / ')}</td>
+      <td>${workMinTotal > 0 ? minToHhmm(workMinTotal) : ''}</td>
+      <td>${overtimeHTotal > 0 ? hoursToHhmm(overtimeHTotal) : ''}</td>
+      <td style="${lateMinTotal > 0 ? 'color:#e74c3c' : ''}">${lateMinTotal > 0 ? lateMinTotal+'分' : ''}</td>
+      <td>${earlyMinTotal > 0 ? earlyMinTotal+'分' : ''}</td>
     </tr></tfoot>`;
     tbl.innerHTML = html;
 
@@ -1036,13 +1057,14 @@ function renderKintaiTable(records, month, staffName) {
       if (!matrix[r.date]) matrix[r.date] = {};
       matrix[r.date][r.staffName] = r;
     });
-    // スタッフごとの日勤・夜勤・合計を集計する
+    // スタッフごとの日勤・夜勤・実働時間を集計する
     const colSummary = {};
-    names.forEach(n => { colSummary[n] = { day: 0, night: 0 }; });
+    names.forEach(n => { colSummary[n] = { day: 0, night: 0, workMin: 0 }; });
     records.forEach(r => {
       if (!r.leaveType && colSummary[r.staffName]) {
-        colSummary[r.staffName].day   += r.dayCount   || 0;
-        colSummary[r.staffName].night += r.nightCount || 0;
+        colSummary[r.staffName].day     += r.dayCount   || 0;
+        colSummary[r.staffName].night   += r.nightCount || 0;
+        colSummary[r.staffName].workMin += hhmmToMin(r.workingHours);
       }
     });
     let html = '<thead><tr><th>日付</th>';
@@ -1067,12 +1089,12 @@ function renderKintaiTable(records, month, staffName) {
       });
       html += '</tr>';
     }
-    // 集計行: 日勤日数・夜勤日数・合計出勤日数
+    // 集計行: 日勤日数・夜勤日数・合計出勤日数・実働時間合計
     html += '<tfoot><tr class="summary-row"><td style="text-align:left">合計</td>';
     names.forEach(n => {
       const s = colSummary[n];
       const total = s.day + s.night;
-      html += `<td style="font-size:0.72rem;line-height:1.4">日${s.day}<br>夜${s.night}<br>計${total}</td>`;
+      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>計${total}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
     });
     html += '</tr></tfoot>';
     tbl.innerHTML = html;
