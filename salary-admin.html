@@ -46,32 +46,6 @@
     }
     .page-header .title { font-size: 1.05rem; font-weight: 700; flex: 1; }
     .page-header .subtitle { font-size: 0.75rem; opacity: 0.7; }
-    /* デモモード切替ボタン */
-    #demo-toggle {
-      padding: 0.28rem 0.7rem;
-      border-radius: 6px;
-      border: 1.5px solid rgba(255,255,255,0.5);
-      background: transparent;
-      color: rgba(255,255,255,0.85);
-      font-size: 0.78rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    #demo-toggle.demo-on { background: #f0c040; color: #4a3f35; border-color: #f0c040; }
-
-    /* ==================== デモバナー ==================== */
-    #demo-banner {
-      background: #fff3cd;
-      color: #856404;
-      padding: 0.5rem 1rem;
-      font-size: 0.82rem;
-      font-weight: 700;
-      border-bottom: 2px solid #ffc107;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
     /* ==================== 更新アラートバナー ==================== */
     #update-alerts { display: flex; flex-direction: column; }
     .alert-banner {
@@ -382,7 +356,7 @@
     /* ==================== 印刷スタイル ==================== */
     @media print {
       body { background: white; }
-      .page-header, #update-alerts, #demo-banner, .main-tabs,
+      .page-header, #update-alerts, .main-tabs,
       .ctrl-bar, .print-toolbar, .settings-save-bar { display: none !important; }
       .tab-content { display: none !important; }
       .tab-content.print-target { display: block !important; }
@@ -406,15 +380,7 @@
   <i class="fa-solid fa-file-invoice-dollar" style="font-size:1.2rem"></i>
   <span class="title">給与・出勤管理</span>
   <span class="subtitle">合同会社 GLAD Life Create</span>
-  <button id="demo-toggle" onclick="toggleDemo()">
-    <i class="fa-solid fa-flask"></i> デモ表示
-  </button>
 </header>
-
-<!-- デモモードバナー -->
-<div id="demo-banner" class="hidden">
-  <i class="fa-solid fa-flask"></i> デモモード — サンプルデータを表示しています（実際のLarkデータとは異なります）
-</div>
 
 <!-- 更新アラートバナー -->
 <div id="update-alerts"></div>
@@ -573,246 +539,14 @@
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
 // ============================================================
-// ▼▼▼ デモデータ ▼▼▼
-// ============================================================
-
-/** 給与デモデータ: 介護施設スタッフ5名分（2026年4月実績） */
-const DEMO_SALARY = {
-  ok: true,
-  month: '2026-04',
-  count: 5,
-  data: [
-    {
-      staffId: '000001', staffName: '山田 花子',
-      kintai: { 出勤日数:21, 内日勤:21, 内夜勤:0, 有休日数:1, 欠勤:0,
-        実働時間計:'176:30', 残業計:'8:30', 遅刻回数:0, 早退回数:0 },
-      基本給:280000, 役職手当:30000, 資格手当:10000, 夜勤手当:0, 割増手当:0, 深夜手当:0,
-      年末年始手当:0, 調整手当:0, 処遇改善手当:20000, 業績手当:0, 有給手当:13333, 残業手当:9800,
-      遅早控除:0, 欠勤控除:0,
-      通勤課税:0, 通勤非課税:10000, 課税計:363133, 非課税計:10000, 総支給額:373133,
-      健康保険:18545, 介護保険:2905, 厚生年金:33282, 雇用保険:2179,
-      社会保険計:56911, 課税対象額:306222,
-      源泉所得税:5800, 住民税:18500, 食費:0, その他控除:0,
-      控除計:24300, 控除合計:81211, 差引支給額:291922, 銀行振込:291922,
-      基本給単価:13333, 扶養人数:1, 課税累計額:1452532, 有給残日数:15,
-    },
-    {
-      staffId: '000002', staffName: '鈴木 一郎',
-      kintai: { 出勤日数:18, 内日勤:16, 内夜勤:2, 有休日数:0, 欠勤:0,
-        実働時間計:'158:00', 残業計:'2:00', 遅刻回数:0, 早退回数:0 },
-      基本給:215000, 役職手当:0, 資格手当:10000, 夜勤手当:16000, 割増手当:2600, 深夜手当:1800,
-      年末年始手当:0, 調整手当:0, 処遇改善手当:15000, 業績手当:0, 有給手当:0, 残業手当:2400,
-      遅早控除:0, 欠勤控除:0,
-      通勤課税:0, 通勤非課税:8400, 課税計:262800, 非課税計:8400, 総支給額:271200,
-      健康保険:13413, 介護保険:0, 厚生年金:24057, 雇用保険:1577,
-      社会保険計:39047, 課税対象額:223753,
-      源泉所得税:3200, 住民税:12800, 食費:0, その他控除:0,
-      控除計:16000, 控除合計:55047, 差引支給額:216153, 銀行振込:216153,
-      基本給単価:9772, 扶養人数:0, 課税累計額:1051200, 有給残日数:8,
-    },
-    {
-      staffId: '000003', staffName: '田中 美咲',
-      kintai: { 出勤日数:15, 内日勤:15, 内夜勤:0, 有休日数:2, 欠勤:0,
-        実働時間計:'120:00', 残業計:'0:00', 遅刻回数:1, 早退回数:0 },
-      基本給:158000, 役職手当:0, 資格手当:0, 夜勤手当:0, 割増手当:0, 深夜手当:0,
-      年末年始手当:0, 調整手当:0, 処遇改善手当:8000, 業績手当:0, 有給手当:21067, 残業手当:0,
-      遅早控除:862, 欠勤控除:0,
-      通勤課税:0, 通勤非課税:5040, 課税計:186205, 非課税計:5040, 総支給額:191245,
-      健康保険:9506, 介護保険:0, 厚生年金:17055, 雇用保険:1117,
-      社会保険計:27678, 課税対象額:158527,
-      源泉所得税:2000, 住民税:8200, 食費:0, その他控除:0,
-      控除計:10200, 控除合計:37878, 差引支給額:153367, 銀行振込:153367,
-      基本給単価:7181, 扶養人数:0, 課税累計額:744820, 有給残日数:5,
-    },
-    {
-      staffId: '000004', staffName: '伊藤 健太',
-      kintai: { 出勤日数:13, 内日勤:3, 内夜勤:10, 有休日数:0, 欠勤:0,
-        実働時間計:'156:00', 残業計:'6:00', 遅刻回数:0, 早退回数:0 },
-      基本給:220000, 役職手当:0, 資格手当:10000, 夜勤手当:80000, 割増手当:9600, 深夜手当:7200,
-      年末年始手当:0, 調整手当:0, 処遇改善手当:15000, 業績手当:0, 有給手当:0, 残業手当:7200,
-      遅早控除:0, 欠勤控除:0,
-      通勤課税:0, 通勤非課税:12600, 課税計:349000, 非課税計:12600, 総支給額:361600,
-      健康保険:17824, 介護保険:2792, 厚生年金:31978, 雇用保険:2094,
-      社会保険計:54688, 課税対象額:294312,
-      源泉所得税:5300, 住民税:14200, 食費:0, その他控除:0,
-      控除計:19500, 控除合計:74188, 差引支給額:287412, 銀行振込:287412,
-      基本給単価:10000, 扶養人数:1, 課税累計額:1396000, 有給残日数:8,
-    },
-    {
-      staffId: '000005', staffName: '木村 奈緒',
-      kintai: { 出勤日数:20, 内日勤:20, 内夜勤:0, 有休日数:0, 欠勤:0,
-        実働時間計:'160:00', 残業計:'0:00', 遅刻回数:0, 早退回数:0 },
-      基本給:260000, 役職手当:0, 資格手当:20000, 夜勤手当:0, 割増手当:0, 深夜手当:0,
-      年末年始手当:0, 調整手当:0, 処遇改善手当:18000, 業績手当:0, 有給手当:0, 残業手当:0,
-      遅早控除:0, 欠勤控除:0,
-      通勤課税:0, 通勤非課税:8400, 課税計:298000, 非課税計:8400, 総支給額:306400,
-      健康保険:15215, 介護保険:2384, 厚生年金:27285, 雇用保険:1788,
-      社会保険計:46672, 課税対象額:251328,
-      源泉所得税:5560, 住民税:16400, 食費:0, その他控除:0,
-      控除計:21960, 控除合計:68632, 差引支給額:237768, 銀行振込:237768,
-      基本給単価:11818, 扶養人数:1, 課税累計額:1192000, 有給残日数:11,
-    },
-  ],
-};
-
-/** 有休デモデータ */
-const DEMO_LEAVE = {
-  ok: true,
-  count: 5,
-  data: [
-    { staffId:'000001', staffName:'山田 花子', openId:'demo_ou_001',
-      totalGranted:20, totalUsed:5, remaining:15, nextGrantDate:'2026-10-01' },
-    { staffId:'000002', staffName:'鈴木 一郎', openId:'demo_ou_002',
-      totalGranted:10, totalUsed:2, remaining:8, nextGrantDate:'2027-04-01' },
-    { staffId:'000003', staffName:'田中 美咲', openId:'demo_ou_003',
-      totalGranted:7, totalUsed:2, remaining:5, nextGrantDate:'2026-12-15' },
-    { staffId:'000004', staffName:'伊藤 健太', openId:'demo_ou_004',
-      totalGranted:11, totalUsed:3, remaining:8, nextGrantDate:'2026-08-20' },
-    { staffId:'000005', staffName:'木村 奈緒', openId:'demo_ou_005',
-      totalGranted:15, totalUsed:4, remaining:11, nextGrantDate:'2027-01-10' },
-  ],
-};
-
-/**
- * 出勤簿デモデータを動的に生成する
- * @param {string} month - 'YYYY-MM'
- * @param {string} staffName - スタッフ名（空で全員）
- */
-function buildDemoKintai(month, staffName) {
-  const [y, m] = month.split('-').map(Number);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const names = ['山田 花子','鈴木 一郎','田中 美咲','伊藤 健太','木村 奈緒'];
-  const targets = staffName ? names.filter(n => n === staffName) : names;
-
-  // 各スタッフのシフトパターン（簡易）
-  const shifts = {
-    '山田 花子': { type:'day', attend:'09:00', leave:'18:00', nightDays:[] },
-    '鈴木 一郎': { type:'mix', attend:'09:00', leave:'18:00', nightDays:[3,7,14,18] },
-    '田中 美咲': { type:'day', attend:'09:00', leave:'16:30', nightDays:[], lateDay:10 },
-    '伊藤 健太': { type:'night', attend:'17:00', leave:'09:00(翌)', nightDays:[1,2,3,7,8,9,14,15,16,21,22] },
-    '木村 奈緒': { type:'day', attend:'09:00', leave:'17:30', nightDays:[] },
-  };
-
-  const records = [];
-  targets.forEach(name => {
-    const sh = shifts[name] || { type:'day', attend:'09:00', leave:'18:00', nightDays:[] };
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${month}-${String(d).padStart(2,'0')}`;
-      const dow = new Date(dateStr).getDay();
-      // 土日はスキップ（正職員の基本シフト）
-      if (dow === 0 || dow === 6) continue;
-      // 夜勤日かどうか判定する
-      const isNight = sh.nightDays.includes(d);
-      // 田中は10日遅刻あり
-      const isLate = (name === '田中 美咲' && d === 10);
-      records.push({
-        recordId: `demo-${name}-${d}`,
-        staffName: name,
-        date: dateStr,
-        attendTime: isLate ? '09:42' : sh.attend,
-        leaveTime:  isNight ? '09:00' : sh.leave,
-        workingHours: isNight ? '16:00' : '8:00',
-        overtime: d === 5 && name === '山田 花子' ? '2:30' : '',
-        lateMin: isLate ? 42 : 0,
-        earlyMin: 0,
-        nightCount: isNight ? 1 : 0,
-        dayCount:   isNight ? 0 : 1,
-      });
-    }
-  });
-  return { ok:true, month, staffName, count:records.length, data:records };
-}
-
-/** 設定デモデータ */
-const DEMO_SETTINGS = {
-  ok: true,
-  settings: {
-    insuranceRates: [
-      { effectiveFrom:'2024-04', health:0.10190, nursing:0.01600, pension:0.18300, note:'令和6年度' },
-      { effectiveFrom:'2025-04', health:0.10210, nursing:0.01600, pension:0.18300, note:'令和7年度' },
-    ],
-    staff: {
-      '000001': {
-        standardRemuneration: [
-          { effectiveFrom:'2024-09', amount:360000 },
-          { effectiveFrom:'2025-10', amount:380000 },
-        ],
-        isNursingInsurance: true, dependents: 1, isOkuran: false, skipInsurance: false,
-        residentTaxYears: [{ year:2025, months:{'6':18500,'7':18500,'8':18500,'9':18500,'10':18500,'11':18500,'12':18500,'1':18500,'2':18500,'3':18500,'4':18500,'5':18500} }],
-      },
-      '000002': {
-        standardRemuneration: [{ effectiveFrom:'2025-04', amount:280000 }],
-        isNursingInsurance: false, dependents: 0, isOkuran: false, skipInsurance: false,
-        residentTaxYears: [{ year:2025, months:{'6':12800,'7':12800,'8':12800,'9':12800,'10':12800,'11':12800,'12':12800,'1':12800,'2':12800,'3':12800,'4':12800,'5':12800} }],
-      },
-      '000003': {
-        standardRemuneration: [{ effectiveFrom:'2025-04', amount:190000 }],
-        isNursingInsurance: false, dependents: 0, isOkuran: false, skipInsurance: false,
-        residentTaxYears: [{ year:2025, months:{'6':8200,'7':8200,'8':8200,'9':8200,'10':8200,'11':8200,'12':8200,'1':8200,'2':8200,'3':8200,'4':8200,'5':8200} }],
-      },
-      '000004': {
-        standardRemuneration: [{ effectiveFrom:'2025-04', amount:360000 }],
-        isNursingInsurance: true, dependents: 1, isOkuran: false, skipInsurance: false,
-        residentTaxYears: [{ year:2025, months:{'6':14200,'7':14200,'8':14200,'9':14200,'10':14200,'11':14200,'12':14200,'1':14200,'2':14200,'3':14200,'4':14200,'5':14200} }],
-      },
-      '000005': {
-        standardRemuneration: [{ effectiveFrom:'2025-04', amount:300000 }],
-        isNursingInsurance: true, dependents: 1, isOkuran: false, skipInsurance: false,
-        residentTaxYears: [{ year:2025, months:{'6':16400,'7':16400,'8':16400,'9':16400,'10':16400,'11':16400,'12':16400,'1':16400,'2':16400,'3':16400,'4':16400,'5':16400} }],
-      },
-    },
-  },
-};
-
-/** スタッフリストデモデータ */
-const DEMO_STAFF_LIST = {
-  ok: true,
-  list: [
-    { staffId:'000001', staffName:'山田 花子', employmentType:'正職員', joinDate:'2020-04-01', larkRemaining:15, nextGrantDate:'2026-10-01' },
-    { staffId:'000002', staffName:'鈴木 一郎', employmentType:'正職員', joinDate:'2022-07-01', larkRemaining:8,  nextGrantDate:'2027-04-01' },
-    { staffId:'000003', staffName:'田中 美咲', employmentType:'パート', joinDate:'2023-12-15', larkRemaining:5,  nextGrantDate:'2026-12-15' },
-    { staffId:'000004', staffName:'伊藤 健太', employmentType:'正職員', joinDate:'2021-08-20', larkRemaining:8,  nextGrantDate:'2026-08-20' },
-    { staffId:'000005', staffName:'木村 奈緒', employmentType:'正職員', joinDate:'2023-01-10', larkRemaining:11, nextGrantDate:'2027-01-10' },
-  ],
-};
-
-// ============================================================
-// ▲▲▲ デモデータ ▲▲▲
-// ============================================================
-
-// デモモードフラグ
-let DEMO_MODE = false;
-
-/** デモモードのON/OFFを切り替える */
-function toggleDemo() {
-  DEMO_MODE = !DEMO_MODE;
-  const btn = document.getElementById('demo-toggle');
-  const banner = document.getElementById('demo-banner');
-  if (DEMO_MODE) {
-    btn.classList.add('demo-on');
-    btn.innerHTML = '<i class="fa-solid fa-flask"></i> デモ中';
-    banner.classList.remove('hidden');
-    // スタッフセレクトにデモデータを反映する
-    populateStaffSelect(DEMO_STAFF_LIST.list);
-    // デモ設定を設定タブに反映する
-    currentSettings = JSON.parse(JSON.stringify(DEMO_SETTINGS.settings));
-    renderInsuranceSettings(currentSettings);
-    renderStaffSettings(currentSettings);
-  } else {
-    btn.classList.remove('demo-on');
-    btn.innerHTML = '<i class="fa-solid fa-flask"></i> デモ表示';
-    banner.classList.add('hidden');
-  }
-}
-
-// ============================================================
 // 初期化
 // ============================================================
 (function init() {
   const now = new Date();
-  // デフォルト月をデモ用に2026-04に設定（デモデータに合わせる）
-  document.getElementById('salary-month').value = '2026-04';
-  document.getElementById('kintai-month').value  = '2026-04';
+  // 初期表示月を現在月に設定する
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('salary-month').value = currentMonth;
+  document.getElementById('kintai-month').value  = currentMonth;
   showUpdateAlerts(now.getMonth() + 1);
   loadStaffList();
   loadSettingsUI();
@@ -864,14 +598,10 @@ let staffList = [];
 
 async function loadStaffList() {
   try {
-    if (DEMO_MODE) {
-      staffList = DEMO_STAFF_LIST.list;
-    } else {
-      const r = await fetch(`${API_BASE}/api/salary/staff-list`);
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error);
-      staffList = j.list;
-    }
+    const r = await fetch(`${API_BASE}/api/salary/staff-list`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    staffList = j.list;
     populateStaffSelect(staffList);
   } catch(e) {
     console.warn('スタッフリスト取得失敗:', e.message);
@@ -908,16 +638,8 @@ async function loadSalary() {
   document.getElementById('salary-scroll').classList.add('hidden');
   document.getElementById('salary-print-bar').classList.add('hidden');
   try {
-    let j;
-    if (DEMO_MODE) {
-      // デモモード: サンプルデータをそのまま使用する
-      await new Promise(r => setTimeout(r, 400)); // ローディング演出
-      j = JSON.parse(JSON.stringify(DEMO_SALARY));
-      j.month = month;
-    } else {
-      const r = await fetch(`${API_BASE}/api/salary/monthly?month=${month}`);
-      j = await r.json();
-    }
+    const r = await fetch(`${API_BASE}/api/salary/monthly?month=${month}`);
+    const j = await r.json();
     if (!j.ok) throw new Error(j.error || '取得失敗');
     renderSalaryTable(j.data, month);
     setStatus('salary', '');
@@ -1094,14 +816,8 @@ async function loadLeave() {
   setStatus('leave', 'loading', '有休情報を取得中…');
   document.getElementById('leave-grid').classList.add('hidden');
   try {
-    let j;
-    if (DEMO_MODE) {
-      await new Promise(r => setTimeout(r, 300));
-      j = DEMO_LEAVE;
-    } else {
-      const r = await fetch(`${API_BASE}/api/paid-leave/all`);
-      j = await r.json();
-    }
+    const r = await fetch(`${API_BASE}/api/paid-leave/all`);
+    const j = await r.json();
     if (!j.ok) throw new Error(j.error || '取得失敗');
     renderLeaveGrid(j.data);
     setStatus('leave', '');
@@ -1158,12 +874,6 @@ async function submitGrant() {
   const statusEl   = document.getElementById('grant-status');
   if (!openId || !grantDate || !days) { statusEl.textContent = '⚠ 必須項目を入力してください。'; return; }
   statusEl.innerHTML = '<span class="spinner"></span> 登録中…';
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 600));
-    statusEl.textContent = '✅ 付与を登録しました（デモ）';
-    setTimeout(() => { closeGrantModal(); loadLeave(); }, 1200);
-    return;
-  }
   try {
     const r = await fetch(`${API_BASE}/api/paid-leave/grant`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1189,16 +899,10 @@ async function loadKintai() {
   document.getElementById('kintai-scroll').classList.add('hidden');
   document.getElementById('kintai-print-bar').classList.add('hidden');
   try {
-    let j;
-    if (DEMO_MODE) {
-      await new Promise(r => setTimeout(r, 300));
-      j = buildDemoKintai(month, staffName);
-    } else {
-      let url = `${API_BASE}/api/attendance/monthly?month=${month}`;
-      if (staffName) url += `&staffName=${encodeURIComponent(staffName)}`;
-      const r = await fetch(url);
-      j = await r.json();
-    }
+    let url = `${API_BASE}/api/attendance/monthly?month=${month}`;
+    if (staffName) url += `&staffName=${encodeURIComponent(staffName)}`;
+    const r = await fetch(url);
+    const j = await r.json();
     if (!j.ok) throw new Error(j.error || '取得失敗');
     renderKintaiTable(j.data, month, staffName);
     setStatus('kintai', '');
@@ -1309,14 +1013,8 @@ let currentSettings = null;
 
 async function loadSettingsUI() {
   try {
-    let j;
-    if (DEMO_MODE) {
-      j = DEMO_SETTINGS;
-      staffList = DEMO_STAFF_LIST.list;
-    } else {
-      const r = await fetch(`${API_BASE}/api/salary/settings`);
-      j = await r.json();
-    }
+    const r = await fetch(`${API_BASE}/api/salary/settings`);
+    const j = await r.json();
     if (!j.ok) throw new Error(j.error);
     currentSettings = j.settings;
     renderInsuranceSettings(currentSettings);
@@ -1561,12 +1259,6 @@ async function saveSettings() {
   });
   const statusEl = document.getElementById('save-status-msg');
   statusEl.textContent = '保存中…'; statusEl.className = 'save-status'; statusEl.classList.remove('hidden');
-  if (DEMO_MODE) {
-    await new Promise(r => setTimeout(r, 500));
-    statusEl.textContent = '✅ 保存完了（デモ）';
-    setTimeout(() => statusEl.classList.add('hidden'), 2500);
-    return;
-  }
   try {
     const r = await fetch(`${API_BASE}/api/salary/settings`, {
       method:'POST', headers:{'Content-Type':'application/json'},
