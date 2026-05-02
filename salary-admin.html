@@ -283,6 +283,12 @@
     .kintai-table .col-attend { color: #1a6e2e; font-weight: 700; }
     .kintai-table .col-leave  { color: #7b2d8b; font-weight: 700; }
     .kintai-table .summary-row td { background: #fdf0e0; font-weight: 700; border-top: 2px solid #aaa; }
+    /* 有休・欠勤行のスタイル */
+    .kintai-table tr.leave-row td { background: #e8f5e9; }
+    .kintai-table tr.absence-row td { background: #fce4ec; }
+    .leave-badge { display:inline-block; padding:1px 6px; border-radius:4px; font-size:0.78rem; font-weight:700; }
+    .leave-badge.yuukyu { background:#c8e6c9; color:#2e7d32; }
+    .leave-badge.kekkin  { background:#ffcdd2; color:#c62828; }
     .kintai-print-header { display: none; text-align: center; margin-bottom: 0.8rem; }
     .kintai-print-header h2 { font-size: 1.1rem; font-weight: 700; }
     .kintai-print-header p  { font-size: 0.85rem; }
@@ -926,6 +932,12 @@ function renderKintaiTable(records, month, staffName) {
   const daysInMonth = new Date(y, m, 0).getDate();
   const dayOfWeek   = ['日','月','火','水','木','金','土'];
 
+  // 有休・欠勤バッジのHTML生成
+  const leaveBadge = type =>
+    type === '有休' ? '<span class="leave-badge yuukyu">有休</span>'
+    : type === '欠勤' ? '<span class="leave-badge kekkin">欠勤</span>'
+    : '';
+
   if (staffName) {
     // 1人の日別一覧
     const byDate = {};
@@ -939,27 +951,46 @@ function renderKintaiTable(records, month, staffName) {
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${month}-${String(d).padStart(2,'0')}`;
       const dow     = new Date(dateStr).getDay();
-      const rowCls  = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
       const rec     = byDate[dateStr];
-      html += `<tr class="${rowCls}">
-        <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
-        <td>${dow===0||dow===6 ? '休' : ''}</td>
-        <td class="col-attend">${rec?.attendTime || ''}</td>
-        <td class="col-leave">${rec?.leaveTime   || ''}</td>
-        <td>${rec?.workingHours || ''}</td>
-        <td>${rec?.overtime     || ''}</td>
-        <td style="${rec?.lateMin?'color:#e74c3c;font-weight:700':''}">
-          ${rec?.lateMin ? rec.lateMin+'分' : ''}</td>
-        <td>${rec?.earlyMin ? rec.earlyMin+'分' : ''}</td>
-      </tr>`;
+
+      // 行クラス: 有休/欠勤/土日
+      let rowCls = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
+      if (rec?.leaveType === '有休') rowCls += ' leave-row';
+      else if (rec?.leaveType === '欠勤') rowCls += ' absence-row';
+
+      if (rec?.leaveType) {
+        // 有休・欠勤行: 出勤欄にバッジを表示し、その他は空欄にする
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
+          <td>${dow===0||dow===6 ? '休' : ''}</td>
+          <td colspan="6">${leaveBadge(rec.leaveType)}</td>
+        </tr>`;
+      } else {
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
+          <td>${dow===0||dow===6 ? '休' : ''}</td>
+          <td class="col-attend">${rec?.attendTime || ''}</td>
+          <td class="col-leave">${rec?.leaveTime   || ''}</td>
+          <td>${rec?.workingHours || ''}</td>
+          <td>${rec?.overtime     || ''}</td>
+          <td style="${rec?.lateMin?'color:#e74c3c;font-weight:700':''}">
+            ${rec?.lateMin ? rec.lateMin+'分' : ''}</td>
+          <td>${rec?.earlyMin ? rec.earlyMin+'分' : ''}</td>
+        </tr>`;
+      }
     }
 
-    // 集計行
-    const totalDays = records.length;
+    // 集計行（打刻シフト数・遅刻回数のみカウント。有休・欠勤は除く）
+    const workDays  = records.filter(r => !r.leaveType).length;
+    const yuukyuDays = records.filter(r => r.leaveType === '有休').length;
+    const kekkinDays = records.filter(r => r.leaveType === '欠勤').length;
     const lateTimes = records.filter(r => r.lateMin > 0).length;
+    let summary = `出勤 ${workDays}日`;
+    if (yuukyuDays > 0) summary += ` / 有休 ${yuukyuDays}日`;
+    if (kekkinDays > 0) summary += ` / 欠勤 ${kekkinDays}日`;
     html += `</tbody><tfoot><tr class="summary-row">
-      <td colspan="2" style="text-align:left">出勤合計</td>
-      <td colspan="3">${totalDays}日</td>
+      <td colspan="2" style="text-align:left">合計</td>
+      <td colspan="3">${summary}</td>
       <td></td>
       <td>${lateTimes > 0 ? lateTimes+'回' : ''}</td>
       <td></td>
@@ -985,7 +1016,10 @@ function renderKintaiTable(records, month, staffName) {
       html += `<tr class="${rowCls}"><td class="kintai-date">${d}日</td><td>${dayOfWeek[dow]}</td>`;
       names.forEach(n => {
         const rec = matrix[dateStr]?.[n];
-        if (rec) {
+        if (rec?.leaveType) {
+          // 有休・欠勤はバッジ表示
+          html += `<td style="text-align:center">${leaveBadge(rec.leaveType)}</td>`;
+        } else if (rec) {
           html += `<td style="font-size:0.72rem">
             <span class="col-attend">${rec.attendTime}</span>〜<span class="col-leave">${rec.leaveTime||'?'}</span>
           </td>`;
