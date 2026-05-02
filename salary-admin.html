@@ -895,6 +895,18 @@ async function downloadSalary() {
     .salary-table .col-sec,
     .salary-table .col-item,
     .salary-table thead th { position: static !important; left: auto !important; top: auto !important; }
+    /* html2canvas は writing-mode: vertical-rl を正常描画できないため、
+       PDF キャプチャ時のみ横書き＋word-break で縦並びレイアウトを再現する */
+    .salary-table .col-sec {
+      writing-mode: horizontal-tb !important;
+      word-break: break-all !important;
+      white-space: normal !important;
+      width: 1.2em !important;
+      min-width: 1.2em !important;
+      max-width: 1.2em !important;
+      line-height: 1.3 !important;
+      overflow: hidden !important;
+    }
   `;
   document.head.appendChild(tmpStyle);
 
