@@ -853,7 +853,7 @@ async function downloadSalary() {
       margin:     [8, 8, 8, 8],
       filename:   `${label}.pdf`,
       html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:      { unit: 'mm', format: 'a3', orientation: 'landscape' },
+      jsPDF:      { unit: 'mm', format: 'a4', orientation: 'landscape' },
       pagebreak:  { mode: ['avoid-all', 'css', 'legacy'] },
     }).from(scroll).save();
   } finally {
@@ -1150,7 +1150,7 @@ async function downloadKintai() {
       margin:     [8, 8, 8, 8],
       filename:   `${label}.pdf`,
       html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:      { unit: 'mm', format: 'a3', orientation: 'landscape' },
+      jsPDF:      { unit: 'mm', format: 'a4', orientation: 'landscape' },
       pagebreak:  { mode: ['avoid-all', 'css', 'legacy'] },
     }).from(scroll).save();
   } finally {
