@@ -104,6 +104,7 @@
     }
 
     /* ==================== コントロールバー ==================== */
+    /* flex子（tab-content.active の中）なので sticky 不要 — kintai-scroll がスクロールしても ctrl-bar は動かない */
     .ctrl-bar {
       display: flex;
       align-items: center;
@@ -112,9 +113,7 @@
       padding: 0.7rem 1rem;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 48px;
-      z-index: 30;
+      flex-shrink: 0;
     }
     .ctrl-bar label { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
     .ctrl-bar input[type=month],
