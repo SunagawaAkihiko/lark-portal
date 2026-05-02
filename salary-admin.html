@@ -25,7 +25,11 @@
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
-      min-height: 100dvh;
+      /* bodyをflexコンテナにして高さを100dvhに固定し、各タブが残りの高さを使えるようにする */
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     button { cursor: pointer; font-family: inherit; }
     input, select, textarea { font-family: inherit; }
@@ -90,7 +94,14 @@
 
     /* ==================== タブコンテンツ共通 ==================== */
     .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* activeタブはflexコンテナとして残りの高さをすべて使う（スクロールはタブ内で発生させる） */
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
 
     /* ==================== コントロールバー ==================== */
     .ctrl-bar {
@@ -148,7 +159,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ==================== ▼ タブ1: 給与一覧表 ==================== */
-    .salary-scroll { overflow-x: auto; padding: 0.5rem 0.5rem 2rem; }
+    /* flex: 1 + min-height: 0 で親flexコンテナ内で縦スクロールを発生させる */
+    .salary-scroll { overflow-x: auto; overflow-y: auto; flex: 1; min-height: 0; padding: 0.5rem 0.5rem 2rem; }
     .salary-table {
       border-collapse: collapse;
       font-size: 0.8rem;
@@ -214,11 +226,16 @@
     .print-toolbar .month-label { font-weight: 700; font-size: 0.95rem; color: var(--brown-dark); flex: 1; }
 
     /* ==================== ▼ タブ2: 有休管理 ==================== */
+    /* flex: 1 + min-height: 0 + overflow-y: auto で縦スクロールを発生させる */
     .leave-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 0.8rem;
       padding: 0.8rem;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      align-content: start;
     }
     .leave-card {
       background: white;
@@ -268,7 +285,14 @@
     .modal-btns .btn-cancel { background: #f0e8e0; color: var(--brown-mid); }
 
     /* ==================== ▼ タブ3: 出勤簿 ==================== */
-    .kintai-scroll { overflow-x: auto; padding: 0.5rem 0.5rem 2rem; }
+    /* flex: 1 + min-height: 0 で親flexコンテナ内の残り高さを占有し、縦スクロールを発生させる */
+    /* これにより thead th の position:sticky が確実に機能する */
+    .kintai-scroll {
+      overflow-x: auto; overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      padding: 0 0.5rem 2rem;
+    }
     .kintai-table {
       border-collapse: collapse; font-size: 0.8rem;
       min-width: 600px; background: white; width: 100%;
@@ -276,6 +300,8 @@
     .kintai-table th, .kintai-table td {
       border: 1px solid #ccc; padding: 4px 6px; text-align: center; white-space: nowrap;
     }
+    /* 全員マトリクス表示時の名前ヘッダー行を縦スクロールで固定する */
+    .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
     .kintai-table td.kintai-date { text-align: left; font-weight: 700; }
     .kintai-table tr.sat td { background: #eef4fb; }
@@ -294,7 +320,8 @@
     .kintai-print-header p  { font-size: 0.85rem; }
 
     /* ==================== ▼ タブ4: 設定 ==================== */
-    .settings-wrap { padding: 1rem; max-width: 700px; margin: 0 auto; }
+    /* flex: 1 + min-height: 0 + overflow-y: auto で縦スクロールを発生させる */
+    .settings-wrap { padding: 1rem; max-width: 700px; margin: 0 auto; overflow-y: auto; flex: 1; min-height: 0; }
     .settings-section {
       background: white; border: 1.5px solid var(--border);
       border-radius: 10px; margin-bottom: 1.2rem; overflow: hidden;
@@ -361,7 +388,8 @@
 
     /* ==================== 印刷スタイル ==================== */
     @media print {
-      body { background: white; }
+      /* 印刷時はbodyのflexレイアウト・overflow制限を解除して全コンテンツを展開する */
+      body { background: white; height: auto; overflow: visible; display: block; }
       .page-header, #update-alerts, .main-tabs,
       .ctrl-bar, .print-toolbar, .settings-save-bar { display: none !important; }
       .tab-content { display: none !important; }
@@ -978,17 +1006,22 @@ function renderKintaiTable(records, month, staffName) {
       }
     }
 
-    // 集計行（打刻シフト数・遅刻回数のみカウント。有休・欠勤は除く）
-    const workDays  = records.filter(r => !r.leaveType).length;
+    // 集計行（日勤・夜勤・有休・欠勤・遅刻回数をカウント）
+    const dayDays    = records.filter(r => !r.leaveType && (r.dayCount || 0) > 0).length;
+    const nightDays  = records.filter(r => !r.leaveType && (r.nightCount || 0) > 0).length;
+    const workDays   = dayDays + nightDays;
     const yuukyuDays = records.filter(r => r.leaveType === '有休').length;
     const kekkinDays = records.filter(r => r.leaveType === '欠勤').length;
-    const lateTimes = records.filter(r => r.lateMin > 0).length;
-    let summary = `出勤 ${workDays}日`;
-    if (yuukyuDays > 0) summary += ` / 有休 ${yuukyuDays}日`;
-    if (kekkinDays > 0) summary += ` / 欠勤 ${kekkinDays}日`;
+    const lateTimes  = records.filter(r => r.lateMin > 0).length;
+    let summaryParts = [];
+    if (dayDays > 0)    summaryParts.push(`日勤 ${dayDays}日`);
+    if (nightDays > 0)  summaryParts.push(`夜勤 ${nightDays}日`);
+    summaryParts.push(`計 ${workDays}日`);
+    if (yuukyuDays > 0) summaryParts.push(`有休 ${yuukyuDays}日`);
+    if (kekkinDays > 0) summaryParts.push(`欠勤 ${kekkinDays}日`);
     html += `</tbody><tfoot><tr class="summary-row">
       <td style="text-align:left">合計</td>
-      <td colspan="3">${summary}</td>
+      <td colspan="3">${summaryParts.join(' / ')}</td>
       <td></td>
       <td>${lateTimes > 0 ? lateTimes+'回' : ''}</td>
       <td></td>
@@ -1004,30 +1037,45 @@ function renderKintaiTable(records, month, staffName) {
       if (!matrix[r.date]) matrix[r.date] = {};
       matrix[r.date][r.staffName] = r;
     });
-    let html = '<thead><tr><th>日付</th><th>曜</th>';
+    // スタッフごとの日勤・夜勤・合計を集計する
+    const colSummary = {};
+    names.forEach(n => { colSummary[n] = { day: 0, night: 0 }; });
+    records.forEach(r => {
+      if (!r.leaveType && colSummary[r.staffName]) {
+        colSummary[r.staffName].day   += r.dayCount   || 0;
+        colSummary[r.staffName].night += r.nightCount || 0;
+      }
+    });
+    let html = '<thead><tr><th>日付</th>';
     names.forEach(n => { html += `<th>${n}</th>`; });
     html += '</tr></thead><tbody>';
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${month}-${String(d).padStart(2,'0')}`;
       const dow     = new Date(dateStr).getDay();
       const rowCls  = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
-      html += `<tr class="${rowCls}"><td class="kintai-date">${d}日</td><td>${dayOfWeek[dow]}</td>`;
+      html += `<tr class="${rowCls}"><td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>`;
       names.forEach(n => {
         const rec = matrix[dateStr]?.[n];
         if (rec?.leaveType) {
-          // 有休・欠勤はバッジ表示
           html += `<td style="text-align:center">${leaveBadge(rec.leaveType)}</td>`;
         } else if (rec) {
           html += `<td style="font-size:0.72rem">
             <span class="col-attend">${rec.attendTime}</span>〜<span class="col-leave">${rec.leaveTime||'?'}</span>
           </td>`;
         } else {
-          html += `<td style="color:#ddd">${dow===0||dow===6 ? '休' : ''}</td>`;
+          html += '<td></td>';
         }
       });
       html += '</tr>';
     }
-    html += '</tbody>';
+    // 集計行: 日勤日数・夜勤日数・合計出勤日数
+    html += '<tfoot><tr class="summary-row"><td style="text-align:left">合計</td>';
+    names.forEach(n => {
+      const s = colSummary[n];
+      const total = s.day + s.night;
+      html += `<td style="font-size:0.72rem;line-height:1.4">日${s.day}<br>夜${s.night}<br>計${total}</td>`;
+    });
+    html += '</tr></tfoot>';
     tbl.innerHTML = html;
   }
 }
