@@ -91,6 +91,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "給与・出勤管理",
+        description: "給与一覧表・有休管理・出勤簿・保険料設定",
+        icon: "fa-money-bill-wave",
+        url: "salary-admin.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "利用者情報",
         description: "利用者情報の閲覧・薬手帳の登録ができます",
         icon: "fa-address-card",
