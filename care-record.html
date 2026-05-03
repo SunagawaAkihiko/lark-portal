@@ -1141,20 +1141,23 @@
         loadedRecords = data.data;
 
         // 排便管理は記録が0件でも月グリッドを表示するため、length===0 チェックより先に処理する
-        // 月末ストリークを翌月初に引き継ぐため、前月レコードも並行取得する
+        // 月末ストリークを翌月初に引き継ぐため、前月レコードも並行取得する。
+        // 下剤設定（persons）も並行取得してアラート計算に使用する。
         if (currentTable === 'bowel') {
           const prevMonth = bowelMonth === 1 ? 12 : bowelMonth - 1;
           const prevYear  = bowelMonth === 1 ? bowelYear - 1 : bowelYear;
           const prevParams = new URLSearchParams({ table: 'bowel', year: prevYear, month: prevMonth });
           if (office) prevParams.append('office', office);
           if (name)   prevParams.append('name',   name);
-          let prevRecords = [];
-          try {
-            const prevRes  = await fetch(`${API_BASE}/api/care/records?${prevParams}`);
-            const prevData = await prevRes.json();
-            if (prevData.ok) prevRecords = prevData.data;
-          } catch { /* 前月取得失敗時はストリーク引き継ぎなしで続行する */ }
-          renderBowelCalendar(data.data, prevRecords, prevYear, prevMonth);
+          // 前月レコードと下剤設定を並行取得してレンダリング時間を短縮する
+          const [prevRecords, persons] = await Promise.all([
+            fetch(`${API_BASE}/api/care/records?${prevParams}`)
+              .then(r => r.json())
+              .then(d => d.ok ? d.data : [])
+              .catch(() => []),
+            fetchLaxPersons(office),
+          ]);
+          renderBowelCalendar(data.data, prevRecords, prevYear, prevMonth, persons);
           return;
         }
 
@@ -1254,7 +1257,8 @@
     }
 
     // ==================== 排便管理 横型カレンダー描画 ====================
-    function renderBowelCalendar(records, prevRecords = [], prevYear = 0, prevMonth = 0) {
+    // persons: fetchLaxPersons() で事前取得した下剤設定マップ（アラート計算に使用）
+    function renderBowelCalendar(records, prevRecords = [], prevYear = 0, prevMonth = 0, persons = {}) {
       const DOW_JA = ['日','月','火','水','木','金','土'];
 
       // 名前・日付ごとにグループ化する（記録のある氏名を収集する）
@@ -1322,9 +1326,9 @@
       html += '</tr></thead><tbody>';
 
       // 前月末のストリーク（連続排便不足日数）を計算して当月初に引き継ぐ
-      const initialStreaks = calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth);
+      const initialStreaks = calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth, persons);
       // 下剤アラート判定（利用者ごとにN日連続排便不足の日を事前に算出する）
-      const laxAlerts = calcLaxAlerts(names, dates, byNameDate, initialStreaks);
+      const laxAlerts = calcLaxAlerts(names, dates, byNameDate, persons, initialStreaks);
 
       for (const name of names) {
         html += `<tr><td class="bowel-td-name">${escHtml(name)}</td>`;
@@ -1397,43 +1401,52 @@
       return [{ fields: { '排便タイプ': combinedType, '排便量': combinedAmount }, _count: recs.length }];
     }
 
-    // localStorage から下剤設定を読み込む。
-    // フォーマット: { offices: { 事業所名: { persons: { 氏名: { minAmount, rules:[...] } } } } }
-    function loadLaxSettings() {
+    // ---- 下剤設定 Lark API 連携 ----
+    // 各ルールは Lark テーブル tblGjvZP4m0uFZp5 の1レコードとして管理する。
+    // デバイス間同期のために localStorage は使用しない。
+    // minAmount（最低排便量）も Lark の「最低排便量」単一選択フィールドで管理する。
+
+    // 事業所ごとの下剤設定キャッシュ（ページ内キャッシュで API 呼び出しを最小化する）
+    let laxPersonsCache = null; // { office: '…', persons: { 氏名: { minAmount, rules:[{recordId,days,timing,instruction}] } } }
+
+    // Lark API から指定事業所の下剤設定を取得してキャッシュする
+    // minAmount は Lark の「最低排便量」フィールド値をそのまま使用する
+    // （'卵1つ分以上' / '卵2つ分以上' / '卵3つ分以上' / '' = 未設定 = 量不問）
+    async function fetchLaxPersons(office) {
+      // キャッシュが同一事業所なら再利用する
+      if (laxPersonsCache && laxPersonsCache.office === office) return laxPersonsCache.persons;
       try {
-        const raw = JSON.parse(localStorage.getItem('bowelLaxSettings') || 'null');
-        if (!raw) return { offices: {} };
-        // 旧フォーマット（offices キーなし）は破棄して空データを返す
-        if (!raw.offices) return { offices: {} };
-        return raw;
-      } catch {
-        return { offices: {} };
-      }
+        const res  = await fetch(`${API_BASE}/api/lax-settings?office=${encodeURIComponent(office)}`);
+        const data = await res.json();
+        if (data.ok) {
+          laxPersonsCache = { office, persons: data.persons };
+          return data.persons;
+        }
+      } catch { /* 取得失敗時は空を返す */ }
+      return {};
     }
 
-    // localStorage に下剤設定を保存する
-    function saveLaxSettings(s) {
-      localStorage.setItem('bowelLaxSettings', JSON.stringify(s));
-    }
-
-    // 現在の事業所の persons マップを返す（なければ初期化して返す）
-    function getLaxPersons(s) {
-      if (!s.offices[currentOffice]) s.offices[currentOffice] = { persons: {} };
-      return s.offices[currentOffice].persons;
+    // キャッシュを無効化する（保存後に呼び出して次回の取得を強制する）
+    function invalidateLaxCache() {
+      laxPersonsCache = null;
     }
 
     // 排便記録が「規定量を満たしているか」を判定する（同日合算ランクで評価する）
+    // minAmount は Lark「最低排便量」フィールド値: '卵1つ分以上' / '卵2つ分以上' / '卵3つ分以上' / '' = 量不問
     function isSufficientBowel(recs, minAmount) {
       if (recs.length === 0) return false;
-      if (minAmount === 'any') return true;
-      const threshold = parseInt(minAmount, 10) || 1;
+      if (!minAmount) return true; // 未設定（空文字）= 量不問
+      // 各値に対応する合算ランクの最低閾値（AMOUNT_RANK: 付着=1, 卵1=2, 卵2=3, 卵3+=4）
+      const thresholdMap = { '卵1つ分以上': 2, '卵2つ分以上': 3, '卵3つ分以上': 4 };
+      const threshold = thresholdMap[minAmount] || 2;
       const totalRank = recs.reduce((s, r) => s + (AMOUNT_RANK[r.fields?.['排便量']] || 0), 0);
-      return totalRank >= threshold + 1; // 卵1=rank2, 卵2=rank3, 卵3=rank4
+      return totalRank >= threshold;
     }
 
     // 前月末の連続排便不足日数を利用者ごとに計算して返す
+    // persons: fetchLaxPersons() で取得済みのマップ { 氏名: { minAmount, rules } }
     // 返り値: { name: streak数 }
-    function calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth) {
+    function calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth, persons) {
       if (!prevYear || !prevMonth) return {};
       // 前月の全日程を生成する
       const daysInPrev = new Date(prevYear, prevMonth, 0).getDate();
@@ -1450,8 +1463,6 @@
         if (!prevByDate[n][dt]) prevByDate[n][dt] = [];
         prevByDate[n][dt].push(r);
       }
-      const s = loadLaxSettings();
-      const persons = getLaxPersons(s);
       const result = {};
       for (const name of names) {
         const cfg = persons[name];
@@ -1469,11 +1480,10 @@
 
     // 全利用者×全日付の下剤アラートを事前計算する。
     // ストリーク日数に対して「days が streak 以下の最大ルール」を適用する。
+    // persons: fetchLaxPersons() で取得済みのマップ { 氏名: { minAmount, rules } }
     // initialStreaks: 前月末から引き継いだストリーク初期値 { name: 日数 }
     // 返り値: { name: { date: labelText } }（アラートがある日だけ含む）
-    function calcLaxAlerts(names, dates, byNameDate, initialStreaks = {}) {
-      const s = loadLaxSettings();
-      const persons = getLaxPersons(s);
+    function calcLaxAlerts(names, dates, byNameDate, persons, initialStreaks = {}) {
       const result = {};
       for (const name of names) {
         const cfg = persons[name];
@@ -1513,11 +1523,21 @@
     closeLaxModal.addEventListener('click', () => closeModal(laxModal));
     laxModal.addEventListener('click', e => { if (e.target === laxModal) closeModal(laxModal); });
 
-    function openLaxModal() {
-      const s = loadLaxSettings();
-      renderLaxPersonList(s);
-      laxFormMsg.textContent = '';
+    // モーダルを開くときに Lark から最新設定を取得する
+    // laxModalOriginalPersons: 保存差分計算用のスナップショット（モーダルオープン時に記録）
+    let laxModalOriginalPersons = {};
+
+    async function openLaxModal() {
+      laxFormMsg.textContent = '読み込み中…';
+      laxFormMsg.style.color = 'var(--text-muted)';
+      laxPersonList.innerHTML = '';
       openModal(laxModal);
+      // 最新データを Lark から取得してスナップショットを保持する
+      invalidateLaxCache();
+      const persons = await fetchLaxPersons(currentOffice);
+      laxModalOriginalPersons = JSON.parse(JSON.stringify(persons)); // 深いコピー
+      renderLaxPersonList(persons);
+      laxFormMsg.textContent = '';
     }
 
     // タイミング select の option HTML を生成するヘルパー
@@ -1527,13 +1547,23 @@
         .join('');
     }
 
-    // 1つのルール行 HTML を生成する（保存前に DOM で追加・削除できる）
+    // 最低排便量 select の option HTML を生成するヘルパー
+    // 未設定（空文字）の場合は先頭オプションを選択状態にする
+    function minAmountOptions(selected) {
+      return ['卵1つ分以上','卵2つ分以上','卵3つ分以上']
+        .map(v => `<option value="${v}" ${selected===v?'selected':''}>${v}</option>`)
+        .join('');
+    }
+
+    // 1つのルール行 HTML を生成する
+    // data-record-id に既存レコードの ID を保持し、保存時の差分計算に使用する
     function ruleRowHtml(rule) {
+      const rid = rule.recordId ? ` data-record-id="${escHtml(rule.recordId)}"` : '';
       const inp = (f, v, ph='', type='text', extra='') =>
         `<input type="${type}" data-field="${f}" value="${escHtml(String(v||''))}" placeholder="${ph}" ${extra}
           style="padding:.35rem .4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.85rem;font-family:inherit;width:100%">`;
       return `
-        <div class="lax-rule-row">
+        <div class="lax-rule-row"${rid}>
           <div class="lax-rule-inner">
             <div class="lax-rule-field">
               <span class="lax-rule-label">N日目</span>
@@ -1557,9 +1587,8 @@
         </div>`;
     }
 
-    // 利用者カード全体を描画する（現在の事業所の設定のみ表示する）
-    function renderLaxPersonList(s) {
-      const persons = getLaxPersons(s);
+    // 利用者カード全体を描画する（persons は fetchLaxPersons() の返り値）
+    function renderLaxPersonList(persons) {
       let html = '';
       for (const [name, cfg] of Object.entries(persons)) {
         const rulesHtml = (cfg.rules || []).map(ruleRowHtml).join('');
@@ -1575,10 +1604,7 @@
               <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:3px">最低排便量（この量未満を「排便なし」と判定）</div>
               <select data-field="minAmount"
                 style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
-                <option value="any" ${cfg.minAmount==='any'?'selected':''}>記録があれば可（量不問）</option>
-                <option value="1"   ${cfg.minAmount==='1'  ?'selected':''}>卵1つ分以上</option>
-                <option value="2"   ${cfg.minAmount==='2'  ?'selected':''}>卵2つ分以上</option>
-                <option value="3"   ${cfg.minAmount==='3'  ?'selected':''}>卵3つ分以上</option>
+                ${minAmountOptions(cfg.minAmount || '')}
               </select>
             </div>
             <div class="lax-rules-list">${rulesHtml}</div>
@@ -1592,20 +1618,17 @@
       laxPersonList.innerHTML = html;
     }
 
-    // 利用者カードを削除する（現在の事業所の設定のみ操作する）
+    // 利用者カードを DOM から削除する（Lark への削除は保存ボタン押下時に実行する）
     function deleteLaxPerson(name) {
-      const s = loadLaxSettings();
-      delete getLaxPersons(s)[name];
-      saveLaxSettings(s);
-      renderLaxPersonList(s);
+      document.querySelector(`#lax-person-list .lax-person-row[data-person="${name}"]`)?.remove();
     }
 
-    // 利用者追加ボタン（現在の事業所の利用者のみ選択肢に表示する）
+    // 利用者追加ボタン：DOM にカードを追加するだけ（Lark への書き込みは保存時）
     document.getElementById('lax-add-person-btn').addEventListener('click', () => {
-      const s = loadLaxSettings();
-      const persons = getLaxPersons(s);
-      const names = officeNamesMap[currentOffice] || [];
-      const remaining = names.filter(n => !persons[n]);
+      // 現在 DOM に表示されている利用者を除いた残りを選択肢に表示する
+      const inDom   = new Set([...document.querySelectorAll('#lax-person-list .lax-person-row')].map(el => el.dataset.person));
+      const names   = officeNamesMap[currentOffice] || [];
+      const remaining = names.filter(n => !inDom.has(n));
       if (remaining.length === 0) { laxFormMsg.textContent = '追加できる利用者がいません'; return; }
       const sel = document.createElement('select');
       sel.style.cssText = 'width:100%;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:.95rem;font-family:inherit;margin-bottom:.5rem';
@@ -1616,38 +1639,118 @@
       sel.addEventListener('change', () => {
         const chosen = sel.value;
         if (!chosen) return;
-        getLaxPersons(s)[chosen] = { minAmount: 'any', rules: [{ days: 3, instruction: '', timing: '朝食後' }] };
-        saveLaxSettings(s);
+        // 新規追加カード（recordId なし・デフォルト値で DOM に挿入する）
+        const tmp = {};
+        tmp[chosen] = { minAmount: '卵1つ分以上', rules: [{ days: 3, instruction: '', timing: '朝食後' }] };
+        sel.insertAdjacentHTML('beforebegin', renderLaxPersonCard(chosen, tmp[chosen]));
         sel.remove();
-        renderLaxPersonList(s);
+        laxFormMsg.textContent = '';
       });
     });
 
-    // 保存ボタン：DOM からすべての利用者カード・ルール行を読み取って現在の事業所に保存する
-    laxSaveBtn.addEventListener('click', () => {
-      const s = loadLaxSettings();
-      // 現在の事業所分を一旦クリアして DOM から再構築する
-      s.offices[currentOffice] = { persons: {} };
-      const persons = s.offices[currentOffice].persons;
-      document.querySelectorAll('#lax-person-list .lax-person-row').forEach(card => {
-        const name = card.dataset.person;
-        if (!name) return;
-        const minAmount = card.querySelector('[data-field="minAmount"]').value;
-        const rules = [];
-        card.querySelectorAll('.lax-rule-row').forEach(row => {
-          rules.push({
-            days:        parseInt(row.querySelector('[data-field="days"]').value, 10) || 1,
-            instruction: row.querySelector('[data-field="instruction"]').value.trim(),
-            timing:      row.querySelector('[data-field="timing"]').value,
+    // 利用者1名分のカード HTML を返すヘルパー（renderLaxPersonList からも利用）
+    function renderLaxPersonCard(name, cfg) {
+      const rulesHtml = (cfg.rules || []).map(ruleRowHtml).join('');
+      return `
+        <div class="lax-person-row" data-person="${escHtml(name)}">
+          <div class="lax-person-row-header">
+            <span>${escHtml(name)}</span>
+            <button class="lax-person-delete-btn" onclick="deleteLaxPerson('${escHtml(name)}')">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <div style="margin-bottom:.6rem">
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:3px">最低排便量（この量未満を「排便なし」と判定）</div>
+            <select data-field="minAmount"
+              style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+              ${minAmountOptions(cfg.minAmount || '')}
+            </select>
+          </div>
+          <div class="lax-rules-list">${rulesHtml}</div>
+          <button class="lax-add-rule-btn"
+            onclick="this.previousElementSibling.insertAdjacentHTML('beforeend', ruleRowHtml({days:'', instruction:'', timing:'朝食後'}))">
+            <i class="fa-solid fa-plus"></i> ルールを追加
+          </button>
+        </div>`;
+    }
+
+    // 保存ボタン：DOM の状態と Lark のスナップショットを差分比較して API を呼ぶ
+    // 削除されたルール → DELETE / 既存ルール → PUT / 新規ルール → POST
+    laxSaveBtn.addEventListener('click', async () => {
+      laxSaveBtn.disabled = true;
+      laxFormMsg.textContent = '保存中…';
+      laxFormMsg.style.color = 'var(--text-muted)';
+
+      try {
+        const calls = []; // Promise を収集して最後に並行実行する
+
+        // DOM に残っている利用者カードを走査する
+        const domPersonNames = new Set();
+        document.querySelectorAll('#lax-person-list .lax-person-row').forEach(card => {
+          const name      = card.dataset.person;
+          if (!name) return;
+          domPersonNames.add(name);
+          const minAmount = card.querySelector('[data-field="minAmount"]')?.value || '';
+          const domRuleIds = new Set();
+
+          // ルール行を走査して PUT / POST を振り分ける
+          card.querySelectorAll('.lax-rule-row').forEach(row => {
+            const rid         = row.dataset.recordId || '';
+            const days        = parseInt(row.querySelector('[data-field="days"]').value, 10) || 1;
+            const instruction = row.querySelector('[data-field="instruction"]').value.trim();
+            const timing      = row.querySelector('[data-field="timing"]').value;
+            if (rid) {
+              // 既存レコード → PUT で更新する
+              domRuleIds.add(rid);
+              calls.push(fetch(`${API_BASE}/api/lax-settings/${rid}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ days, timing, instruction, minAmount }),
+              }));
+            } else {
+              // 新規ルール → POST で追加する
+              calls.push(fetch(`${API_BASE}/api/lax-settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ office: currentOffice, name, days, timing, instruction, minAmount }),
+              }));
+            }
           });
+
+          // スナップショットにあったがDOMから消えたルール → DELETE する
+          const origRules = laxModalOriginalPersons[name]?.rules || [];
+          for (const origRule of origRules) {
+            if (origRule.recordId && !domRuleIds.has(origRule.recordId)) {
+              calls.push(fetch(`${API_BASE}/api/lax-settings/${origRule.recordId}`, { method: 'DELETE' }));
+            }
+          }
         });
-        rules.sort((a, b) => a.days - b.days);
-        persons[name] = { minAmount, rules };
-      });
-      saveLaxSettings(s);
-      laxFormMsg.textContent = '保存しました';
-      laxFormMsg.style.color = 'green';
-      setTimeout(() => { closeModal(laxModal); loadRecords(currentOffice, selName.value); }, 800);
+
+        // DOM から消えた利用者のルールをすべて削除する
+        for (const [origName, origCfg] of Object.entries(laxModalOriginalPersons)) {
+          if (!domPersonNames.has(origName)) {
+            for (const rule of origCfg.rules || []) {
+              if (rule.recordId) {
+                calls.push(fetch(`${API_BASE}/api/lax-settings/${rule.recordId}`, { method: 'DELETE' }));
+              }
+            }
+          }
+        }
+
+        // すべての API 呼び出しを並行実行する
+        await Promise.all(calls);
+
+        laxFormMsg.textContent = '保存しました';
+        laxFormMsg.style.color = 'green';
+        // キャッシュを破棄してカレンダーを再描画する
+        invalidateLaxCache();
+        setTimeout(() => { closeModal(laxModal); loadRecords(currentOffice, selName.value); }, 800);
+      } catch (err) {
+        laxFormMsg.textContent = `保存エラー: ${err.message}`;
+        laxFormMsg.style.color = '#e63946';
+      } finally {
+        laxSaveBtn.disabled = false;
+      }
     });
 
     // 排便管理タブ以外では下剤設定FABを非表示にする
