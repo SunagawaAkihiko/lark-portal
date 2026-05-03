@@ -516,7 +516,8 @@ function renderSelectedDay() {
             <div class="event-time">${ev.time || "未定"}</div>
             <div class="event-details">
                 <h4>${ev.name || "名称なし"}</h4>
-                <p><span class="office-tag">${ev.office || "未指定"}</span> ${ev.memo || ""}</p>
+                ${ev.type ? `<p class="event-type"><i class="fa-solid fa-tag"></i> ${ev.type}</p>` : ''}
+                ${ev.memo ? `<p class="event-memo"><i class="fa-solid fa-pen-to-square"></i> ${ev.memo}</p>` : ''}
             </div>
         `;
         selectedDayEvents.appendChild(card);
