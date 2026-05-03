@@ -1476,10 +1476,9 @@
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">服用タイミング</div>
                 <select data-field="timing"
                   style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
-                  <option value=""      ${!cfg.timing            ?'selected':''}>指定なし</option>
                   <option value="朝食後" ${cfg.timing==='朝食後' ?'selected':''}>朝食後</option>
                   <option value="昼食後" ${cfg.timing==='昼食後' ?'selected':''}>昼食後</option>
-                  <option value="夕食後" ${cfg.timing==='夕食後' ?'selected':''}>夕食後</option>
+                  <option value="夕食後" ${(!cfg.timing||cfg.timing==='夕食後') ?'selected':''}>夕食後</option>
                 </select>
               </div>
               <div style="grid-column:1/-1">
