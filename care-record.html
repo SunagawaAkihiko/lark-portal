@@ -1623,26 +1623,25 @@
       document.querySelector(`#lax-person-list .lax-person-row[data-person="${name}"]`)?.remove();
     }
 
-    // 利用者追加ボタン：DOM にカードを追加するだけ（Lark への書き込みは保存時）
+    // 利用者追加ボタン：lax-person-list 内にカードを追加するだけ（Lark への書き込みは保存時）
     document.getElementById('lax-add-person-btn').addEventListener('click', () => {
-      // 現在 DOM に表示されている利用者を除いた残りを選択肢に表示する
-      const inDom   = new Set([...document.querySelectorAll('#lax-person-list .lax-person-row')].map(el => el.dataset.person));
-      const names   = officeNamesMap[currentOffice] || [];
+      // 現在 lax-person-list 内にある利用者を除いた残りを選択肢に表示する
+      const inDom    = new Set([...laxPersonList.querySelectorAll('.lax-person-row')].map(el => el.dataset.person));
+      const names    = officeNamesMap[currentOffice] || [];
       const remaining = names.filter(n => !inDom.has(n));
       if (remaining.length === 0) { laxFormMsg.textContent = '追加できる利用者がいません'; return; }
       const sel = document.createElement('select');
       sel.style.cssText = 'width:100%;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:.95rem;font-family:inherit;margin-bottom:.5rem';
       sel.innerHTML = '<option value="">利用者を選択…</option>' +
         remaining.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
-      document.getElementById('lax-add-person-btn').before(sel);
+      // lax-person-list の末尾に select を追加する（ボタンの外側なので querySelectorAll と競合しない）
+      laxPersonList.appendChild(sel);
       sel.focus();
       sel.addEventListener('change', () => {
         const chosen = sel.value;
         if (!chosen) return;
-        // 新規追加カード（recordId なし・デフォルト値で DOM に挿入する）
-        const tmp = {};
-        tmp[chosen] = { minAmount: '卵1つ分以上', rules: [{ days: 3, instruction: '', timing: '朝食後' }] };
-        sel.insertAdjacentHTML('beforebegin', renderLaxPersonCard(chosen, tmp[chosen]));
+        // 新規カード（recordId なし）を lax-person-list 内の select の直前に挿入する
+        sel.insertAdjacentHTML('beforebegin', renderLaxPersonCard(chosen, { minAmount: '卵1つ分以上', rules: [{ days: 3, instruction: '', timing: '朝食後' }] }));
         sel.remove();
         laxFormMsg.textContent = '';
       });
