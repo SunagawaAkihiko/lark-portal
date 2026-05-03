@@ -738,41 +738,7 @@
         <button class="close-btn" id="close-lax-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- 全員共通設定 -->
-      <div class="lax-section-title">全員共通設定</div>
-      <div class="lax-toggle-row">
-        <span style="font-weight:700">下剤アラートを有効にする</span>
-        <label class="lax-toggle">
-          <input type="checkbox" id="lax-global-enabled">
-          <span class="lax-toggle-slider"></span>
-        </label>
-      </div>
-      <div class="form-group">
-        <label>判定日数（連続してN日間、下記の量未満なら指示マークを表示）</label>
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <input type="number" id="lax-global-days" min="1" max="14" value="3"
-            style="width:4.5rem;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:1rem;font-family:inherit">
-          <span>日間</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>最低排便量（この量未満を「排便なし」と判定）</label>
-        <select id="lax-global-min-amount" style="width:100%;padding:.6rem;border:1px solid var(--border-color);border-radius:6px;font-size:0.95rem;font-family:inherit">
-          <option value="any">記録があれば可（量不問）</option>
-          <option value="1">卵1つ分以上が必要</option>
-          <option value="2">卵2つ分以上が必要</option>
-          <option value="3">卵3つ分以上が必要</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>下剤指示内容（カレンダーに表示するテキスト）</label>
-        <input type="text" id="lax-global-instruction"
-          placeholder="例: マグミット2T"
-          style="width:100%;padding:.6rem;border:1px solid var(--border-color);border-radius:6px;font-size:0.95rem;font-family:inherit">
-      </div>
-
-      <!-- 個別設定（利用者ごとに共通設定を上書き） -->
-      <div class="lax-section-title">個別設定（利用者ごとに上書き）</div>
+      <!-- 利用者ごとの個別設定 -->
       <div id="lax-person-list"></div>
       <button class="lax-add-btn" id="lax-add-person-btn">
         <i class="fa-solid fa-plus"></i> 個別設定を追加
@@ -1331,16 +1297,20 @@
           const alertText = laxAlerts[name]?.[d] || '';
           // セルタップで登録モーダルを開く（name・dateをdata属性で渡す）
           const cellAttr = `onclick="openBowelCellModal('${escHtml(name)}','${d}')"`;
+          // 同日複数記録は量を合算して1件に統合する
+          const displayRecs = combineRecs(recs);
           html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}>`;
-          if (recs.length === 0) {
+          if (displayRecs.length === 0) {
             html += `<span class="bowel-no-data">＋</span>`;
           } else {
-            for (const r of recs) {
+            for (const r of displayRecs) {
               const type   = r.fields?.['排便タイプ'] || '';
               const amount = r.fields?.['排便量']     || '';
-              const cls    = typeClass[type] || 'other';
+              // 複数タイプ結合時は最初のタイプのクラスを使う
+              const cls    = typeClass[type.split('・')[0]] || 'other';
               const amtStr = amountShort[amount] || amount;
-              html += `<div class="bowel-entry ${cls}">${escHtml(type)}<span>${escHtml(amtStr)}</span></div>`;
+              const countBadge = r._count > 1 ? `<span style="font-size:0.55rem;opacity:.8">×${r._count}</span>` : '';
+              html += `<div class="bowel-entry ${cls}">${escHtml(type)}${countBadge}<span>${escHtml(amtStr)}</span></div>`;
             }
           }
           // 下剤アラートバッジ（条件を満たした日に赤バッジで指示内容を表示）
@@ -1369,23 +1339,37 @@
 
     // ==================== 下剤設定管理 ====================
 
-    // 排便量のランク（大きいほど多い）。判定に使用する。
+    // 排便量のランク（大きいほど多い）。判定・合算に使用する。
     const AMOUNT_RANK = {
       '付着～卵１未満': 1,
       '卵１つ分':       2,
       '卵２つ分':       3,
       '卵３つ分以上':   4,
     };
+    // ランクから表示名に逆引きする配列（index 0 = rank 1）
+    const RANK_TO_AMOUNT = ['付着～卵１未満', '卵１つ分', '卵２つ分', '卵３つ分以上'];
 
-    // localStorage から下剤設定を読み込む（初期値は無効）
+    // 同日に複数の排便記録がある場合、量を合算して1件にまとめる
+    // タイプは重複排除して「・」で結合し、量は合算ランクに変換する
+    function combineRecs(recs) {
+      if (recs.length <= 1) return recs;
+      const totalRank  = recs.reduce((s, r) => s + (AMOUNT_RANK[r.fields?.['排便量']] || 0), 0);
+      const clampedIdx = Math.min(totalRank, 4) - 1; // 0〜3 にクランプ
+      const combinedAmount = clampedIdx >= 0 ? RANK_TO_AMOUNT[clampedIdx] : '';
+      const types = [...new Set(recs.map(r => r.fields?.['排便タイプ']).filter(Boolean))];
+      const combinedType = types.join('・');
+      return [{ fields: { '排便タイプ': combinedType, '排便量': combinedAmount }, _count: recs.length }];
+    }
+
+    // localStorage から下剤設定を読み込む（利用者個別設定のみ。旧フォーマットは自動移行する）
     function loadLaxSettings() {
       try {
-        return JSON.parse(localStorage.getItem('bowelLaxSettings') || 'null') || {
-          global: { enabled: false, days: 3, minAmount: 'any', instruction: '' },
-          persons: {}
-        };
+        const raw = JSON.parse(localStorage.getItem('bowelLaxSettings') || 'null');
+        // 旧フォーマット（global キーあり）は persons だけ引き継ぐ
+        if (raw?.global !== undefined) return { persons: raw.persons || {} };
+        return raw || { persons: {} };
       } catch {
-        return { global: { enabled: false, days: 3, minAmount: 'any', instruction: '' }, persons: {} };
+        return { persons: {} };
       }
     }
 
@@ -1394,25 +1378,25 @@
       localStorage.setItem('bowelLaxSettings', JSON.stringify(s));
     }
 
-    // 利用者ごとの有効な設定を返す（個別設定 > 共通設定）
+    // 利用者に対して有効な設定を返す（個別設定がない場合は null）
     function getLaxSettingFor(name, s) {
-      const g = s.global;
-      if (!g.enabled) return null;
-      const p = s.persons[name];
+      const p = s.persons?.[name];
+      if (!p) return null;
       return {
-        days:        (p?.days        ?? g.days)        || 3,
-        minAmount:   (p?.minAmount   ?? g.minAmount)   || 'any',
-        instruction: (p?.instruction ?? g.instruction) || '下剤',
+        days:        p.days        || 3,
+        minAmount:   p.minAmount   || 'any',
+        instruction: p.instruction || '下剤',
       };
     }
 
-    // 排便記録が「規定量を満たしているか」を判定する
+    // 排便記録が「規定量を満たしているか」を判定する（合算量で評価する）
     function isSufficientBowel(recs, minAmount) {
       if (recs.length === 0) return false;
       if (minAmount === 'any') return true;
-      const threshold = parseInt(minAmount, 10) || 1;
-      const maxRank = Math.max(...recs.map(r => AMOUNT_RANK[r.fields?.['排便量']] || 0));
-      return maxRank >= threshold + 1; // '1'→rank≥2(卵1以上), '2'→rank≥3, '3'→rank≥4
+      const threshold = parseInt(minAmount, 10) || 1; // '1'→卵1以上, '2'→卵2以上, '3'→卵3以上
+      // 合算ランクで評価（同日複数記録は足し合わせた量で判定する）
+      const totalRank = recs.reduce((s, r) => s + (AMOUNT_RANK[r.fields?.['排便量']] || 0), 0);
+      return totalRank >= threshold + 1; // rank: 卵1=2, 卵2=3, 卵3=4
     }
 
     // 全利用者×全日付の下剤アラートを事前計算する
@@ -1432,9 +1416,7 @@
           } else {
             streak++;
             // N日連続で排便不足になった日にアラートを表示する
-            if (streak >= cfg.days) {
-              result[name][d] = cfg.instruction || '下剤';
-            }
+            if (streak >= cfg.days) result[name][d] = cfg.instruction || '下剤';
           }
         }
       }
@@ -1453,22 +1435,17 @@
     closeLaxModal.addEventListener('click', () => closeModal(laxModal));
     laxModal.addEventListener('click', e => { if (e.target === laxModal) closeModal(laxModal); });
 
-    // モーダルを開いて現在の設定を各フィールドに反映する
+    // モーダルを開いて個別設定リストを描画する
     function openLaxModal() {
       const s = loadLaxSettings();
-      document.getElementById('lax-global-enabled').checked    = s.global.enabled;
-      document.getElementById('lax-global-days').value         = s.global.days || 3;
-      document.getElementById('lax-global-min-amount').value   = s.global.minAmount || 'any';
-      document.getElementById('lax-global-instruction').value  = s.global.instruction || '';
       renderLaxPersonList(s);
       laxFormMsg.textContent = '';
       openModal(laxModal);
     }
 
-    // 個別設定リストを描画する（利用者選択→日数・指示テキストをカード形式で表示）
+    // 個別設定リストを描画する（利用者カードに判定日数・最低排便量・指示内容を表示）
     function renderLaxPersonList(s) {
       const persons = s.persons || {};
-      const officeNames = officeNamesMap[currentOffice] || [];
       let html = '';
       for (const [name, cfg] of Object.entries(persons)) {
         html += `
@@ -1492,10 +1469,10 @@
                   style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
               </div>
               <div style="grid-column:1/-1">
-                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">最低排便量</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">最低排便量（この量未満を「排便なし」と判定）</div>
                 <select data-field="minAmount"
                   style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
-                  <option value="any" ${cfg.minAmount==='any'?'selected':''}>記録があれば可</option>
+                  <option value="any" ${cfg.minAmount==='any'?'selected':''}>記録があれば可（量不問）</option>
                   <option value="1"   ${cfg.minAmount==='1'  ?'selected':''}>卵1つ分以上</option>
                   <option value="2"   ${cfg.minAmount==='2'  ?'selected':''}>卵2つ分以上</option>
                   <option value="3"   ${cfg.minAmount==='3'  ?'selected':''}>卵3つ分以上</option>
@@ -1504,10 +1481,11 @@
             </div>
           </div>`;
       }
+      if (!html) html = '<p style="color:var(--text-muted);text-align:center;padding:1rem 0">設定なし。下の「追加」ボタンで利用者を登録してください。</p>';
       laxPersonList.innerHTML = html;
     }
 
-    // 個別設定削除ボタン
+    // 個別設定の削除ボタン
     function deleteLaxPerson(name) {
       const s = loadLaxSettings();
       delete s.persons[name];
@@ -1515,38 +1493,32 @@
       renderLaxPersonList(s);
     }
 
-    // 個別設定追加ボタン（利用者を選択させるプロンプトの代わりにselectを表示）
+    // 個別設定追加ボタン（select を一時的に挿入して利用者を選ばせる）
     document.getElementById('lax-add-person-btn').addEventListener('click', () => {
       const s = loadLaxSettings();
       const names = officeNamesMap[currentOffice] || [];
       const remaining = names.filter(n => !s.persons[n]);
       if (remaining.length === 0) { laxFormMsg.textContent = '追加できる利用者がいません'; return; }
-      // 一時的なセレクトを表示して追加する利用者を選ばせる
       const sel = document.createElement('select');
       sel.style.cssText = 'width:100%;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:.95rem;font-family:inherit;margin-bottom:.5rem';
       sel.innerHTML = '<option value="">利用者を選択…</option>' +
         remaining.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
-      const addBtn = document.getElementById('lax-add-person-btn');
-      addBtn.before(sel);
+      document.getElementById('lax-add-person-btn').before(sel);
       sel.focus();
       sel.addEventListener('change', () => {
         const chosen = sel.value;
         if (!chosen) return;
-        s.persons[chosen] = { days: s.global.days || 3, minAmount: s.global.minAmount || 'any', instruction: s.global.instruction || '' };
+        // 新規追加は判定日数3日・量不問・指示内容空をデフォルトにする
+        s.persons[chosen] = { days: 3, minAmount: 'any', instruction: '' };
         saveLaxSettings(s);
         sel.remove();
         renderLaxPersonList(s);
       });
     });
 
-    // 保存ボタン：フォームの値を読み取って localStorage に保存する
+    // 保存ボタン：各カードの値を読み取って localStorage に保存する
     laxSaveBtn.addEventListener('click', () => {
       const s = loadLaxSettings();
-      s.global.enabled     = document.getElementById('lax-global-enabled').checked;
-      s.global.days        = parseInt(document.getElementById('lax-global-days').value, 10) || 3;
-      s.global.minAmount   = document.getElementById('lax-global-min-amount').value;
-      s.global.instruction = document.getElementById('lax-global-instruction').value.trim();
-      // 個別設定カードから値を読み取る
       document.querySelectorAll('#lax-person-list .lax-person-row').forEach(row => {
         const name = row.dataset.person;
         if (!name) return;
