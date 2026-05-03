@@ -273,21 +273,46 @@
     .record-group-area > *:last-child { border-bottom: none; }
 
     /* ==================== 排便管理 横型カレンダー ==================== */
-    /* 縦横両方スクロール可能なコンテナ。sticky が機能するには overflow を両方 auto にする必要がある */
-    .bowel-cal-wrap {
-      overflow: auto;
-      /* 親のpadding/max-widthに関係なく、どんなデバイスでも画面横幅いっぱいにする */
-      /* left:50% で親中央に寄せ、translateX(-50%) で自身の幅の半分戻すことで全幅化する */
+    /* bowel-container: ナビバー＋テーブルをまとめて画面全幅に広げる */
+    .bowel-container {
       width: 100vw;
       position: relative;
       left: 50%;
       transform: translateX(-50%);
-      /* 縦は画面全体を使う（上部のstickyヘッダー高さ約130px分を引く） */
-      max-height: calc(100vh - 130px);
-      padding-bottom: 80px;
-      border-radius: 0;
-      border-top: 1px solid var(--border-color);
+    }
+    /* 月ナビゲーションバー */
+    .bowel-month-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: var(--card-bg);
       border-bottom: 1px solid var(--border-color);
+    }
+    .bowel-nav-btn {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .bowel-nav-btn:active { opacity: 0.8; }
+    .bowel-nav-label {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    /* 縦横両方スクロール可能なコンテナ。sticky が機能するには overflow を両方 auto にする必要がある */
+    /* 全幅化は親の bowel-container 側で行うので、ここでは幅・位置指定不要 */
+    .bowel-cal-wrap {
+      overflow: auto;
+      /* 縦は画面全体を使う（stickyヘッダー約130px＋月ナビバー約46px分を引く） */
+      max-height: calc(100vh - 176px);
+      padding-bottom: 80px;
     }
     .bowel-cal-table {
       border-collapse: collapse; font-size: 0.75rem; background: #fff;
@@ -818,6 +843,10 @@
     let currentTable  = 'bathing'; // 現在表示中のテーブルキー（入浴バイタルが先頭）
     let currentOffice = '大浦家';  // 現在選択中の事業所
     let loadedRecords = [];         // 最後に取得したレコード一覧（削除モーダルで使用）
+    // 排便管理カレンダー用の表示月（初期値は今月）
+    const _today = new Date();
+    let bowelYear  = _today.getFullYear();
+    let bowelMonth = _today.getMonth() + 1;
     // 顧客情報APIから取得した事業所別氏名マップ（動的に更新される）
     let officeNamesMap = {};
 
@@ -967,6 +996,11 @@
         const params = new URLSearchParams({ table: currentTable });
         if (office) params.append('office', office);
         if (name)   params.append('name',   name);
+        // 排便管理カレンダーは表示月のレコードだけをサーバー側で絞り込む
+        if (currentTable === 'bowel') {
+          params.append('year',  bowelYear);
+          params.append('month', bowelMonth);
+        }
 
         const res  = await fetch(`${API_BASE}/api/care/records?${params}`);
         const data = await res.json();
@@ -1067,30 +1101,52 @@
       }
     }
 
+    // ==================== 排便管理 月ナビゲーション ====================
+    // 前月・翌月ボタンのクリックで bowelYear/bowelMonth を更新して再取得する
+    function changeBowelMonth(delta) {
+      bowelMonth += delta;
+      if (bowelMonth > 12) { bowelMonth = 1;  bowelYear++; }
+      if (bowelMonth < 1)  { bowelMonth = 12; bowelYear--; }
+      loadRecords(currentOffice, selName.value);
+    }
+
     // ==================== 排便管理 横型カレンダー描画 ====================
     function renderBowelCalendar(records) {
       const DOW_JA = ['日','月','火','水','木','金','土'];
 
-      // 名前・日付ごとにグループ化する
-      const nameSet = new Set();
-      const dateSet = new Set();
+      // 名前・日付ごとにグループ化する（記録のある氏名を収集する）
+      const nameSet    = new Set();
       const byNameDate = {}; // { name: { date: record[] } }
       for (const r of records) {
         const name = r.name || '—';
         const date = r.date || '—';
-        nameSet.add(name);
-        if (date !== '—') dateSet.add(date);
+        if (name !== '—') nameSet.add(name);
         if (!byNameDate[name]) byNameDate[name] = {};
         if (!byNameDate[name][date]) byNameDate[name][date] = [];
         byNameDate[name][date].push(r);
       }
 
-      // 日付を昇順（左→右で古い→新しい）、氏名を五十音順でソートする
-      const dates = [...dateSet].sort();
+      // 表示月の全日程を生成する（記録の有無に関わらず全日表示）
+      const daysInMonth = new Date(bowelYear, bowelMonth, 0).getDate();
+      const dates = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        dates.push(`${bowelYear}-${String(bowelMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      }
+
+      // 氏名を五十音順でソートする
       const names = [...nameSet].filter(n => n !== '—').sort((a, b) => a.localeCompare(b, 'ja'));
 
-      if (dates.length === 0 || names.length === 0) {
-        recordList.innerHTML = '<div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>記録がありません</div>';
+      // 氏名がなければ「記録なし」を表示する（日付列は月ナビ付きで表示する）
+      if (names.length === 0) {
+        recordList.innerHTML = `
+          <div class="bowel-container">
+            <div class="bowel-month-nav">
+              <button class="bowel-nav-btn" onclick="changeBowelMonth(-1)"><i class="fa-solid fa-chevron-left"></i> 前月</button>
+              <span class="bowel-nav-label">${bowelYear}年${bowelMonth}月</span>
+              <button class="bowel-nav-btn" onclick="changeBowelMonth(1)">翌月 <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>この月の記録がありません</div>
+          </div>`;
         return;
       }
 
@@ -1108,8 +1164,15 @@
         '水様便': 'suiyou',
       };
 
-      // テーブルHTML組み立て
-      let html = '<div class="bowel-cal-wrap"><table class="bowel-cal-table"><thead><tr>';
+      // テーブルHTML組み立て（月ナビ＋スクロール可能なテーブルを bowel-container でラップする）
+      let html = `
+        <div class="bowel-container">
+          <div class="bowel-month-nav">
+            <button class="bowel-nav-btn" onclick="changeBowelMonth(-1)"><i class="fa-solid fa-chevron-left"></i> 前月</button>
+            <span class="bowel-nav-label">${bowelYear}年${bowelMonth}月</span>
+            <button class="bowel-nav-btn" onclick="changeBowelMonth(1)">翌月 <i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="bowel-cal-wrap"><table class="bowel-cal-table"><thead><tr>`;
       html += '<th class="bowel-th-name">氏名</th>';
       for (const d of dates) {
         const [y, m, day] = d.split('-').map(Number);
@@ -1142,7 +1205,7 @@
         html += '</tr>';
       }
 
-      html += '</tbody></table></div>';
+      html += '</tbody></table></div></div>';
       recordList.innerHTML = html;
     }
 
