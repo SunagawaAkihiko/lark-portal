@@ -1681,7 +1681,17 @@
       laxFormMsg.style.color = 'var(--text-muted)';
 
       try {
-        const calls = []; // Promise を収集して最後に並行実行する
+        // fetch を実行して JSON レスポンスを返す。HTTP エラーは例外として投げる。
+        const callApi = async (url, opts) => {
+          const res  = await fetch(url, opts);
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || json.ok === false) {
+            throw new Error(`API エラー [${opts.method || 'GET'} ${url}]: ${json.error || res.status}`);
+          }
+          return json;
+        };
+
+        const promises = []; // 並行実行する Promise を収集する
 
         // DOM に残っている利用者カードを走査する
         const domPersonNames = new Set();
@@ -1701,14 +1711,14 @@
             if (rid) {
               // 既存レコード → PUT で更新する
               domRuleIds.add(rid);
-              calls.push(fetch(`${API_BASE}/api/lax-settings/${rid}`, {
+              promises.push(callApi(`${API_BASE}/api/lax-settings/${rid}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ days, timing, instruction, minAmount }),
               }));
             } else {
               // 新規ルール → POST で追加する
-              calls.push(fetch(`${API_BASE}/api/lax-settings`, {
+              promises.push(callApi(`${API_BASE}/api/lax-settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ office: currentOffice, name, days, timing, instruction, minAmount }),
@@ -1720,7 +1730,7 @@
           const origRules = laxModalOriginalPersons[name]?.rules || [];
           for (const origRule of origRules) {
             if (origRule.recordId && !domRuleIds.has(origRule.recordId)) {
-              calls.push(fetch(`${API_BASE}/api/lax-settings/${origRule.recordId}`, { method: 'DELETE' }));
+              promises.push(callApi(`${API_BASE}/api/lax-settings/${origRule.recordId}`, { method: 'DELETE' }));
             }
           }
         });
@@ -1730,14 +1740,20 @@
           if (!domPersonNames.has(origName)) {
             for (const rule of origCfg.rules || []) {
               if (rule.recordId) {
-                calls.push(fetch(`${API_BASE}/api/lax-settings/${rule.recordId}`, { method: 'DELETE' }));
+                promises.push(callApi(`${API_BASE}/api/lax-settings/${rule.recordId}`, { method: 'DELETE' }));
               }
             }
           }
         }
 
-        // すべての API 呼び出しを並行実行する
-        await Promise.all(calls);
+        // 変更がない場合はそのまま閉じる
+        if (promises.length === 0) {
+          closeModal(laxModal);
+          return;
+        }
+
+        // すべての API 呼び出しを並行実行し、1件でも失敗したら例外を投げる
+        await Promise.all(promises);
 
         laxFormMsg.textContent = '保存しました';
         laxFormMsg.style.color = 'green';
@@ -1745,6 +1761,7 @@
         invalidateLaxCache();
         setTimeout(() => { closeModal(laxModal); loadRecords(currentOffice, selName.value); }, 800);
       } catch (err) {
+        console.error('[lax-save]', err);
         laxFormMsg.textContent = `保存エラー: ${err.message}`;
         laxFormMsg.style.color = '#e63946';
       } finally {
