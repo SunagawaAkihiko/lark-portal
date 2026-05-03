@@ -408,6 +408,12 @@
       background-color: #7c6b5e;
       box-shadow: 0 4px 10px rgba(100,80,60,0.3);
     }
+    /* 登録FAB（右下・排便管理タブ以外で表示） */
+    .fab-add {
+      right: 1.5rem;
+      background-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(231,111,81,0.4);
+    }
     /* 下剤設定FAB（右下・排便管理タブのみ表示） */
     .fab-laxative {
       right: 1.5rem;
@@ -746,6 +752,11 @@
     </div>
   </main>
 
+
+  <!-- 登録FAB（排便管理タブ以外で表示） -->
+  <button class="fab fab-add" id="fab-add">
+    <i class="fa-solid fa-pen"></i> 記録
+  </button>
 
   <!-- 下剤設定FAB（排便管理タブ表示時のみ visible） -->
   <button class="fab fab-laxative hidden" id="fab-laxative">
@@ -1769,10 +1780,27 @@
       }
     });
 
-    // 排便管理タブ以外では下剤設定FABを非表示にする
+    const fabAdd = document.getElementById('fab-add');
+
+    // タブに応じて登録FABと下剤設定FABの表示を切り替える
+    // 排便管理タブ: 下剤設定FABのみ表示（登録はセルタップで行う）
+    // その他タブ: 登録FABのみ表示
     function updateLaxFabVisibility() {
-      fabLaxative.classList.toggle('hidden', currentTable !== 'bowel');
+      const isBowel = currentTable === 'bowel';
+      fabAdd.classList.toggle('hidden', isBowel);
+      fabLaxative.classList.toggle('hidden', !isBowel);
     }
+
+    // 登録FABクリック → 登録モード選択モーダルを開く
+    fabAdd.addEventListener('click', () => {
+      const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
+      document.getElementById('mode-modal-title').innerHTML =
+        `<i class="fa-solid fa-pen"></i> ${label}を登録`;
+      // 「入浴」ボタンはバイタルタブのみ表示する
+      document.getElementById('mode-btn-scheduled')
+        .classList.toggle('hidden', currentTable !== 'bathing');
+      openModal(document.getElementById('bathing-mode-modal'));
+    });
 
     // ==================== モーダル開閉ヘルパー ====================
     // モーダルを開く際にbodyのスクロールを固定して横揺れを防ぐ
