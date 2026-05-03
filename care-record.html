@@ -323,7 +323,10 @@
     .bowel-entry.nanbun { background: #fff3e0; color: #e65100; }
     .bowel-entry.suiyou { background: #fce4ec; color: #c62828; }
     .bowel-entry.other  { background: #f3f3f3; color: #555; }
-    .bowel-no-data { color: #ddd; font-size: 0.8rem; line-height: 2.5; }
+    .bowel-no-data { color: #ccc; font-size: 1rem; line-height: 2.2; }
+    /* タップ可能セルのフィードバック */
+    .bowel-cell-tap { cursor: pointer; transition: background 0.12s; }
+    .bowel-cell-tap:active { background: #fff3e0; }
 
     /* ==================== 記録選択・アクションバー ==================== */
     /* タップで選択した記録のハイライト */
@@ -1112,10 +1115,12 @@
         html += `<tr><td class="bowel-td-name">${escHtml(name)}</td>`;
         for (const d of dates) {
           const recs = byNameDate[name]?.[d] || [];
+          // セルタップで登録モーダルを開く（name・dateをdata属性で渡す）
+          const cellAttr = `onclick="openBowelCellModal('${escHtml(name)}','${d}')"`;
           if (recs.length === 0) {
-            html += '<td class="bowel-cal-cell"><span class="bowel-no-data">—</span></td>';
+            html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}><span class="bowel-no-data">＋</span></td>`;
           } else {
-            html += '<td class="bowel-cal-cell">';
+            html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}>`;
             for (const r of recs) {
               const type   = r.fields?.['排便タイプ'] || '';
               const amount = r.fields?.['排便量']     || '';
@@ -1131,6 +1136,19 @@
 
       html += '</tbody></table></div>';
       recordList.innerHTML = html;
+    }
+
+    // ==================== 排便カレンダーセルタップ → 登録モーダル ====================
+    function openBowelCellModal(name, date) {
+      // モーダルタイトルと日付・氏名をセットして登録フォームを開く
+      modalTitle.textContent = '排便管理登録';
+      updateNameOptions(currentOffice, inputName);
+      inputDate.value = date;
+      inputName.value = name;
+      buildDynamicFields('bowel');
+      formMsg.textContent = '';
+      formMsg.className   = 'form-msg';
+      openModal(addModal);
     }
 
     // ==================== モーダル開閉ヘルパー ====================
