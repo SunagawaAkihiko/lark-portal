@@ -273,34 +273,38 @@
     .record-group-area > *:last-child { border-bottom: none; }
 
     /* ==================== 排便管理 横型カレンダー ==================== */
+    /* 縦横両方スクロール可能なコンテナ。sticky が機能するには overflow を両方 auto にする必要がある */
     .bowel-cal-wrap {
-      overflow-x: auto; padding-bottom: 80px;
+      overflow: auto;
+      max-height: calc(100vh - 180px);
+      padding-bottom: 80px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
     }
     .bowel-cal-table {
       border-collapse: collapse; font-size: 0.75rem; background: #fff;
-      border-radius: 10px; overflow: hidden;
     }
     .bowel-cal-table th, .bowel-cal-table td {
       border: 1px solid var(--border-color); text-align: center;
     }
-    /* 氏名列ヘッダー（左上固定） */
+    /* 左上コーナー（氏名列ヘッダー）: 縦横両方に固定 */
     .bowel-th-name {
-      position: sticky; left: 0; top: 0; z-index: 4;
+      position: sticky; left: 0; top: 0; z-index: 40;
       background: #4a3f35; color: #fff;
       padding: 6px 10px; min-width: 90px; font-weight: 700;
     }
-    /* 日付列ヘッダー（上固定） */
+    /* 日付ヘッダー行: 縦スクロール時に上端固定 */
     .bowel-th-date {
-      position: sticky; top: 0; z-index: 2;
+      position: sticky; top: 0; z-index: 30;
       background: #4a3f35; color: #fff;
       padding: 5px 6px; min-width: 54px; font-weight: 600;
       white-space: nowrap; line-height: 1.4;
     }
     .bowel-th-date.is-sun { color: #ffb3b3; }
     .bowel-th-date.is-sat { color: #b3d4ff; }
-    /* 氏名列データ（左固定） */
+    /* 氏名列データセル: 横スクロール時に左端固定 */
     .bowel-td-name {
-      position: sticky; left: 0; z-index: 1;
+      position: sticky; left: 0; z-index: 20;
       background: #f9f4ef; font-weight: 600;
       text-align: left; padding: 6px 10px;
       white-space: nowrap; border-right: 2px solid #c8a882;
