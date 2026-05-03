@@ -272,6 +272,55 @@
     /* グループエリアの最後の子要素は下線不要 */
     .record-group-area > *:last-child { border-bottom: none; }
 
+    /* ==================== 排便管理 横型カレンダー ==================== */
+    .bowel-cal-wrap {
+      overflow-x: auto; padding-bottom: 80px;
+    }
+    .bowel-cal-table {
+      border-collapse: collapse; font-size: 0.75rem; background: #fff;
+      border-radius: 10px; overflow: hidden;
+    }
+    .bowel-cal-table th, .bowel-cal-table td {
+      border: 1px solid var(--border-color); text-align: center;
+    }
+    /* 氏名列ヘッダー（左上固定） */
+    .bowel-th-name {
+      position: sticky; left: 0; top: 0; z-index: 4;
+      background: #4a3f35; color: #fff;
+      padding: 6px 10px; min-width: 90px; font-weight: 700;
+    }
+    /* 日付列ヘッダー（上固定） */
+    .bowel-th-date {
+      position: sticky; top: 0; z-index: 2;
+      background: #4a3f35; color: #fff;
+      padding: 5px 6px; min-width: 54px; font-weight: 600;
+      white-space: nowrap; line-height: 1.4;
+    }
+    .bowel-th-date.is-sun { color: #ffb3b3; }
+    .bowel-th-date.is-sat { color: #b3d4ff; }
+    /* 氏名列データ（左固定） */
+    .bowel-td-name {
+      position: sticky; left: 0; z-index: 1;
+      background: #f9f4ef; font-weight: 600;
+      text-align: left; padding: 6px 10px;
+      white-space: nowrap; border-right: 2px solid #c8a882;
+    }
+    /* データセル */
+    .bowel-cal-cell {
+      padding: 3px 3px; vertical-align: top;
+    }
+    /* 1件の排便エントリ（タイプごとに色分け） */
+    .bowel-entry {
+      display: flex; flex-direction: column; align-items: center;
+      margin: 1px 2px; padding: 2px 4px; border-radius: 4px;
+      font-size: 0.68rem; line-height: 1.4; white-space: nowrap;
+    }
+    .bowel-entry.futsuu { background: #e8f5e9; color: #2e7d32; }
+    .bowel-entry.nanbun { background: #fff3e0; color: #e65100; }
+    .bowel-entry.suiyou { background: #fce4ec; color: #c62828; }
+    .bowel-entry.other  { background: #f3f3f3; color: #555; }
+    .bowel-no-data { color: #ddd; font-size: 0.8rem; line-height: 2.5; }
+
     /* ==================== 記録選択・アクションバー ==================== */
     /* タップで選択した記録のハイライト */
     .record-group-card { cursor: pointer; }
@@ -916,6 +965,12 @@
           return;
         }
 
+        // 排便管理タブは横型カレンダー表示で描画する
+        if (currentTable === 'bowel') {
+          renderBowelCalendar(data.data);
+          return;
+        }
+
         const tableDef = TABLE_DEFS[currentTable];
 
         // 各フィールドをボックス形式のHTMLに変換するヘルパー
@@ -995,6 +1050,83 @@
       } finally {
         loadingEl.classList.add('hidden');
       }
+    }
+
+    // ==================== 排便管理 横型カレンダー描画 ====================
+    function renderBowelCalendar(records) {
+      const DOW_JA = ['日','月','火','水','木','金','土'];
+
+      // 名前・日付ごとにグループ化する
+      const nameSet = new Set();
+      const dateSet = new Set();
+      const byNameDate = {}; // { name: { date: record[] } }
+      for (const r of records) {
+        const name = r.name || '—';
+        const date = r.date || '—';
+        nameSet.add(name);
+        if (date !== '—') dateSet.add(date);
+        if (!byNameDate[name]) byNameDate[name] = {};
+        if (!byNameDate[name][date]) byNameDate[name][date] = [];
+        byNameDate[name][date].push(r);
+      }
+
+      // 日付を昇順（左→右で古い→新しい）、氏名を五十音順でソートする
+      const dates = [...dateSet].sort();
+      const names = [...nameSet].filter(n => n !== '—').sort((a, b) => a.localeCompare(b, 'ja'));
+
+      if (dates.length === 0 || names.length === 0) {
+        recordList.innerHTML = '<div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>記録がありません</div>';
+        return;
+      }
+
+      // 排便量の短縮表示マッピング
+      const amountShort = {
+        '付着～卵１未満': '付着',
+        '卵１つ分':       '卵1',
+        '卵２つ分':       '卵2',
+        '卵３つ分以上':   '卵3+',
+      };
+      // 排便タイプごとのCSSクラス
+      const typeClass = {
+        '普通便': 'futsuu',
+        '軟便':   'nanbun',
+        '水様便': 'suiyou',
+      };
+
+      // テーブルHTML組み立て
+      let html = '<div class="bowel-cal-wrap"><table class="bowel-cal-table"><thead><tr>';
+      html += '<th class="bowel-th-name">氏名</th>';
+      for (const d of dates) {
+        const [y, m, day] = d.split('-').map(Number);
+        const dow = new Date(y, m - 1, day).getDay();
+        const dowCls = dow === 0 ? ' is-sun' : dow === 6 ? ' is-sat' : '';
+        html += `<th class="bowel-th-date${dowCls}">${m}/${day}<br>(${DOW_JA[dow]})</th>`;
+      }
+      html += '</tr></thead><tbody>';
+
+      for (const name of names) {
+        html += `<tr><td class="bowel-td-name">${escHtml(name)}</td>`;
+        for (const d of dates) {
+          const recs = byNameDate[name]?.[d] || [];
+          if (recs.length === 0) {
+            html += '<td class="bowel-cal-cell"><span class="bowel-no-data">—</span></td>';
+          } else {
+            html += '<td class="bowel-cal-cell">';
+            for (const r of recs) {
+              const type   = r.fields?.['排便タイプ'] || '';
+              const amount = r.fields?.['排便量']     || '';
+              const cls    = typeClass[type] || 'other';
+              const amtStr = amountShort[amount] || amount;
+              html += `<div class="bowel-entry ${cls}">${escHtml(type)}<span>${escHtml(amtStr)}</span></div>`;
+            }
+            html += '</td>';
+          }
+        }
+        html += '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+      recordList.innerHTML = html;
     }
 
     // ==================== モーダル開閉ヘルパー ====================
