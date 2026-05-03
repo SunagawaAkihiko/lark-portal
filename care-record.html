@@ -276,10 +276,18 @@
     /* 縦横両方スクロール可能なコンテナ。sticky が機能するには overflow を両方 auto にする必要がある */
     .bowel-cal-wrap {
       overflow: auto;
-      max-height: calc(100vh - 180px);
+      /* 親のpadding/max-widthに関係なく、どんなデバイスでも画面横幅いっぱいにする */
+      /* left:50% で親中央に寄せ、translateX(-50%) で自身の幅の半分戻すことで全幅化する */
+      width: 100vw;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+      /* 縦は画面全体を使う（上部のstickyヘッダー高さ約130px分を引く） */
+      max-height: calc(100vh - 130px);
       padding-bottom: 80px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
+      border-radius: 0;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
     }
     .bowel-cal-table {
       border-collapse: collapse; font-size: 0.75rem; background: #fff;
