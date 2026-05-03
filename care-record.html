@@ -402,12 +402,6 @@
       transition: transform 0.15s;
     }
     .fab:active { transform: scale(0.95); }
-    /* 登録FAB（右下） */
-    .fab-add {
-      right: 1.5rem;
-      background-color: var(--primary-color);
-      box-shadow: 0 4px 12px rgba(231,111,81,0.4);
-    }
     /* 削除FAB（左下） */
     .fab-delete {
       left: 1.5rem;
@@ -639,10 +633,6 @@
     </div>
   </main>
 
-  <!-- ===== 登録FABボタン（右下） ===== -->
-  <button class="fab fab-add" id="fab-add">
-    <i class="fa-solid fa-pen"></i> 記録
-  </button>
 
   <!-- 記録選択時に表示される下部アクションバー（スクリプトより前に配置してDOMを確保する） -->
   <div id="recordActionBar" class="record-action-bar hidden">
@@ -857,7 +847,7 @@
     const allBtn         = document.getElementById('all-btn');
     const loadingEl      = document.getElementById('loading');
     const recordList     = document.getElementById('record-list');
-    const fabAdd         = document.getElementById('fab-add');
+
     const addModal       = document.getElementById('add-modal');
     const editModal      = document.getElementById('edit-modal');
     const closeAddModal  = document.getElementById('close-add-modal');
@@ -1137,22 +1127,14 @@
       const selectedName = selName.value;
       if (selectedName && !nameSet.has(selectedName)) nameSet.add(selectedName);
 
+      // 記録が0件でも officeNamesMap から事業所の全利用者を補完してカレンダーを常に表示する
+      const officeNames = officeNamesMap[currentOffice] || [];
+      for (const n of officeNames) {
+        if (n && !nameSet.has(n)) nameSet.add(n);
+      }
+
       // 氏名を五十音順でソートする
       const names = [...nameSet].filter(n => n !== '—').sort((a, b) => a.localeCompare(b, 'ja'));
-
-      // 氏名がなければ「記録なし」を表示する（日付列は月ナビ付きで表示する）
-      if (names.length === 0) {
-        recordList.innerHTML = `
-          <div class="bowel-container">
-            <div class="bowel-month-nav">
-              <button class="bowel-nav-btn" onclick="changeBowelMonth(-1)"><i class="fa-solid fa-chevron-left"></i> 前月</button>
-              <span class="bowel-nav-label">${bowelYear}年${bowelMonth}月</span>
-              <button class="bowel-nav-btn" onclick="changeBowelMonth(1)">翌月 <i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-            <div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>この月の記録がありません</div>
-          </div>`;
-        return;
-      }
 
       // 排便量の短縮表示マッピング
       const amountShort = {
@@ -1241,16 +1223,6 @@
     }
 
     // ==================== 登録モーダル制御 ====================
-    fabAdd.addEventListener('click', () => {
-      const label = TABLE_DEFS[currentTable]?.label || 'ケア記録';
-      // モーダルタイトルをテーブル名に合わせる
-      document.getElementById('mode-modal-title').innerHTML =
-        `<i class="fa-solid fa-pen"></i> ${label}を登録`;
-      // 「入浴」ボタンはバイタルタブのみ表示する
-      document.getElementById('mode-btn-scheduled')
-        .classList.toggle('hidden', currentTable !== 'bathing');
-      openModal(document.getElementById('bathing-mode-modal'));
-    });
 
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     addModal.addEventListener('click', e => { if (e.target === addModal) closeModal(addModal); });
