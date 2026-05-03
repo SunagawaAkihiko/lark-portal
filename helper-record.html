@@ -1711,6 +1711,7 @@
     let staffByOffice     = {};   // 事業所別スタッフ名リスト { 事業所名: [氏名, ...] }
     let customerList      = [];   // 利用者リスト
     let currentRecords    = [];   // 現在表示中の記録一覧
+    let allKnownNames     = new Set(); // 事業所内の全利用者氏名キャッシュ（氏名フィルターなし時に更新）
     let pauseRecords      = [];   // 一時停止管理用の顧客別作業設定
     let currentTab        = 'list'; // 現在のタブ
     let selectedRecordId  = null; // 下部アクションバーで操作対象の記録ID
@@ -1854,6 +1855,8 @@
       vitalUpdateNameOptions(office, document.getElementById('vitalAddName'));
       if (currentTab === 'vital') vitalLoadRecords(office, '');
 
+      // 事業所切り替え時に氏名キャッシュをリセットする（別事業所の名前が残らないようにする）
+      allKnownNames = new Set();
       // 事業所切り替え時に選択をリセットして記録履歴を自動で再取得する（初回表示も含む）
       clearSelection();
       loadRecords();
@@ -1916,7 +1919,11 @@
         currentRecords = data.records || [];
         document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
         renderRecords(currentRecords);
-        // loadMetaが未完了の場合に備え、ロード済み記録から氏名フィルターを補完する
+        // 氏名フィルターなし時のみ全員リストを更新する
+        // フィルターあり時は filtered 結果しか返らないためキャッシュを上書きしない
+        if (!name) {
+          allKnownNames = new Set(currentRecords.filter(r => r.氏名).map(r => r.氏名));
+        }
         refreshFilterNames();
       } catch (err) {
         list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-triangle-exclamation"></i>${escHtml(err.message)}</div>`;
@@ -1935,9 +1942,10 @@
     function refreshFilterNames() {
       const sel = document.getElementById('filterName');
       const currentVal = sel.value; // 現在の選択値を保持する
-      // ロード済みの記録から氏名のみ抽出する（事業所単位で自動絞り込み済み）
-      const names = new Set();
-      currentRecords.forEach(r => { if (r.氏名) names.add(r.氏名); });
+      // allKnownNames（全員ロード時のキャッシュ）を優先し、未取得時は currentRecords から補完する
+      const names = allKnownNames.size > 0
+        ? allKnownNames
+        : new Set(currentRecords.filter(r => r.氏名).map(r => r.氏名));
       sel.innerHTML = '<option value="">全員</option>';
       [...names].sort().forEach(n => {
         const opt = document.createElement('option');
