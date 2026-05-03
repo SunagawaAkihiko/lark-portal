@@ -1141,8 +1141,20 @@
         loadedRecords = data.data;
 
         // 排便管理は記録が0件でも月グリッドを表示するため、length===0 チェックより先に処理する
+        // 月末ストリークを翌月初に引き継ぐため、前月レコードも並行取得する
         if (currentTable === 'bowel') {
-          renderBowelCalendar(data.data);
+          const prevMonth = bowelMonth === 1 ? 12 : bowelMonth - 1;
+          const prevYear  = bowelMonth === 1 ? bowelYear - 1 : bowelYear;
+          const prevParams = new URLSearchParams({ table: 'bowel', year: prevYear, month: prevMonth });
+          if (office) prevParams.append('office', office);
+          if (name)   prevParams.append('name',   name);
+          let prevRecords = [];
+          try {
+            const prevRes  = await fetch(`${API_BASE}/api/care/records?${prevParams}`);
+            const prevData = await prevRes.json();
+            if (prevData.ok) prevRecords = prevData.data;
+          } catch { /* 前月取得失敗時はストリーク引き継ぎなしで続行する */ }
+          renderBowelCalendar(data.data, prevRecords, prevYear, prevMonth);
           return;
         }
 
@@ -1242,7 +1254,7 @@
     }
 
     // ==================== 排便管理 横型カレンダー描画 ====================
-    function renderBowelCalendar(records) {
+    function renderBowelCalendar(records, prevRecords = [], prevYear = 0, prevMonth = 0) {
       const DOW_JA = ['日','月','火','水','木','金','土'];
 
       // 名前・日付ごとにグループ化する（記録のある氏名を収集する）
@@ -1309,8 +1321,10 @@
       }
       html += '</tr></thead><tbody>';
 
+      // 前月末のストリーク（連続排便不足日数）を計算して当月初に引き継ぐ
+      const initialStreaks = calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth);
       // 下剤アラート判定（利用者ごとにN日連続排便不足の日を事前に算出する）
-      const laxAlerts = calcLaxAlerts(names, dates, byNameDate);
+      const laxAlerts = calcLaxAlerts(names, dates, byNameDate, initialStreaks);
 
       for (const name of names) {
         html += `<tr><td class="bowel-td-name">${escHtml(name)}</td>`;
@@ -1420,10 +1434,46 @@
       return totalRank >= threshold + 1; // 卵1=rank2, 卵2=rank3, 卵3=rank4
     }
 
+    // 前月末の連続排便不足日数を利用者ごとに計算して返す
+    // 返り値: { name: streak数 }
+    function calcPrevMonthStreaks(names, prevRecords, prevYear, prevMonth) {
+      if (!prevYear || !prevMonth) return {};
+      // 前月の全日程を生成する
+      const daysInPrev = new Date(prevYear, prevMonth, 0).getDate();
+      const prevDates  = [];
+      for (let d = 1; d <= daysInPrev; d++) {
+        prevDates.push(`${prevYear}-${String(prevMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      }
+      // 前月レコードを名前×日付でグループ化する
+      const prevByDate = {};
+      for (const r of prevRecords) {
+        const n = r.name || '—';
+        const dt = r.date || '—';
+        if (!prevByDate[n]) prevByDate[n] = {};
+        if (!prevByDate[n][dt]) prevByDate[n][dt] = [];
+        prevByDate[n][dt].push(r);
+      }
+      const s = loadLaxSettings();
+      const result = {};
+      for (const name of names) {
+        const cfg = s.persons?.[name];
+        const minAmount = cfg?.minAmount || 'any';
+        let streak = 0;
+        for (const d of prevDates) {
+          const recs = prevByDate[name]?.[d] || [];
+          if (isSufficientBowel(recs, minAmount)) streak = 0;
+          else streak++;
+        }
+        result[name] = streak;
+      }
+      return result;
+    }
+
     // 全利用者×全日付の下剤アラートを事前計算する。
     // ストリーク日数に対して「days が streak 以下の最大ルール」を適用する。
+    // initialStreaks: 前月末から引き継いだストリーク初期値 { name: 日数 }
     // 返り値: { name: { date: labelText } }（アラートがある日だけ含む）
-    function calcLaxAlerts(names, dates, byNameDate) {
+    function calcLaxAlerts(names, dates, byNameDate, initialStreaks = {}) {
       const s = loadLaxSettings();
       const result = {};
       for (const name of names) {
@@ -1432,7 +1482,8 @@
         // rules を日数昇順にソートしておく
         const sortedRules = [...cfg.rules].sort((a, b) => (a.days || 0) - (b.days || 0));
         result[name] = {};
-        let streak = 0;
+        // 前月末のストリークを引き継いで開始する（月をまたぐ連続排便なしに対応）
+        let streak = initialStreaks[name] || 0;
         for (const d of dates) {
           const recs = byNameDate[name]?.[d] || [];
           if (isSufficientBowel(recs, cfg.minAmount)) {
