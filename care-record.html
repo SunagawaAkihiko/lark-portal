@@ -1523,7 +1523,7 @@
 
     // タイミング select の option HTML を生成するヘルパー
     function timingOptions(selected) {
-      return ['朝食後','昼食後','夕食後']
+      return ['起床時','朝食後','昼食後','夕食後']
         .map(t => `<option value="${t}" ${selected===t?'selected':''}>${t}</option>`)
         .join('');
     }
