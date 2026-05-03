@@ -1386,6 +1386,7 @@
         days:        p.days        || 3,
         minAmount:   p.minAmount   || 'any',
         instruction: p.instruction || '下剤',
+        timing:      p.timing      || '',
       };
     }
 
@@ -1415,8 +1416,11 @@
             streak = 0;
           } else {
             streak++;
-            // N日連続で排便不足になった日にアラートを表示する
-            if (streak >= cfg.days) result[name][d] = cfg.instruction || '下剤';
+            // N日連続で排便不足になった日にアラートを表示する（指示内容＋タイミングを結合）
+            if (streak >= cfg.days) {
+              const label = [cfg.instruction || '下剤', cfg.timing].filter(Boolean).join(' ');
+              result[name][d] = label;
+            }
           }
         }
       }
@@ -1467,6 +1471,19 @@
                 <input type="text" value="${escHtml(cfg.instruction || '')}"
                   data-field="instruction" placeholder="例:マグミット"
                   style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+              </div>
+              <div style="grid-column:1/-1">
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">服用タイミング</div>
+                <select data-field="timing"
+                  style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+                  <option value=""        ${!cfg.timing              ?'selected':''}>指定なし</option>
+                  <option value="朝食後"   ${cfg.timing==='朝食後'   ?'selected':''}>朝食後</option>
+                  <option value="昼食後"   ${cfg.timing==='昼食後'   ?'selected':''}>昼食後</option>
+                  <option value="夕食後"   ${cfg.timing==='夕食後'   ?'selected':''}>夕食後</option>
+                  <option value="就寝前"   ${cfg.timing==='就寝前'   ?'selected':''}>就寝前</option>
+                  <option value="起床時"   ${cfg.timing==='起床時'   ?'selected':''}>起床時</option>
+                  <option value="朝昼食後" ${cfg.timing==='朝昼食後' ?'selected':''}>朝昼食後</option>
+                </select>
               </div>
               <div style="grid-column:1/-1">
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">最低排便量（この量未満を「排便なし」と判定）</div>
@@ -1525,6 +1542,7 @@
         if (!s.persons[name]) s.persons[name] = {};
         s.persons[name].days        = parseInt(row.querySelector('[data-field="days"]').value, 10) || 3;
         s.persons[name].instruction = row.querySelector('[data-field="instruction"]').value.trim();
+        s.persons[name].timing      = row.querySelector('[data-field="timing"]').value;
         s.persons[name].minAmount   = row.querySelector('[data-field="minAmount"]').value;
       });
       saveLaxSettings(s);
