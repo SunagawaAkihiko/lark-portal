@@ -988,7 +988,7 @@ async function loadLeave() {
 function renderLeaveGrid(data) {
   const grid = document.getElementById('leave-grid');
   grid.innerHTML = '';
-  data.forEach(d => {
+  data.filter(d => d.staffName !== '砂川明彦').forEach(d => {
     const total = d.totalGranted || 0;
     const used  = d.totalUsed   || 0;
     const rem   = d.remaining   || 0;
