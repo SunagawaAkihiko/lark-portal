@@ -1855,8 +1855,9 @@
       vitalUpdateNameOptions(office, document.getElementById('vitalAddName'));
       if (currentTab === 'vital') vitalLoadRecords(office, '');
 
-      // 事業所切り替え時に氏名キャッシュをリセットする（別事業所の名前が残らないようにする）
+      // 事業所切り替え時に氏名キャッシュ・氏名フィルターをリセットして全員検索する
       allKnownNames = new Set();
+      document.getElementById('filterName').value = '';
       // 事業所切り替え時に選択をリセットして記録履歴を自動で再取得する（初回表示も含む）
       clearSelection();
       loadRecords();
