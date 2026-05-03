@@ -180,6 +180,7 @@
       padding: 0.05rem 0.45rem; border-radius: 4px;
       white-space: nowrap; flex-shrink: 0;
       background: var(--primary-light); color: var(--primary-color);
+      margin-left: auto;
     }
     /* 2行目：記録内容（全文表示） */
     .record-item-content {
@@ -1928,16 +1929,16 @@
           // 提供時間の昇順（時系列）で並べる
           recs.sort((a, b) => teikyoToMins(a.提供時間) - teikyoToMins(b.提供時間));
           for (const r of recs) {
-            // 1行目：記録分類・時間・作業項目・スタッフ名
-            const bunruiHtml = r.記録分類 ? `<span class="record-item-bunrui">${escHtml(r.記録分類)}</span>` : '';
+            // 1行目：時間・作業項目・スタッフ名・記録分類（右端）
             const timeHtml   = r.提供時間 ? `<span class="record-item-time">${escHtml(r.提供時間)}</span>` : '';
             const sagyouHtml = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
             const staffHtml  = r.スタッフ  ? `<span class="record-item-staff">${escHtml(r.スタッフ)}</span>`  : '';
+            const bunruiHtml = r.記録分類 ? `<span class="record-item-bunrui">${escHtml(r.記録分類)}</span>` : '';
             html += `
               <div class="record-item" onclick="selectRecord(this, '${r.recordId}')">
                 <div class="record-item-main">
                   <div class="record-item-info">
-                    <div class="record-item-line1">${bunruiHtml}${timeHtml}${sagyouHtml}${staffHtml}</div>
+                    <div class="record-item-line1">${timeHtml}${sagyouHtml}${staffHtml}${bunruiHtml}</div>
                   </div>
                 </div>
               </div>`;
