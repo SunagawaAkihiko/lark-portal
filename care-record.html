@@ -1009,14 +1009,14 @@
         // 取得結果をキャッシュしておく（削除モーダルで使用）
         loadedRecords = data.data;
 
-        if (data.data.length === 0) {
-          recordList.innerHTML = '<div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>記録がありません</div>';
+        // 排便管理は記録が0件でも月グリッドを表示するため、length===0 チェックより先に処理する
+        if (currentTable === 'bowel') {
+          renderBowelCalendar(data.data);
           return;
         }
 
-        // 排便管理タブは横型カレンダー表示で描画する
-        if (currentTable === 'bowel') {
-          renderBowelCalendar(data.data);
+        if (data.data.length === 0) {
+          recordList.innerHTML = '<div class="no-records"><i class="fa-solid fa-inbox" style="font-size:2rem;margin-bottom:.6rem;display:block;"></i>記録がありません</div>';
           return;
         }
 
@@ -1132,6 +1132,10 @@
       for (let d = 1; d <= daysInMonth; d++) {
         dates.push(`${bowelYear}-${String(bowelMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
       }
+
+      // ドロップダウンで特定の氏名が選択されている場合、記録がなくても行を表示する
+      const selectedName = selName.value;
+      if (selectedName && !nameSet.has(selectedName)) nameSet.add(selectedName);
 
       // 氏名を五十音順でソートする
       const names = [...nameSet].filter(n => n !== '—').sort((a, b) => a.localeCompare(b, 'ja'));
