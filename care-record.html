@@ -408,6 +408,97 @@
       background-color: #7c6b5e;
       box-shadow: 0 4px 10px rgba(100,80,60,0.3);
     }
+    /* 下剤設定FAB（右下・排便管理タブのみ表示） */
+    .fab-laxative {
+      right: 1.5rem;
+      background-color: #6a4c93;
+      box-shadow: 0 4px 12px rgba(106,76,147,0.4);
+    }
+
+    /* 下剤指示バッジ（カレンダーセル内） */
+    .lax-alert {
+      background: #c62828;
+      color: white;
+      font-size: 0.62rem;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 4px;
+      margin-top: 2px;
+      line-height: 1.5;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+
+    /* 下剤設定モーダル固有スタイル */
+    .lax-section-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.3rem;
+      margin: 1.2rem 0 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .lax-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    /* 有効/無効トグルスイッチ */
+    .lax-toggle { position: relative; display: inline-block; width: 48px; height: 26px; }
+    .lax-toggle input { opacity: 0; width: 0; height: 0; }
+    .lax-toggle-slider {
+      position: absolute; cursor: pointer;
+      inset: 0; background: #ccc; border-radius: 26px; transition: .3s;
+    }
+    .lax-toggle-slider::before {
+      content: ''; position: absolute;
+      height: 20px; width: 20px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%; transition: .3s;
+    }
+    .lax-toggle input:checked + .lax-toggle-slider { background: #6a4c93; }
+    .lax-toggle input:checked + .lax-toggle-slider::before { transform: translateX(22px); }
+    /* 個別設定行 */
+    .lax-person-row {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 0.8rem;
+      margin-bottom: 0.6rem;
+      border-left: 3px solid #6a4c93;
+    }
+    .lax-person-row-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+      font-weight: 700;
+    }
+    .lax-person-delete-btn {
+      background: none; border: none; color: #e63946;
+      font-size: 1rem; cursor: pointer; padding: 0 0.3rem;
+    }
+    .lax-person-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .lax-person-fields input, .lax-person-fields select {
+      width: 100%; padding: 0.4rem 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px; font-size: 0.85rem; font-family: inherit;
+    }
+    .lax-add-btn {
+      width: 100%; padding: 0.6rem;
+      background: var(--primary-light); color: var(--primary-color);
+      border: 1px dashed var(--primary-color); border-radius: 8px;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit;
+      margin-top: 0.5rem;
+    }
 
     /* ==================== モーダル（ボトムシート型） ==================== */
     .modal {
@@ -633,6 +724,67 @@
     </div>
   </main>
 
+
+  <!-- 下剤設定FAB（排便管理タブ表示時のみ visible） -->
+  <button class="fab fab-laxative hidden" id="fab-laxative">
+    <i class="fa-solid fa-pills"></i> 下剤設定
+  </button>
+
+  <!-- 下剤設定モーダル（ボトムシート） -->
+  <div class="modal hidden" id="laxative-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-pills"></i> 下剤設定</h2>
+        <button class="close-btn" id="close-lax-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 全員共通設定 -->
+      <div class="lax-section-title">全員共通設定</div>
+      <div class="lax-toggle-row">
+        <span style="font-weight:700">下剤アラートを有効にする</span>
+        <label class="lax-toggle">
+          <input type="checkbox" id="lax-global-enabled">
+          <span class="lax-toggle-slider"></span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>判定日数（連続してN日間、下記の量未満なら指示マークを表示）</label>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <input type="number" id="lax-global-days" min="1" max="14" value="3"
+            style="width:4.5rem;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:1rem;font-family:inherit">
+          <span>日間</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>最低排便量（この量未満を「排便なし」と判定）</label>
+        <select id="lax-global-min-amount" style="width:100%;padding:.6rem;border:1px solid var(--border-color);border-radius:6px;font-size:0.95rem;font-family:inherit">
+          <option value="any">記録があれば可（量不問）</option>
+          <option value="1">卵1つ分以上が必要</option>
+          <option value="2">卵2つ分以上が必要</option>
+          <option value="3">卵3つ分以上が必要</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>下剤指示内容（カレンダーに表示するテキスト）</label>
+        <input type="text" id="lax-global-instruction"
+          placeholder="例: マグミット2T"
+          style="width:100%;padding:.6rem;border:1px solid var(--border-color);border-radius:6px;font-size:0.95rem;font-family:inherit">
+      </div>
+
+      <!-- 個別設定（利用者ごとに共通設定を上書き） -->
+      <div class="lax-section-title">個別設定（利用者ごとに上書き）</div>
+      <div id="lax-person-list"></div>
+      <button class="lax-add-btn" id="lax-add-person-btn">
+        <i class="fa-solid fa-plus"></i> 個別設定を追加
+      </button>
+
+      <div style="height:1rem"></div>
+      <button class="submit-btn" id="lax-save-btn">
+        <i class="fa-solid fa-floppy-disk"></i> 保存する
+      </button>
+      <div class="form-msg" id="lax-form-msg" style="margin-top:.6rem"></div>
+    </div>
+  </div>
 
   <!-- 記録選択時に表示される下部アクションバー（スクリプトより前に配置してDOMを確保する） -->
   <div id="recordActionBar" class="record-action-bar hidden">
@@ -905,6 +1057,7 @@
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTable = btn.dataset.table;
+      updateLaxFabVisibility();
       // タブ切り替え時は選択中の氏名でそのまま再取得する（氏名未選択なら全員表示）
       loadRecords(currentOffice, selName.value);
     });
@@ -1168,16 +1321,20 @@
       }
       html += '</tr></thead><tbody>';
 
+      // 下剤アラート判定（利用者ごとにN日連続排便不足の日を事前に算出する）
+      const laxAlerts = calcLaxAlerts(names, dates, byNameDate);
+
       for (const name of names) {
         html += `<tr><td class="bowel-td-name">${escHtml(name)}</td>`;
         for (const d of dates) {
           const recs = byNameDate[name]?.[d] || [];
+          const alertText = laxAlerts[name]?.[d] || '';
           // セルタップで登録モーダルを開く（name・dateをdata属性で渡す）
           const cellAttr = `onclick="openBowelCellModal('${escHtml(name)}','${d}')"`;
+          html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}>`;
           if (recs.length === 0) {
-            html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}><span class="bowel-no-data">＋</span></td>`;
+            html += `<span class="bowel-no-data">＋</span>`;
           } else {
-            html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}>`;
             for (const r of recs) {
               const type   = r.fields?.['排便タイプ'] || '';
               const amount = r.fields?.['排便量']     || '';
@@ -1185,8 +1342,10 @@
               const amtStr = amountShort[amount] || amount;
               html += `<div class="bowel-entry ${cls}">${escHtml(type)}<span>${escHtml(amtStr)}</span></div>`;
             }
-            html += '</td>';
           }
+          // 下剤アラートバッジ（条件を満たした日に赤バッジで指示内容を表示）
+          if (alertText) html += `<span class="lax-alert">💊 ${escHtml(alertText)}</span>`;
+          html += '</td>';
         }
         html += '</tr>';
       }
@@ -1206,6 +1365,205 @@
       formMsg.textContent = '';
       formMsg.className   = 'form-msg';
       openModal(addModal);
+    }
+
+    // ==================== 下剤設定管理 ====================
+
+    // 排便量のランク（大きいほど多い）。判定に使用する。
+    const AMOUNT_RANK = {
+      '付着～卵１未満': 1,
+      '卵１つ分':       2,
+      '卵２つ分':       3,
+      '卵３つ分以上':   4,
+    };
+
+    // localStorage から下剤設定を読み込む（初期値は無効）
+    function loadLaxSettings() {
+      try {
+        return JSON.parse(localStorage.getItem('bowelLaxSettings') || 'null') || {
+          global: { enabled: false, days: 3, minAmount: 'any', instruction: '' },
+          persons: {}
+        };
+      } catch {
+        return { global: { enabled: false, days: 3, minAmount: 'any', instruction: '' }, persons: {} };
+      }
+    }
+
+    // localStorage に下剤設定を保存する
+    function saveLaxSettings(s) {
+      localStorage.setItem('bowelLaxSettings', JSON.stringify(s));
+    }
+
+    // 利用者ごとの有効な設定を返す（個別設定 > 共通設定）
+    function getLaxSettingFor(name, s) {
+      const g = s.global;
+      if (!g.enabled) return null;
+      const p = s.persons[name];
+      return {
+        days:        (p?.days        ?? g.days)        || 3,
+        minAmount:   (p?.minAmount   ?? g.minAmount)   || 'any',
+        instruction: (p?.instruction ?? g.instruction) || '下剤',
+      };
+    }
+
+    // 排便記録が「規定量を満たしているか」を判定する
+    function isSufficientBowel(recs, minAmount) {
+      if (recs.length === 0) return false;
+      if (minAmount === 'any') return true;
+      const threshold = parseInt(minAmount, 10) || 1;
+      const maxRank = Math.max(...recs.map(r => AMOUNT_RANK[r.fields?.['排便量']] || 0));
+      return maxRank >= threshold + 1; // '1'→rank≥2(卵1以上), '2'→rank≥3, '3'→rank≥4
+    }
+
+    // 全利用者×全日付の下剤アラートを事前計算する
+    // 返り値: { name: { date: instruction文字列 } }（アラートがある日だけ含む）
+    function calcLaxAlerts(names, dates, byNameDate) {
+      const s = loadLaxSettings();
+      const result = {};
+      for (const name of names) {
+        const cfg = getLaxSettingFor(name, s);
+        if (!cfg) continue;
+        result[name] = {};
+        let streak = 0; // 連続して排便不足の日数
+        for (const d of dates) {
+          const recs = byNameDate[name]?.[d] || [];
+          if (isSufficientBowel(recs, cfg.minAmount)) {
+            streak = 0;
+          } else {
+            streak++;
+            // N日連続で排便不足になった日にアラートを表示する
+            if (streak >= cfg.days) {
+              result[name][d] = cfg.instruction || '下剤';
+            }
+          }
+        }
+      }
+      return result;
+    }
+
+    // ---- 下剤設定モーダル UI ----
+    const laxModal      = document.getElementById('laxative-modal');
+    const fabLaxative   = document.getElementById('fab-laxative');
+    const closeLaxModal = document.getElementById('close-lax-modal');
+    const laxSaveBtn    = document.getElementById('lax-save-btn');
+    const laxFormMsg    = document.getElementById('lax-form-msg');
+    const laxPersonList = document.getElementById('lax-person-list');
+
+    fabLaxative.addEventListener('click', () => openLaxModal());
+    closeLaxModal.addEventListener('click', () => closeModal(laxModal));
+    laxModal.addEventListener('click', e => { if (e.target === laxModal) closeModal(laxModal); });
+
+    // モーダルを開いて現在の設定を各フィールドに反映する
+    function openLaxModal() {
+      const s = loadLaxSettings();
+      document.getElementById('lax-global-enabled').checked    = s.global.enabled;
+      document.getElementById('lax-global-days').value         = s.global.days || 3;
+      document.getElementById('lax-global-min-amount').value   = s.global.minAmount || 'any';
+      document.getElementById('lax-global-instruction').value  = s.global.instruction || '';
+      renderLaxPersonList(s);
+      laxFormMsg.textContent = '';
+      openModal(laxModal);
+    }
+
+    // 個別設定リストを描画する（利用者選択→日数・指示テキストをカード形式で表示）
+    function renderLaxPersonList(s) {
+      const persons = s.persons || {};
+      const officeNames = officeNamesMap[currentOffice] || [];
+      let html = '';
+      for (const [name, cfg] of Object.entries(persons)) {
+        html += `
+          <div class="lax-person-row" data-person="${escHtml(name)}">
+            <div class="lax-person-row-header">
+              <span>${escHtml(name)}</span>
+              <button class="lax-person-delete-btn" onclick="deleteLaxPerson('${escHtml(name)}')">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+            <div class="lax-person-fields">
+              <div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">判定日数</div>
+                <input type="number" min="1" max="14" value="${cfg.days || 3}"
+                  data-field="days" style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+              </div>
+              <div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">指示内容</div>
+                <input type="text" value="${escHtml(cfg.instruction || '')}"
+                  data-field="instruction" placeholder="例:マグミット"
+                  style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+              </div>
+              <div style="grid-column:1/-1">
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:2px">最低排便量</div>
+                <select data-field="minAmount"
+                  style="width:100%;padding:.4rem;border:1px solid var(--border-color);border-radius:6px;font-size:.9rem;font-family:inherit">
+                  <option value="any" ${cfg.minAmount==='any'?'selected':''}>記録があれば可</option>
+                  <option value="1"   ${cfg.minAmount==='1'  ?'selected':''}>卵1つ分以上</option>
+                  <option value="2"   ${cfg.minAmount==='2'  ?'selected':''}>卵2つ分以上</option>
+                  <option value="3"   ${cfg.minAmount==='3'  ?'selected':''}>卵3つ分以上</option>
+                </select>
+              </div>
+            </div>
+          </div>`;
+      }
+      laxPersonList.innerHTML = html;
+    }
+
+    // 個別設定削除ボタン
+    function deleteLaxPerson(name) {
+      const s = loadLaxSettings();
+      delete s.persons[name];
+      saveLaxSettings(s);
+      renderLaxPersonList(s);
+    }
+
+    // 個別設定追加ボタン（利用者を選択させるプロンプトの代わりにselectを表示）
+    document.getElementById('lax-add-person-btn').addEventListener('click', () => {
+      const s = loadLaxSettings();
+      const names = officeNamesMap[currentOffice] || [];
+      const remaining = names.filter(n => !s.persons[n]);
+      if (remaining.length === 0) { laxFormMsg.textContent = '追加できる利用者がいません'; return; }
+      // 一時的なセレクトを表示して追加する利用者を選ばせる
+      const sel = document.createElement('select');
+      sel.style.cssText = 'width:100%;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:.95rem;font-family:inherit;margin-bottom:.5rem';
+      sel.innerHTML = '<option value="">利用者を選択…</option>' +
+        remaining.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+      const addBtn = document.getElementById('lax-add-person-btn');
+      addBtn.before(sel);
+      sel.focus();
+      sel.addEventListener('change', () => {
+        const chosen = sel.value;
+        if (!chosen) return;
+        s.persons[chosen] = { days: s.global.days || 3, minAmount: s.global.minAmount || 'any', instruction: s.global.instruction || '' };
+        saveLaxSettings(s);
+        sel.remove();
+        renderLaxPersonList(s);
+      });
+    });
+
+    // 保存ボタン：フォームの値を読み取って localStorage に保存する
+    laxSaveBtn.addEventListener('click', () => {
+      const s = loadLaxSettings();
+      s.global.enabled     = document.getElementById('lax-global-enabled').checked;
+      s.global.days        = parseInt(document.getElementById('lax-global-days').value, 10) || 3;
+      s.global.minAmount   = document.getElementById('lax-global-min-amount').value;
+      s.global.instruction = document.getElementById('lax-global-instruction').value.trim();
+      // 個別設定カードから値を読み取る
+      document.querySelectorAll('#lax-person-list .lax-person-row').forEach(row => {
+        const name = row.dataset.person;
+        if (!name) return;
+        if (!s.persons[name]) s.persons[name] = {};
+        s.persons[name].days        = parseInt(row.querySelector('[data-field="days"]').value, 10) || 3;
+        s.persons[name].instruction = row.querySelector('[data-field="instruction"]').value.trim();
+        s.persons[name].minAmount   = row.querySelector('[data-field="minAmount"]').value;
+      });
+      saveLaxSettings(s);
+      laxFormMsg.textContent = '保存しました';
+      laxFormMsg.style.color = 'green';
+      setTimeout(() => { closeModal(laxModal); loadRecords(currentOffice, selName.value); }, 800);
+    });
+
+    // 排便管理タブ以外では下剤設定FABを非表示にする
+    function updateLaxFabVisibility() {
+      fabLaxative.classList.toggle('hidden', currentTable !== 'bowel');
     }
 
     // ==================== モーダル開閉ヘルパー ====================
