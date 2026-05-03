@@ -1397,32 +1397,29 @@
       return [{ fields: { '排便タイプ': combinedType, '排便量': combinedAmount }, _count: recs.length }];
     }
 
-    // localStorage から下剤設定を読み込む。旧フォーマットは自動移行する。
-    // 新フォーマット: { persons: { 氏名: { minAmount, rules: [{days, instruction, timing}] } } }
+    // localStorage から下剤設定を読み込む。
+    // フォーマット: { offices: { 事業所名: { persons: { 氏名: { minAmount, rules:[...] } } } } }
     function loadLaxSettings() {
       try {
         const raw = JSON.parse(localStorage.getItem('bowelLaxSettings') || 'null');
-        if (!raw) return { persons: {} };
-        // 旧フォーマット移行: global キーがある場合は persons だけ引き継ぐ
-        const persons = raw.global !== undefined ? (raw.persons || {}) : (raw.persons || {});
-        // 旧フォーマット移行: persons の各エントリが rules 配列を持たない場合は変換する
-        for (const [name, cfg] of Object.entries(persons)) {
-          if (!Array.isArray(cfg.rules)) {
-            persons[name] = {
-              minAmount: cfg.minAmount || 'any',
-              rules: [{ days: cfg.days || 3, instruction: cfg.instruction || '', timing: cfg.timing || '朝食後' }],
-            };
-          }
-        }
-        return { persons };
+        if (!raw) return { offices: {} };
+        // 旧フォーマット（offices キーなし）は破棄して空データを返す
+        if (!raw.offices) return { offices: {} };
+        return raw;
       } catch {
-        return { persons: {} };
+        return { offices: {} };
       }
     }
 
     // localStorage に下剤設定を保存する
     function saveLaxSettings(s) {
       localStorage.setItem('bowelLaxSettings', JSON.stringify(s));
+    }
+
+    // 現在の事業所の persons マップを返す（なければ初期化して返す）
+    function getLaxPersons(s) {
+      if (!s.offices[currentOffice]) s.offices[currentOffice] = { persons: {} };
+      return s.offices[currentOffice].persons;
     }
 
     // 排便記録が「規定量を満たしているか」を判定する（同日合算ランクで評価する）
@@ -1454,9 +1451,10 @@
         prevByDate[n][dt].push(r);
       }
       const s = loadLaxSettings();
+      const persons = getLaxPersons(s);
       const result = {};
       for (const name of names) {
-        const cfg = s.persons?.[name];
+        const cfg = persons[name];
         const minAmount = cfg?.minAmount || 'any';
         let streak = 0;
         for (const d of prevDates) {
@@ -1475,9 +1473,10 @@
     // 返り値: { name: { date: labelText } }（アラートがある日だけ含む）
     function calcLaxAlerts(names, dates, byNameDate, initialStreaks = {}) {
       const s = loadLaxSettings();
+      const persons = getLaxPersons(s);
       const result = {};
       for (const name of names) {
-        const cfg = s.persons?.[name];
+        const cfg = persons[name];
         if (!cfg || !Array.isArray(cfg.rules) || cfg.rules.length === 0) continue;
         // rules を日数昇順にソートしておく
         const sortedRules = [...cfg.rules].sort((a, b) => (a.days || 0) - (b.days || 0));
@@ -1558,9 +1557,9 @@
         </div>`;
     }
 
-    // 利用者カード全体を描画する
+    // 利用者カード全体を描画する（現在の事業所の設定のみ表示する）
     function renderLaxPersonList(s) {
-      const persons = s.persons || {};
+      const persons = getLaxPersons(s);
       let html = '';
       for (const [name, cfg] of Object.entries(persons)) {
         const rulesHtml = (cfg.rules || []).map(ruleRowHtml).join('');
@@ -1593,19 +1592,20 @@
       laxPersonList.innerHTML = html;
     }
 
-    // 利用者カードを削除する
+    // 利用者カードを削除する（現在の事業所の設定のみ操作する）
     function deleteLaxPerson(name) {
       const s = loadLaxSettings();
-      delete s.persons[name];
+      delete getLaxPersons(s)[name];
       saveLaxSettings(s);
       renderLaxPersonList(s);
     }
 
-    // 利用者追加ボタン
+    // 利用者追加ボタン（現在の事業所の利用者のみ選択肢に表示する）
     document.getElementById('lax-add-person-btn').addEventListener('click', () => {
       const s = loadLaxSettings();
+      const persons = getLaxPersons(s);
       const names = officeNamesMap[currentOffice] || [];
-      const remaining = names.filter(n => !s.persons[n]);
+      const remaining = names.filter(n => !persons[n]);
       if (remaining.length === 0) { laxFormMsg.textContent = '追加できる利用者がいません'; return; }
       const sel = document.createElement('select');
       sel.style.cssText = 'width:100%;padding:.5rem;border:1px solid var(--border-color);border-radius:6px;font-size:.95rem;font-family:inherit;margin-bottom:.5rem';
@@ -1616,16 +1616,19 @@
       sel.addEventListener('change', () => {
         const chosen = sel.value;
         if (!chosen) return;
-        s.persons[chosen] = { minAmount: 'any', rules: [{ days: 3, instruction: '', timing: '朝食後' }] };
+        getLaxPersons(s)[chosen] = { minAmount: 'any', rules: [{ days: 3, instruction: '', timing: '朝食後' }] };
         saveLaxSettings(s);
         sel.remove();
         renderLaxPersonList(s);
       });
     });
 
-    // 保存ボタン：DOM からすべての利用者カード・ルール行を読み取って保存する
+    // 保存ボタン：DOM からすべての利用者カード・ルール行を読み取って現在の事業所に保存する
     laxSaveBtn.addEventListener('click', () => {
-      const s = { persons: {} };
+      const s = loadLaxSettings();
+      // 現在の事業所分を一旦クリアして DOM から再構築する
+      s.offices[currentOffice] = { persons: {} };
+      const persons = s.offices[currentOffice].persons;
       document.querySelectorAll('#lax-person-list .lax-person-row').forEach(card => {
         const name = card.dataset.person;
         if (!name) return;
@@ -1638,9 +1641,8 @@
             timing:      row.querySelector('[data-field="timing"]').value,
           });
         });
-        // 日数昇順で保存する
         rules.sort((a, b) => a.days - b.days);
-        s.persons[name] = { minAmount, rules };
+        persons[name] = { minAmount, rules };
       });
       saveLaxSettings(s);
       laxFormMsg.textContent = '保存しました';
