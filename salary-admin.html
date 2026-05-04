@@ -635,6 +635,9 @@ async function loadStaffList() {
     if (!j.ok) throw new Error(j.error);
     staffList = j.list;
     populateStaffSelect(staffList);
+    // 設定が先に読み込まれていた場合、スタッフ別設定を再描画する
+    // （loadSettingsUI と loadStaffList の競合対策）
+    if (currentSettings) renderStaffSettings(currentSettings);
   } catch(e) {
     console.warn('スタッフリスト取得失敗:', e.message);
   }
