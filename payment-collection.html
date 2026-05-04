@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>入金回収</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --border-color:  #dcbfa6;
+      --card-bg:       #fff0e3;
+      --green:         #2a9d8f;
+      --green-light:   #e6f7f5;
+      --yellow:        #e9c46a;
+      --yellow-light:  #fdf5e0;
+      --sent-color:    #2a9d8f;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 4rem;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== ヘッダー（事業所タブ） ===== */
+    .page-header {
+      position: sticky; top: 0; z-index: 15;
+      background: var(--text-color);
+      padding: 0 1rem 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .page-header-label {
+      width: 100%; color: white;
+      font-size: 1.25rem; font-weight: 700;
+      padding: 0.75rem 0 0.1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .office-tab {
+      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s, color 0.2s;
+    }
+    .office-tab.active { background: var(--primary-color); color: white; }
+
+    /* ===== ローディング ===== */
+    .loading-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 4rem 1rem; gap: 1rem; color: var(--text-muted);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== ステータスタブ（未送信・送信済） ===== */
+    .status-tabs {
+      display: flex; gap: 0.5rem;
+      padding: 0.75rem 1rem 0;
+      max-width: 600px; margin: 0 auto;
+    }
+    .status-tab {
+      flex: 1; padding: 0.55rem 0;
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      background: var(--card-bg); color: var(--text-muted);
+      transition: background 0.2s, color 0.2s;
+    }
+    .status-tab.active {
+      background: var(--text-color); color: white;
+    }
+
+    /* ===== メインコンテンツ ===== */
+    .main-content {
+      padding: 0.75rem 1rem; max-width: 600px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 0.6rem;
+    }
+
+    /* ===== 件数サマリー ===== */
+    .summary-bar {
+      padding: 0.3rem 0.2rem;
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+    .summary-bar strong { color: var(--text-color); font-size: 1rem; }
+
+    /* ===== 空表示 ===== */
+    .empty-msg {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+    .empty-msg i { display: block; font-size: 2rem; margin-bottom: 0.5rem; }
+
+    /* ===== カード共通 ===== */
+    .payment-card {
+      background: white;
+      border: 1.5px solid var(--border-color);
+      border-radius: 14px; overflow: hidden;
+    }
+    .payment-card-body {
+      padding: 0.85rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+
+    /* 未送信カード（黄色ボーダー） */
+    .card-unsent { border-left: 4px solid var(--yellow); }
+
+    /* 送信済カード（緑ボーダー） */
+    .card-sent { border-left: 4px solid var(--sent-color); }
+
+    /* カード情報 */
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 1rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-month { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .card-email { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    /* 金額 */
+    .card-amount { flex-shrink: 0; text-align: right; }
+    .card-amount-value { font-size: 1.05rem; font-weight: 700; }
+
+    /* 送信済バッジ */
+    .sent-badge {
+      flex-shrink: 0;
+      padding: 0.28rem 0.6rem; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 700;
+      background: var(--green-light); color: var(--sent-color);
+    }
+
+    /* 送信ボタン */
+    .send-btn {
+      flex-shrink: 0;
+      padding: 0.5rem 0.9rem; border-radius: 8px;
+      background: var(--green); color: white;
+      border: none; font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ===== 確認モーダル ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(74,63,53,0.45);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      width: 100%; max-width: 600px;
+      background: white; border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 2.5rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .modal-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--border-color); margin: 0 auto 0.25rem;
+    }
+    .modal-title {
+      font-size: 1.05rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .modal-target {
+      background: var(--bg-color); border-radius: 10px;
+      padding: 0.75rem 1rem;
+    }
+    .modal-target-name { font-size: 1rem; font-weight: 700; }
+    .modal-target-sub  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .modal-target-email { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .modal-target-amount { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin-top: 0.4rem; }
+    .confirm-btn {
+      width: 100%; padding: 1rem;
+      background: var(--green); color: white; border: none; border-radius: 12px;
+      font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 3px 10px rgba(42,157,143,0.35);
+      transition: opacity 0.15s;
+    }
+    .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .cancel-btn {
+      width: 100%; padding: 0.7rem;
+      background: none; color: var(--text-muted); border: 1px solid var(--border-color);
+      border-radius: 10px; font-family: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+
+    /* ===== トースト ===== */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%;
+      transform: translateX(-50%) translateY(1rem);
+      background: var(--text-color); color: white;
+      padding: 0.65rem 1.4rem; border-radius: 99px;
+      font-size: 0.88rem; font-weight: 700;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      white-space: nowrap; z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--green); }
+    .toast.error   { background: #c1121f; }
+
+    /* ===== 横画面 ===== */
+    @media (orientation: landscape) {
+      .page-header { padding: 0 0.8rem 0.5rem; }
+      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
+      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ページヘッダー -->
+<div class="page-header" id="tabBar">
+  <span class="page-header-label">
+    <i class="fa-solid fa-envelope-circle-check"></i> 入金回収
+  </span>
+</div>
+
+<!-- ローディング -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <span>読み込み中...</span>
+</div>
+
+<!-- ステータスタブ -->
+<div class="status-tabs hidden" id="statusTabs">
+  <button class="status-tab active" id="tabUnsent" onclick="switchStatus('unsent')">
+    <i class="fa-solid fa-clock"></i> 未送信
+  </button>
+  <button class="status-tab" id="tabSent" onclick="switchStatus('sent')">
+    <i class="fa-solid fa-circle-check"></i> 送信済
+  </button>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main-content hidden" id="mainContent">
+  <div class="summary-bar" id="summaryBar"></div>
+  <div id="cardList"></div>
+</div>
+
+<!-- 送信確認モーダル -->
+<div class="modal-overlay hidden" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <i class="fa-solid fa-paper-plane" style="color:var(--green)"></i>
+      領収書メールを送信しますか？
+    </div>
+    <div class="modal-target">
+      <div class="modal-target-name" id="modalName"></div>
+      <div class="modal-target-sub"  id="modalMonth"></div>
+      <div class="modal-target-email" id="modalEmail"></div>
+      <div class="modal-target-amount" id="modalAmount"></div>
+    </div>
+    <button class="confirm-btn" id="confirmBtn" onclick="submitSend()">
+      <i class="fa-solid fa-paper-plane"></i> 送信する
+    </button>
+    <button class="cancel-btn" onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // APIベースURLをローカル開発と本番Renderで切り替える
+  const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // ===== 状態管理 =====
+  let allUnsent    = [];   // 未送信レコード
+  let allSent      = [];   // 送信済レコード
+  let offices      = [];   // 事業所一覧
+  let activeOffice = '';   // 選択中の事業所
+  let activeStatus = 'unsent'; // 'unsent' | 'sent'
+  let activeRecord = null; // モーダル対象レコード
+
+  // ===== 初期化 =====
+  async function init() {
+    try {
+      const r = await fetch(`${API_BASE}/api/payment/paid-records`);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+
+      allUnsent = j.unsent;
+      allSent   = j.sent;
+      offices   = j.officeOptions;
+
+      buildTabs();
+      if (offices.length > 0) switchOffice(offices[0]);
+
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('statusTabs').classList.remove('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+    } catch (err) {
+      document.getElementById('loadingScreen').innerHTML =
+        `<div style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 読み込み失敗<br><small>${err.message}</small></div>`;
+    }
+  }
+
+  // ===== 事業所タブを生成する =====
+  function buildTabs() {
+    const bar = document.getElementById('tabBar');
+    bar.innerHTML = '<span class="page-header-label"><i class="fa-solid fa-envelope-circle-check"></i> 入金回収</span>';
+    offices.forEach(office => {
+      const btn = document.createElement('button');
+      btn.className   = 'office-tab';
+      btn.textContent = office;
+      btn.onclick = () => switchOffice(office);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ===== 事業所切り替え =====
+  function switchOffice(office) {
+    activeOffice = office;
+    document.querySelectorAll('.office-tab').forEach(b =>
+      b.classList.toggle('active', b.textContent.trim() === office));
+    renderCards();
+  }
+
+  // ===== ステータスタブ切り替え =====
+  function switchStatus(status) {
+    activeStatus = status;
+    document.getElementById('tabUnsent').classList.toggle('active', status === 'unsent');
+    document.getElementById('tabSent').classList.toggle('active',   status === 'sent');
+    renderCards();
+  }
+
+  // ===== カード一覧を描画する =====
+  function renderCards() {
+    const records = (activeStatus === 'unsent' ? allUnsent : allSent)
+      .filter(r => r.office === activeOffice);
+
+    const label = activeStatus === 'unsent' ? '未送信' : '送信済';
+    document.getElementById('summaryBar').innerHTML =
+      `${label} <strong>${records.length}</strong> 件（${activeOffice}）`;
+
+    const list = document.getElementById('cardList');
+    list.innerHTML = '';
+
+    if (records.length === 0) {
+      const icon  = activeStatus === 'sent' ? 'fa-circle-check' : 'fa-clock';
+      const color = activeStatus === 'sent' ? 'var(--green)' : 'var(--border-color)';
+      const msg   = activeStatus === 'sent' ? '送信済の領収書はありません' : '未送信の領収書はありません';
+      list.innerHTML = `<div class="empty-msg"><i class="fa-solid ${icon}" style="color:${color}"></i>${msg}</div>`;
+      return;
+    }
+
+    records.forEach(record => {
+      const card = document.createElement('div');
+      card.className = `payment-card ${activeStatus === 'sent' ? 'card-sent' : 'card-unsent'}`;
+
+      const amountStr = record.amount != null ? '¥' + record.amount.toLocaleString() : '―';
+      const emailStr  = record.email || '（メールアドレス未登録）';
+
+      if (activeStatus === 'unsent') {
+        // 未送信カード：送信ボタン付き
+        card.innerHTML = `
+          <div class="payment-card-body">
+            <div class="card-info">
+              <div class="card-name">${record.name}</div>
+              <div class="card-month">${record.month || '―'}</div>
+              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:0.65rem"></i> ${emailStr}</div>
+            </div>
+            <div class="card-amount">
+              <div class="card-amount-value">${amountStr}</div>
+            </div>
+            <button class="send-btn" onclick="openModal(event, '${record.recordId}')">
+              <i class="fa-solid fa-paper-plane"></i> 送信
+            </button>
+          </div>`;
+      } else {
+        // 送信済カード：バッジ表示
+        card.innerHTML = `
+          <div class="payment-card-body">
+            <span class="sent-badge"><i class="fa-solid fa-circle-check"></i> 送信済</span>
+            <div class="card-info">
+              <div class="card-name">${record.name}</div>
+              <div class="card-month">${record.month || '―'}</div>
+              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:0.65rem"></i> ${emailStr}</div>
+            </div>
+            <div class="card-amount">
+              <div class="card-amount-value">${amountStr}</div>
+            </div>
+          </div>`;
+      }
+      list.appendChild(card);
+    });
+  }
+
+  // ===== モーダルを開く =====
+  function openModal(event, recordId) {
+    event.stopPropagation();
+    const record = allUnsent.find(r => r.recordId === recordId);
+    if (!record) return;
+    activeRecord = record;
+
+    document.getElementById('modalName').textContent   = record.name;
+    document.getElementById('modalMonth').textContent  = record.month || '―';
+    document.getElementById('modalEmail').textContent  = record.email
+      ? `送信先: ${record.email}` : '⚠ メールアドレス未登録（送信スキップ）';
+    document.getElementById('modalAmount').textContent =
+      record.amount != null ? '¥' + record.amount.toLocaleString() : '―';
+
+    document.getElementById('confirmBtn').disabled = false;
+    document.getElementById('confirmBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> 送信する';
+    document.getElementById('modal').classList.remove('hidden');
+  }
+
+  // ===== モーダルを閉じる =====
+  function closeModal() {
+    document.getElementById('modal').classList.add('hidden');
+    activeRecord = null;
+  }
+
+  // ===== 送信処理を実行する =====
+  async function submitSend() {
+    if (!activeRecord) return;
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送信中...';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/payment/send-receipt`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ recordId: activeRecord.recordId }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '送信に失敗しました');
+
+      // 送信成功：未送信リストから除外して送信済リストに移動する
+      const record = { ...activeRecord, sent: true };
+      allUnsent = allUnsent.filter(r => r.recordId !== activeRecord.recordId);
+      allSent.unshift(record);
+
+      closeModal();
+      renderCards();
+
+      const msg = data.skipped ? `${record.name}：メール未登録のためスキップしました` : `${record.name}に領収書を送信しました`;
+      showToast(msg, 'success');
+
+    } catch (err) {
+      showToast(`エラー: ${err.message}`, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 送信する';
+    }
+  }
+
+  // ===== トースト通知を表示する =====
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = `toast ${type} show`;
+    setTimeout(() => { el.className = `toast ${type}`; }, 3000);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

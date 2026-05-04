@@ -56,6 +56,13 @@ const portalLinks = [
         url: "payment-confirm.html"
     },
     {
+        title: "入金回収",
+        description: "入金済の領収書PDFをメール送信・送信履歴の確認",
+        icon: "fa-envelope-circle-check",
+        url: "payment-collection.html",
+        adminOnly: true
+    },
+    {
         title: "新規顧客登録",
         description: "新しい利用者の基本情報・家族情報・住所等を登録します",
         icon: "fa-user-plus",
