@@ -63,18 +63,20 @@ const portalLinks = [
         adminOnly: true
     },
     {
-        title: "新規顧客登録",
+        title: "お客様情報登録",
         description: "新しい利用者の基本情報・家族情報・住所等を登録します",
         icon: "fa-user-plus",
         url: "customer-register.html",
-        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+        adminOnly: true,
+        selfEntry: true  // ご本人入力フォーム（お客様・入職者本人が入力）
     },
     {
         title: "スタッフ入職登録",
         description: "入職時の基本情報・住所・保有資格などを登録します",
         icon: "fa-user-tie",
         url: "staff-register.html",
-        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+        adminOnly: true,
+        selfEntry: true  // ご本人入力フォーム（お客様・入職者本人が入力）
     },
     {
         title: "スタッフ勤務情報設定",
@@ -127,9 +129,12 @@ function createSectionDivider(type) {
     if (type === 'staff') {
         div.className = 'section-divider section-divider--staff';
         div.innerHTML = '<i class="fa-solid fa-users"></i> スタッフ共通ツール';
-    } else {
+    } else if (type === 'admin') {
         div.className = 'section-divider section-divider--admin';
         div.innerHTML = '<i class="fa-solid fa-lock"></i> 管理者専用ツール';
+    } else {
+        div.className = 'section-divider section-divider--self';
+        div.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> ご本人入力フォーム';
     }
     return div;
 }
@@ -149,15 +154,20 @@ function buildDashboard() {
     grid.innerHTML = '';
 
     const staffLinks = portalLinks.filter(link => !link.adminOnly);
-    const adminLinks = portalLinks.filter(link =>  link.adminOnly);
+    // 管理者専用のうち、本人入力フォームと管理者操作ツールに分ける
+    const selfLinks  = portalLinks.filter(link =>  link.adminOnly &&  link.selfEntry);
+    const adminLinks = portalLinks.filter(link =>  link.adminOnly && !link.selfEntry);
 
     if (window.ADMIN_MODE === true) {
-        // 管理者モード：スタッフ帯・管理者帯の両方を表示する
+        // 管理者モード：スタッフ帯・管理者帯・本人入力フォーム帯の3つを表示する
         grid.appendChild(createSectionDivider('staff'));
         staffLinks.forEach(link => grid.appendChild(createCard(link)));
 
         grid.appendChild(createSectionDivider('admin'));
         adminLinks.forEach(link => grid.appendChild(createCard(link)));
+
+        grid.appendChild(createSectionDivider('self'));
+        selfLinks.forEach(link => grid.appendChild(createCard(link)));
     } else {
         // スタッフモード：スタッフ向けカードのみ表示（見出しなし）
         staffLinks.forEach(link => grid.appendChild(createCard(link)));

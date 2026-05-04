@@ -159,6 +159,13 @@ header p { color: var(--text-muted); margin-top: 1rem; font-weight: 500; }
     border-left: 4px solid #c9b09a;
 }
 
+/* ご本人入力フォーム：ティール系（管理者帯・スタッフ帯と区別するための清潔感ある配色） */
+.section-divider--self {
+    background: #e0f4f1;
+    color: #1a7f6f;
+    border-left: 4px solid #1a7f6f;
+}
+
 footer { text-align: center; margin-top: 4rem; color: var(--text-muted); font-size: 0.9rem; }
 
 /* スマホ用（画面が狭い場合）でも2列を維持し、スマホアプリ風にする設定 */
