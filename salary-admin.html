@@ -211,6 +211,8 @@
     /* 参考欄行 */
     .salary-table .row-ref td:not(.col-sec) { background: #f5f5f5; color: var(--muted); font-size: 0.75rem; }
     /* 項目名列（左寄せ・左端から2番目固定）。右端に区切りラインを引く */
+    /* border-collapse:collapse では隣セルとボーダーが共有されstickyに残らないため */
+    /* box-shadow で代替することでスクロール時もライン表示をstickyセル側に保持する */
     .salary-table .col-item {
       text-align: left;
       min-width: 88px;
@@ -219,7 +221,7 @@
       position: -webkit-sticky; position: sticky;
       left: 22px;
       z-index: 20;
-      border-right: 2px solid #aaa;
+      box-shadow: 2px 0 0 #aaa;
       -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     .salary-table th.col-item { background: #e8d8c4; font-weight: 700; }
