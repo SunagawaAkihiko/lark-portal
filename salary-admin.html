@@ -314,9 +314,19 @@
     /* 全員マトリクス表示時の名前ヘッダー行を縦スクロールで固定する */
     .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
-    .kintai-table td.kintai-date { text-align: left; font-weight: 700; }
+    /* 日付列を横スクロール時に左端へ固定する */
+    .kintai-table td.kintai-date {
+      text-align: left; font-weight: 700;
+      position: sticky; left: 0; z-index: 1;
+      background: white;
+    }
     .kintai-table tr.sat td { background: #eef4fb; }
     .kintai-table tr.sun td { background: #fdf0f0; }
+    /* 土日の日付セルは行の背景色に合わせる */
+    .kintai-table tr.sat td.kintai-date { background: #eef4fb; }
+    .kintai-table tr.sun td.kintai-date { background: #fdf0f0; }
+    /* 左上コーナーのヘッダーセルは縦・横両方固定（z-indexを他のthより高くする） */
+    .kintai-table thead th:first-child { position: sticky; left: 0; z-index: 4; }
     .kintai-table .col-attend { color: #1a6e2e; font-weight: 700; }
     .kintai-table .col-leave  { color: #7b2d8b; font-weight: 700; }
     .kintai-table .summary-row td { background: #fdf0e0; font-weight: 700; border-top: 2px solid #aaa; }
