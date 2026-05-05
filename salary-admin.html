@@ -874,21 +874,27 @@ function setupFrozenPanelSync(dataPanelEl, frozenPanelEl) {
 // frozenTbl と dataTbl の対応する全行を同じ高さに揃える
 // ============================================================
 function syncRowHeights(frozenTbl, dataTbl) {
-  const frozenRows = [...frozenTbl.querySelectorAll('tr')];
-  const dataRows   = [...dataTbl.querySelectorAll('tr')];
-  // 一旦リセット
-  frozenRows.forEach(r => { r.style.height = ''; });
-  dataRows.forEach(r => { r.style.height = ''; });
-  // 対応行を大きい方の高さに揃える
-  const len = Math.max(frozenRows.length, dataRows.length);
-  for (let i = 0; i < len; i++) {
-    const fa = frozenRows[i], da = dataRows[i];
-    if (fa && da) {
-      const h = Math.max(fa.getBoundingClientRect().height, da.getBoundingClientRect().height);
-      fa.style.height = h + 'px';
-      da.style.height = h + 'px';
+  // 一旦高さ指定をリセットしてから、次フレームで実際のレンダリング高さを計測して揃える
+  // requestAnimationFrameを使うことでinnerHTML設定後のブラウザ再レンダリングを待ち
+  // 正確な高さを取得できる（同期実行だと再レンダリング前の古い値になる）
+  [...frozenTbl.querySelectorAll('tr'), ...dataTbl.querySelectorAll('tr')]
+    .forEach(r => r.style.height = '');
+  requestAnimationFrame(() => {
+    const frozenRows = [...frozenTbl.querySelectorAll('tr')];
+    const dataRows   = [...dataTbl.querySelectorAll('tr')];
+    const len = Math.max(frozenRows.length, dataRows.length);
+    for (let i = 0; i < len; i++) {
+      const fa = frozenRows[i], da = dataRows[i];
+      if (fa && da) {
+        const h = Math.ceil(Math.max(
+          fa.getBoundingClientRect().height,
+          da.getBoundingClientRect().height
+        ));
+        fa.style.height = h + 'px';
+        da.style.height = h + 'px';
+      }
     }
-  }
+  });
 }
 
 /**
