@@ -166,7 +166,11 @@
 
     /* ==================== ▼ タブ1: 給与一覧表 ==================== */
     /* flex: 1 + min-height: 0 で親flexコンテナ内で縦スクロールを発生させる */
-    .salary-scroll { overflow-x: auto; overflow-y: auto; flex: 1; min-height: 0; padding: 0.5rem 0.5rem 2rem; }
+    /* transform:translateZ(0) でGPU合成レイヤーを作成し、sticky列の透け問題を解消する */
+    .salary-scroll {
+      overflow: auto; flex: 1; min-height: 0; padding: 0.5rem 0.5rem 2rem;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
+    }
     .salary-table {
       border-collapse: collapse;
       font-size: 0.8rem;
@@ -179,6 +183,11 @@
       text-align: right;
       white-space: nowrap;
     }
+    /* ヘッダー行を縦スクロール時に固定（氏名が常に見えるように） */
+    .salary-table thead th {
+      position: -webkit-sticky; position: sticky;
+      top: 0; z-index: 4;
+    }
     /* 区分ラベル列（縦書き・左端固定） */
     .salary-table .col-sec {
       writing-mode: vertical-rl;
@@ -188,9 +197,10 @@
       font-size: 0.72rem;
       width: 22px;
       padding: 6px 3px;
-      position: sticky;
+      position: -webkit-sticky; position: sticky;
       left: 0;
-      z-index: 2;
+      z-index: 20;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     .salary-table .sec-kintai { background: #7a9db0; color: white; }
     .salary-table .sec-pay    { background: #c4a882; color: white; }
@@ -205,9 +215,10 @@
       min-width: 88px;
       font-weight: 500;
       background: #f5ede0;
-      position: sticky;
+      position: -webkit-sticky; position: sticky;
       left: 22px;
-      z-index: 2;
+      z-index: 20;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     .salary-table th.col-item { background: #e8d8c4; font-weight: 700; }
     /* スタッフ名ヘッダー */
@@ -301,12 +312,13 @@
 
     /* ==================== ▼ タブ3: 出勤簿 ==================== */
     /* flex: 1 + min-height: 0 で親flexコンテナ内の残り高さを占有し、縦スクロールを発生させる */
-    /* これにより thead th の position:sticky が確実に機能する */
+    /* transform:translateZ(0) でGPU合成レイヤーを作成し、sticky列の透け問題を解消する */
     .kintai-scroll {
-      overflow-x: auto; overflow-y: auto;
+      overflow: auto;
       flex: 1;
       min-height: 0;
       padding: 0 0.5rem 2rem;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     /* border-separate でセル間のボーダー共有をなくし、sticky列が確実に前面に出るようにする */
     .kintai-table {
@@ -323,29 +335,29 @@
     .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
     /* 全tdに不透明な白背景を明示し、sticky列の背後に透けるのを防ぐ */
-    /* position:static のままにすることでstickyセルより確実に下に描画される */
     .kintai-table td { background: white; }
     /* ── 日付列: 横スクロール時に左端固定 ── */
-    /* will-change:transform でGPU合成レイヤーに昇格し、スクロール時の重なり順を確実にする */
+    /* translateZ(0) でGPU合成レイヤーに昇格し、スクロール時の重なり順を確実にする（iOS Safari対応） */
     .kintai-table td.kintai-date {
       text-align: left; font-weight: 700;
-      position: sticky; left: 0; z-index: 2;
+      position: -webkit-sticky; position: sticky;
+      left: 0; z-index: 20;
       background: white;
       border-right: 2px solid #aaa;
-      will-change: transform;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     .kintai-table tr.sat td { background: #eef4fb; }
     .kintai-table tr.sun td { background: #fdf0f0; }
     .kintai-table tr.sat td.kintai-date { background: #eef4fb; }
     .kintai-table tr.sun td.kintai-date { background: #fdf0f0; }
-    /* 有休・欠勤行のkintai-date背景も明示してstickyが透けないようにする */
     .kintai-table tr.leave-row td.kintai-date { background: #e8f5e9; }
     .kintai-table tr.absence-row td.kintai-date { background: #fce4ec; }
     /* 左上コーナー: 縦・横両方固定、最高z-index */
     .kintai-table thead th:first-child {
-      position: sticky; left: 0; z-index: 5;
+      position: -webkit-sticky; position: sticky;
+      left: 0; z-index: 25;
       border-right: 2px solid #aaa;
-      will-change: transform;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     /* ── 出勤簿 コントロールバー モバイル1行化 ── */
     @media (max-width: 640px) {
@@ -846,8 +858,10 @@ function renderSalaryTable(rows, month) {
 
   // ── ヘッダー行 ──
   let html = '<thead><tr>';
-  html += '<th class="col-sec" style="position:sticky;left:0;z-index:3;background:#e8d8c4">区分</th>';
-  html += '<th class="col-item" style="z-index:3;background:#e8d8c4">項　　目</th>';
+  /* ヘッダーの col-sec/col-item は縦横両方固定（top:0 は CSS の .salary-table thead th で付与、left は個別に指定） */
+  /* ヘッダー行全体は .salary-table thead th { sticky top:0 z-index:4 } が効くため個別指定は不要 */
+  html += '<th class="col-sec" style="top:0;left:0;z-index:26;background:#e8d8c4">区分</th>';
+  html += '<th class="col-item" style="top:0;z-index:25;background:#e8d8c4">項　　目</th>';
   rows.forEach(row => { html += `<th class="col-staff">${row.staffName}</th>`; });
   html += '<th class="col-total" style="background:#e8d8c4">合　計</th>';
   html += '</tr></thead>';
