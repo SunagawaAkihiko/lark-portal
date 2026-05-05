@@ -659,7 +659,7 @@
       ? `<i class="fa-solid fa-file-invoice-dollar" style="color:var(--red)"></i> 一括入金登録＋送信`
       : `<i class="fa-solid fa-paper-plane" style="color:var(--green)"></i> 一括メール送信`;
     const notice   = isUnpaid
-      ? `<div class="bulk-notice">今日（${todayStr}）付けで入金済に登録し、領収書メールを送信します。</div>`
+      ? `<div class="bulk-notice">各カードで設定した入金日で入金済に登録し、領収書の発行日欄にその日付を印字してメール送信します。</div>`
       : `<div class="bulk-notice">選択した ${targets.length} 件に領収書メールを送信します。</div>`;
 
     const recordRows = targets.map(r => {
