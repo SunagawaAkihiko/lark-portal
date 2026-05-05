@@ -240,13 +240,20 @@
     }
     .bulk-record-item {
       display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.45rem 0.7rem;
+      padding: 0.5rem 0.7rem;
       background: var(--card-bg); border-radius: 8px;
-      font-size: 0.85rem;
     }
-    .bulk-record-name { font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bulk-record-sub  { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; }
-    .bulk-record-amount { font-weight: 700; white-space: nowrap; }
+    .bulk-record-info { flex: 1; min-width: 0; }
+    .bulk-record-name { font-size: 0.85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bulk-record-sub  { font-size: 0.75rem; color: var(--text-muted); }
+    /* 個別発行日の日付入力フィールド */
+    .bulk-date-input {
+      flex-shrink: 0; width: 130px;
+      padding: 0.3rem 0.35rem;
+      border: 1.5px solid var(--border-color); border-radius: 6px;
+      font-family: inherit; font-size: 0.8rem; color: var(--text-color);
+      background: white;
+    }
     .bulk-progress {
       text-align: center; padding: 0.5rem;
       font-size: 0.9rem; color: var(--text-muted);
@@ -392,6 +399,21 @@
   // XSS対策のHTMLエスケープ
   function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // JSTの今日をdate inputのvalue形式（YYYY-MM-DD）で返す
+  function todayDateStr() {
+    const n = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    return `${n.getUTCFullYear()}-${String(n.getUTCMonth()+1).padStart(2,'0')}-${String(n.getUTCDate()).padStart(2,'0')}`;
+  }
+
+  // LarkのnyukinDate（ms数値 or 配列 or null）をdate inputのvalue形式に変換する
+  function nyukinDateToStr(val) {
+    if (!val) return todayDateStr();
+    const ms = typeof val === 'number' ? val : (Array.isArray(val) ? val[0] : null);
+    if (!ms) return todayDateStr();
+    const d = new Date(ms);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
   }
 
   // ===== 初期化 =====
@@ -577,13 +599,19 @@
       ? `<div class="bulk-notice">今日（${todayStr}）付けで入金済に登録し、領収書メールを送信します。</div>`
       : `<div class="bulk-notice">選択した ${targets.length} 件に領収書メールを送信します。</div>`;
 
-    const recordRows = targets.map(r =>
-      `<div class="bulk-record-item">
-        <span class="bulk-record-name">${esc(r.name)}</span>
-        <span class="bulk-record-sub">${esc(r.month||'―')}</span>
-        <span class="bulk-record-amount">${r.amount!=null?'¥'+r.amount.toLocaleString():'―'}</span>
-       </div>`
-    ).join('');
+    const today = todayDateStr();
+    const recordRows = targets.map(r => {
+      // 未入金はデフォルト今日、入金済はLarkに記録済みの入金日をデフォルトにする
+      const defaultDate = isUnpaid ? today : nyukinDateToStr(r.nyukinDate);
+      const amtStr = r.amount != null ? '¥' + r.amount.toLocaleString() : '―';
+      return `<div class="bulk-record-item">
+        <div class="bulk-record-info">
+          <div class="bulk-record-name">${esc(r.name)}</div>
+          <div class="bulk-record-sub">${esc(r.month||'―')} / ${amtStr}</div>
+        </div>
+        <input type="date" class="bulk-date-input" data-rid="${esc(r.recordId)}" value="${defaultDate}">
+      </div>`;
+    }).join('');
 
     document.getElementById('bulkModalContent').innerHTML = `
       <div class="modal-sheet">
@@ -610,7 +638,17 @@
     if (targets.length === 0) return;
 
     const isUnpaid = activeStatus === 'unpaid';
-    const records  = targets.map(r => ({ recordId: r.recordId, needsPayment: isUnpaid }));
+
+    // モーダル内の各日付入力から発行日を収集する
+    const dateMap = {};
+    document.querySelectorAll('.bulk-date-input').forEach(inp => {
+      dateMap[inp.dataset.rid] = inp.value;
+    });
+    const records = targets.map(r => ({
+      recordId:    r.recordId,
+      needsPayment: isUnpaid,
+      payDate:     dateMap[r.recordId] || todayDateStr(),
+    }));
 
     const confirmBtn = document.getElementById('bulkConfirmBtn');
     const cancelBtn  = document.getElementById('bulkCancelBtn');
