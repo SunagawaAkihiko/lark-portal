@@ -172,6 +172,10 @@
       font-size: 0.75rem; color: var(--text-muted);
       white-space: nowrap;
     }
+    .card-date-label {
+      flex-shrink: 0;
+      font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
+    }
     .card-date-input {
       flex-shrink: 0; width: 130px;
       padding: 0.22rem 0.3rem;
@@ -606,6 +610,7 @@
                 <span class="card-compact-name">${esc(record.name)}</span>
                 <span class="card-month">${esc(record.month || '―')}</span>
               </div>
+              <span class="card-date-label">入金日</span>
               <input type="date" class="card-date-input"
                 value="${dateVal}"
                 onclick="event.stopPropagation()"
