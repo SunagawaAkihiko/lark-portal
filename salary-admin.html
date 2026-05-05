@@ -603,20 +603,21 @@
 <div class="modal-overlay hidden" id="kintai-edit-modal">
   <div class="modal-box">
     <h3 id="kintai-edit-title">出勤簿 編集</h3>
-    <div class="modal-field">
+    <!-- 各フィールドに id を付与して openKintaiEdit の visibleField に応じて表示/非表示を切り替える -->
+    <div class="modal-field" id="edit-attend-field">
       <label>出勤時刻</label>
       <!-- ラッパーdivでoverflow:hiddenを使い、時刻inputのネイティブ幅を強制的にクリップして揃える -->
       <div class="time-input-wrap">
         <input type="time" id="edit-attend-time">
       </div>
     </div>
-    <div class="modal-field">
+    <div class="modal-field" id="edit-leave-field">
       <label>退勤時刻</label>
       <div class="time-input-wrap">
         <input type="time" id="edit-leave-time">
       </div>
     </div>
-    <div class="modal-field">
+    <div class="modal-field" id="edit-type-field">
       <label>種別</label>
       <select id="edit-leave-type">
         <option value="">通常出勤</option>
@@ -1269,26 +1270,28 @@ function renderKintaiTable(records, month, staffName) {
       const rec        = byDate[dateStr];
       // 残業時間を "H:MM" 文字列に変換してモーダルに渡す（小数時間 → H:MM）
       const overtimeStr = rec?.overtime ? hoursToHhmm(rec.overtime) : '';
-      // openKintaiEdit に渡すペイロード（最後の true が showOvertime フラグ）
-      const payload = `'${staffOpenId}','${staffName}','${dateStr}','${rec?.attendTime||''}','${rec?.leaveTime||''}','${rec?.leaveType||''}','${overtimeStr}',true`;
 
       let rowCls = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
       if (rec?.leaveType === '有休') rowCls += ' leave-row';
       else if (rec?.leaveType === '欠勤') rowCls += ' absence-row';
 
-      // 日付列（sticky left:0）とデータ列を同一の <tr> に並べる。全行クリック可能にする
+      // 押したセルに対応するフィールドだけ編集モーダルを開く
+      // basePayload は全フィールドの現在値（非表示フィールドの既存値保持のため全て渡す）
+      const basePayload = `'${staffOpenId}','${staffName}','${dateStr}','${rec?.attendTime||''}','${rec?.leaveTime||''}','${rec?.leaveType||''}','${overtimeStr}'`;
       if (rec?.leaveType) {
-        html += `<tr class="${rowCls}" style="cursor:pointer" onclick="openKintaiEdit(${payload})">
-          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
-          <td colspan="6" style="text-align:center">${leaveBadge(rec.leaveType)}</td>
+        // 有休・欠勤行：日付セルとバッジセルで種別を変更する
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date" style="cursor:pointer" onclick="openKintaiEdit(${basePayload},'all')">${d}日 (${dayOfWeek[dow]})</td>
+          <td colspan="6" style="text-align:center;cursor:pointer" onclick="openKintaiEdit(${basePayload},'type')">${leaveBadge(rec.leaveType)}</td>
         </tr>`;
       } else {
-        html += `<tr class="${rowCls}" style="cursor:pointer" onclick="openKintaiEdit(${payload})">
-          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
-          <td class="col-attend">${rec?.attendTime || ''}</td>
-          <td class="col-leave">${rec?.leaveTime   || ''}</td>
+        // 通常行：各セルが対応するフィールドを編集する。実働・遅刻・早退は計算値のためクリック不可
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date" style="cursor:pointer" onclick="openKintaiEdit(${basePayload},'all')">${d}日 (${dayOfWeek[dow]})</td>
+          <td class="col-attend" style="cursor:pointer" onclick="openKintaiEdit(${basePayload},'attend')">${rec?.attendTime || ''}</td>
+          <td class="col-leave"  style="cursor:pointer" onclick="openKintaiEdit(${basePayload},'leave')">${rec?.leaveTime  || ''}</td>
           <td>${rec?.workingHours || ''}</td>
-          <td>${rec?.overtime ? hoursToHhmm(rec.overtime) : ''}</td>
+          <td style="cursor:pointer" onclick="openKintaiEdit(${basePayload},'overtime')">${rec?.overtime ? hoursToHhmm(rec.overtime) : ''}</td>
           <td style="${rec?.lateMin?'color:#e74c3c;font-weight:700':''}">${rec?.lateMin ? rec.lateMin+'分' : ''}</td>
           <td>${rec?.earlyMin ? rec.earlyMin+'分' : ''}</td>
         </tr>`;
@@ -1395,24 +1398,38 @@ function renderKintaiTable(records, month, staffName) {
 let kintaiEditState = null;
 
 // セルクリック時に呼ばれる
-// overtime: "H:MM" 形式の文字列（個別表示時のみ渡す）
-// showOvertime: true のとき残業時間フィールドを表示する（個別表示時のみ）
-function openKintaiEdit(openId, staffName, date, attendTime, leaveTime, leaveType, overtime, showOvertime) {
+// visibleField: 表示するフィールドを指定する文字列
+//   'attend'   → 出勤時刻のみ
+//   'leave'    → 退勤時刻のみ
+//   'type'     → 種別のみ
+//   'overtime' → 残業時間のみ
+//   'all'      → 全フィールド（日付セルクリック時）
+function openKintaiEdit(openId, staffName, date, attendTime, leaveTime, leaveType, overtime, visibleField) {
   if (!openId) {
     alert('スタッフIDが取得できません。一度「取得」ボタンで再読み込みしてください。');
     return;
   }
   kintaiEditState = { openId, date };
   const [, m, d] = date.split('-');
+
+  // visibleField に応じてタイトルと表示フィールドを切り替える
+  const vf = visibleField || 'all';
+  const titles = { attend: '出勤時刻 編集', leave: '退勤時刻 編集', type: '種別 変更', overtime: '残業時間 編集', all: '出勤簿 編集' };
   document.getElementById('kintai-edit-title').textContent =
-    `出勤簿 編集 — ${staffName}  ${parseInt(m)}月${parseInt(d)}日`;
+    `${titles[vf] || '出勤簿 編集'} — ${staffName}  ${parseInt(m)}月${parseInt(d)}日`;
+
+  // 各フィールドの表示/非表示を切り替える
+  document.getElementById('edit-attend-field').style.display   = (vf === 'attend'   || vf === 'all') ? '' : 'none';
+  document.getElementById('edit-leave-field').style.display    = (vf === 'leave'    || vf === 'all') ? '' : 'none';
+  document.getElementById('edit-type-field').style.display     = (vf === 'type'     || vf === 'all') ? '' : 'none';
+  document.getElementById('edit-overtime-field').style.display = (vf === 'overtime' || vf === 'all') ? '' : 'none';
+
+  // 全フィールドに現在値をセット（非表示フィールドも既存値を保持して API 送信時にデータが消えないようにする）
   document.getElementById('edit-attend-time').value = attendTime || '';
   document.getElementById('edit-leave-time').value  = leaveTime  || '';
   document.getElementById('edit-leave-type').value  = leaveType  || '';
-  // 残業時間フィールドは個別表示時のみ表示・入力値をセットする
-  const overtimeField = document.getElementById('edit-overtime-field');
-  overtimeField.style.display = showOvertime ? '' : 'none';
-  document.getElementById('edit-overtime').value = overtime || '';
+  document.getElementById('edit-overtime').value    = overtime   || '';
+
   document.getElementById('kintai-edit-status').textContent = '';
   document.getElementById('kintai-edit-modal').classList.remove('hidden');
 }
