@@ -167,8 +167,9 @@
     /* ==================== ▼ タブ1: 給与一覧表 ==================== */
     /* flex: 1 + min-height: 0 で親flexコンテナ内で縦スクロールを発生させる */
     /* transform:translateZ(0) でGPU合成レイヤーを作成し、sticky列の透け問題を解消する */
+    /* 左右パディングをゼロにし、テーブルを画面端まで広げてstickyコンテンツを物理的にクリップする */
     .salary-scroll {
-      overflow: auto; flex: 1; min-height: 0; padding: 0.5rem 0.5rem 2rem;
+      overflow: auto; flex: 1; min-height: 0; padding: 0 0 2rem 0;
       -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     .salary-table {
@@ -313,11 +314,12 @@
     /* ==================== ▼ タブ3: 出勤簿 ==================== */
     /* flex: 1 + min-height: 0 で親flexコンテナ内の残り高さを占有し、縦スクロールを発生させる */
     /* transform:translateZ(0) でGPU合成レイヤーを作成し、sticky列の透け問題を解消する */
+    /* 左右パディングをゼロにし、テーブルを画面端まで広げてstickyコンテンツを物理的にクリップする */
     .kintai-scroll {
       overflow: auto;
       flex: 1;
       min-height: 0;
-      padding: 0 0.5rem 2rem;
+      padding: 0 0 2rem 0;
       -webkit-transform: translateZ(0); transform: translateZ(0);
     }
     /* border-separate でセル間のボーダー共有をなくし、sticky列が確実に前面に出るようにする */
@@ -332,7 +334,12 @@
     .kintai-table tr > :first-child { border-left: 1px solid #ccc; }
     .kintai-table thead tr:first-child th { border-top: 1px solid #ccc; }
     /* 全員マトリクス表示時の名前ヘッダー行を縦スクロールで固定する */
-    .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
+    /* 縦sticky時の透け防止: -webkit-sticky + translateZ(0) でGPUレイヤーに昇格 */
+    .kintai-table thead th {
+      position: -webkit-sticky; position: sticky;
+      top: 0; z-index: 3; background: #f2e8dc;
+      -webkit-transform: translateZ(0); transform: translateZ(0);
+    }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
     /* 全tdに不透明な白背景を明示し、sticky列の背後に透けるのを防ぐ */
     .kintai-table td { background: white; }
