@@ -221,6 +221,8 @@
       border-right: 1px solid #bbb; border-bottom: 1px solid #bbb;
       padding: 3px 6px; text-align: right; white-space: nowrap;
     }
+    /* tbody/tfootのline-heightを整数pxで固定し、frozen/dataパネル間の行高さ蓄積ズレを防ぐ */
+    .salary-table tbody td, .salary-table tfoot td { line-height: 16px; }
     .salary-table tr > :first-child { border-left: 1px solid #bbb; }
     .salary-table thead tr:first-child th { border-top: 1px solid #bbb; }
     /* データパネル（overflow:auto）内でヘッダーを縦スクロール時に固定する */
@@ -391,6 +393,8 @@
       border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;
       padding: 4px 6px; text-align: center; white-space: nowrap;
     }
+    /* tbody/tfootのline-heightを整数pxで固定し、frozen/dataパネル間の行高さ蓄積ズレを防ぐ */
+    .kintai-table tbody td, .kintai-table tfoot td { line-height: 16px; }
     .kintai-table tr > :first-child { border-left: 1px solid #ccc; }
     /* データパネルの最左列はborder-leftなし（固定パネルのborder-rightと隣接するため） */
     #kintai-data-table tr > :first-child { border-left: none; }
