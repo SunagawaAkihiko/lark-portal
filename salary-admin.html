@@ -1387,10 +1387,10 @@ function renderKintaiTable(records, month, staffName) {
       html += '</tr>';
     }
 
-    html += '</tbody><tfoot><tr class="summary-row"><td class="kintai-date" style="text-align:left">有休</td>';
+    html += '</tbody><tfoot><tr class="summary-row"><td class="kintai-date" style="text-align:left">合計</td>';
     names.forEach(n => {
       const s = colSummary[n];
-      html += `<td style="font-size:0.72rem">${s.yuukyu > 0 ? s.yuukyu + '日' : '-'}</td>`;
+      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>有休${s.yuukyu > 0 ? s.yuukyu : '-'}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
     });
     html += '</tr></tfoot>';
 
