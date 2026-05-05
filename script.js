@@ -56,9 +56,9 @@ const portalLinks = [
         url: "payment-confirm.html"
     },
     {
-        title: "入金回収",
-        description: "入金済の領収書PDFをメール送信・送信履歴の確認",
-        icon: "fa-envelope-circle-check",
+        title: "入金管理",
+        description: "未入金の確認・入金登録・領収書メール送信",
+        icon: "fa-yen-sign",
         url: "payment-collection.html",
         adminOnly: true
     },

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>入金回収</title>
+  <title>入金管理</title>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -12,14 +12,14 @@
       --text-color:    #4a3f35;
       --text-muted:    #8c7c6b;
       --primary-color: #e76f51;
-      --primary-light: #fcece8;
       --border-color:  #dcbfa6;
       --card-bg:       #fff0e3;
       --green:         #2a9d8f;
       --green-light:   #e6f7f5;
-      --yellow:        #e9c46a;
+      --yellow:        #d4a017;
       --yellow-light:  #fdf5e0;
-      --sent-color:    #2a9d8f;
+      --red:           #e63946;
+      --red-light:     #fde8ea;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { overflow-x: hidden; }
@@ -28,30 +28,21 @@
       background: var(--bg-color);
       color: var(--text-color);
       -webkit-font-smoothing: antialiased;
-      padding-bottom: 4rem;
+      padding-bottom: 5rem;
     }
     .hidden { display: none !important; }
 
-    /* ===== ヘッダー（事業所タブ） ===== */
+    /* ===== ヘッダー ===== */
     .page-header {
       position: sticky; top: 0; z-index: 15;
       background: var(--text-color);
-      padding: 0 1rem 0.75rem;
-      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0.75rem 1rem;
     }
     .page-header-label {
-      width: 100%; color: white;
+      color: white;
       font-size: 1.25rem; font-weight: 700;
-      padding: 0.75rem 0 0.1rem;
       display: flex; align-items: center; gap: 0.4rem;
     }
-    .office-tab {
-      flex: 1; padding: 0.55rem 0; border: none; border-radius: 8px;
-      font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
-      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
-      transition: background 0.2s, color 0.2s;
-    }
-    .office-tab.active { background: var(--primary-color); color: white; }
 
     /* ===== ローディング ===== */
     .loading-screen {
@@ -68,35 +59,43 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ===== ステータスタブ（未送信・送信済） ===== */
+    /* ===== ステータスタブ（3つ） ===== */
     .status-tabs {
-      display: flex; gap: 0.5rem;
+      display: flex; gap: 0.4rem;
       padding: 0.75rem 1rem 0;
-      max-width: 600px; margin: 0 auto;
+      max-width: 640px; margin: 0 auto;
     }
     .status-tab {
-      flex: 1; padding: 0.55rem 0;
+      flex: 1; padding: 0.5rem 0.2rem;
       border: none; border-radius: 8px;
-      font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer;
       background: var(--card-bg); color: var(--text-muted);
       transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
     }
-    .status-tab.active {
-      background: var(--text-color); color: white;
-    }
+    /* 各タブのアクティブ色 */
+    #tabUnpaid.active { background: var(--red);    color: white; }
+    #tabUnsent.active { background: var(--yellow);  color: white; }
+    #tabSent.active   { background: var(--green);   color: white; }
 
     /* ===== メインコンテンツ ===== */
     .main-content {
-      padding: 0.75rem 1rem; max-width: 600px; margin: 0 auto;
-      display: flex; flex-direction: column; gap: 0.6rem;
+      padding: 0.5rem 1rem; max-width: 640px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 0.5rem;
     }
 
-    /* ===== 件数サマリー ===== */
+    /* ===== サマリーバー ===== */
     .summary-bar {
-      padding: 0.3rem 0.2rem;
-      font-size: 0.82rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.4rem 0.1rem;
     }
-    .summary-bar strong { color: var(--text-color); font-size: 1rem; }
+    .summary-text { font-size: 0.82rem; color: var(--text-muted); }
+    .summary-text strong { color: var(--text-color); font-size: 1rem; }
+    .select-all-btn {
+      padding: 0.3rem 0.8rem; border-radius: 6px; border: 1.5px solid var(--border-color);
+      background: white; color: var(--text-muted);
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+    }
 
     /* ===== 空表示 ===== */
     .empty-msg {
@@ -110,81 +109,164 @@
       background: white;
       border: 1.5px solid var(--border-color);
       border-radius: 14px; overflow: hidden;
+      transition: border-color 0.15s, background 0.15s;
     }
     .payment-card-body {
       padding: 0.85rem 1rem;
-      display: flex; align-items: center; gap: 0.75rem;
+      display: flex; align-items: center; gap: 0.7rem;
     }
 
-    /* 未送信カード（黄色ボーダー） */
+    /* 各状態のボーダー色 */
+    .card-unpaid { border-left: 4px solid var(--red); }
     .card-unsent { border-left: 4px solid var(--yellow); }
+    .card-sent   { border-left: 4px solid var(--green); }
 
-    /* 送信済カード（緑ボーダー） */
-    .card-sent { border-left: 4px solid var(--sent-color); }
+    /* 選択済み状態 */
+    .card-selected {
+      background: #f0faf9;
+      border-color: var(--green) !important;
+    }
 
-    /* カード情報 */
+    /* タップ可能カード */
+    .payment-card.selectable { cursor: pointer; }
+    .payment-card.selectable:active { opacity: 0.8; }
+
+    /* ===== チェックボックス ===== */
+    .card-check {
+      width: 26px; height: 26px; flex-shrink: 0;
+      border: 2px solid var(--border-color); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      color: transparent; background: white;
+    }
+    .card-check.checked {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+    .card-check i { font-size: 0.7rem; }
+
+    /* ===== カード情報 ===== */
     .card-info { flex: 1; min-width: 0; }
     .card-name {
       font-size: 1rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .card-month { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
-    .card-email { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .card-sub  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
+    .card-email { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.08rem; }
 
-    /* 金額 */
+    /* ===== 金額 ===== */
     .card-amount { flex-shrink: 0; text-align: right; }
-    .card-amount-value { font-size: 1.05rem; font-weight: 700; }
+    .card-amount-value { font-size: 1rem; font-weight: 700; }
 
-    /* 送信済バッジ */
+    /* ===== 送信済バッジ ===== */
     .sent-badge {
       flex-shrink: 0;
-      padding: 0.28rem 0.6rem; border-radius: 6px;
+      padding: 0.28rem 0.55rem; border-radius: 6px;
       font-size: 0.72rem; font-weight: 700;
-      background: var(--green-light); color: var(--sent-color);
+      background: var(--green-light); color: var(--green);
     }
 
-    /* 送信ボタン */
+    /* ===== 単体送信ボタン（入金済未送信用） ===== */
     .send-btn {
       flex-shrink: 0;
-      padding: 0.5rem 0.9rem; border-radius: 8px;
+      padding: 0.5rem 0.75rem; border-radius: 8px;
       background: var(--green); color: white;
-      border: none; font-family: inherit; font-size: 0.88rem; font-weight: 700;
-      cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
+      border: none; font-family: inherit; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer;
       transition: opacity 0.15s;
-      white-space: nowrap;
     }
     .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* ===== 確認モーダル ===== */
+    /* ===== 一括処理フローティングバー ===== */
+    .bulk-bar {
+      position: fixed; bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 640px;
+      background: var(--text-color);
+      padding: 0.85rem 1.25rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      z-index: 20;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    }
+    .bulk-count {
+      color: white; font-size: 0.9rem; font-weight: 700;
+    }
+    .bulk-action-btn {
+      padding: 0.6rem 1.2rem; border-radius: 10px;
+      background: var(--green); color: white;
+      border: none; font-family: inherit; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    /* ===== モーダル共通 ===== */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 50;
       background: rgba(74,63,53,0.45);
       display: flex; align-items: flex-end; justify-content: center;
     }
     .modal-sheet {
-      width: 100%; max-width: 600px;
+      width: 100%; max-width: 640px;
       background: white; border-radius: 20px 20px 0 0;
       padding: 1.25rem 1.25rem 2.5rem;
-      display: flex; flex-direction: column; gap: 1rem;
+      display: flex; flex-direction: column; gap: 0.9rem;
+      max-height: 85vh; overflow-y: auto;
     }
     .modal-handle {
       width: 40px; height: 4px; border-radius: 2px;
-      background: var(--border-color); margin: 0 auto 0.25rem;
+      background: var(--border-color); margin: 0 auto 0.1rem;
+      flex-shrink: 0;
     }
     .modal-title {
       font-size: 1.05rem; font-weight: 700;
       display: flex; align-items: center; gap: 0.5rem;
+      flex-shrink: 0;
     }
+
+    /* ===== 一括モーダル ===== */
+    .bulk-notice {
+      background: var(--bg-color); border-radius: 10px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.85rem; color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .bulk-record-list {
+      display: flex; flex-direction: column; gap: 0.35rem;
+      overflow-y: auto; flex-shrink: 1;
+      max-height: 30vh;
+    }
+    .bulk-record-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 0.7rem;
+      background: var(--card-bg); border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .bulk-record-name { font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bulk-record-sub  { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; }
+    .bulk-record-amount { font-weight: 700; white-space: nowrap; }
+    .bulk-progress {
+      text-align: center; padding: 0.5rem;
+      font-size: 0.9rem; color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ===== 単体送信モーダル ===== */
     .modal-target {
       background: var(--bg-color); border-radius: 10px;
       padding: 0.75rem 1rem;
+      flex-shrink: 0;
     }
-    .modal-target-name { font-size: 1rem; font-weight: 700; }
-    .modal-target-sub  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
-    .modal-target-email { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .modal-target-name   { font-size: 1rem; font-weight: 700; }
+    .modal-target-sub    { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .modal-target-email  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem; }
     .modal-target-amount { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin-top: 0.4rem; }
+
+    /* ===== ボタン ===== */
     .confirm-btn {
-      width: 100%; padding: 1rem;
+      width: 100%; padding: 1rem; flex-shrink: 0;
       background: var(--green); color: white; border: none; border-radius: 12px;
       font-family: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 0.5rem;
@@ -193,7 +275,7 @@
     }
     .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .cancel-btn {
-      width: 100%; padding: 0.7rem;
+      width: 100%; padding: 0.7rem; flex-shrink: 0;
       background: none; color: var(--text-muted); border: 1px solid var(--border-color);
       border-radius: 10px; font-family: inherit; font-size: 0.9rem; cursor: pointer;
     }
@@ -209,24 +291,23 @@
       transition: opacity 0.25s, transform 0.25s;
       white-space: nowrap; z-index: 100;
     }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
     .toast.success { background: var(--green); }
     .toast.error   { background: #c1121f; }
 
     /* ===== 横画面 ===== */
     @media (orientation: landscape) {
-      .page-header { padding: 0 0.8rem 0.5rem; }
-      .page-header-label { padding: 0.5rem 0 0.1rem; font-size: 1.1rem; }
-      .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+      .page-header { padding: 0.5rem 1rem; }
+      .page-header-label { font-size: 1.1rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ページヘッダー -->
-<div class="page-header" id="tabBar">
+<!-- ページヘッダー（事業所タブなし・タイトルのみ） -->
+<div class="page-header">
   <span class="page-header-label">
-    <i class="fa-solid fa-envelope-circle-check"></i> 入金回収
+    <i class="fa-solid fa-yen-sign"></i> 入金管理
   </span>
 </div>
 
@@ -236,10 +317,13 @@
   <span>読み込み中...</span>
 </div>
 
-<!-- ステータスタブ -->
+<!-- ステータスタブ（3つ） -->
 <div class="status-tabs hidden" id="statusTabs">
-  <button class="status-tab active" id="tabUnsent" onclick="switchStatus('unsent')">
-    <i class="fa-solid fa-clock"></i> 未送信
+  <button class="status-tab active" id="tabUnpaid" onclick="switchStatus('unpaid')">
+    <i class="fa-solid fa-circle-exclamation"></i> 未入金
+  </button>
+  <button class="status-tab" id="tabUnsent" onclick="switchStatus('unsent')">
+    <i class="fa-solid fa-clock"></i> 入金済（未送信）
   </button>
   <button class="status-tab" id="tabSent" onclick="switchStatus('sent')">
     <i class="fa-solid fa-circle-check"></i> 送信済
@@ -248,11 +332,28 @@
 
 <!-- メインコンテンツ -->
 <div class="main-content hidden" id="mainContent">
-  <div class="summary-bar" id="summaryBar"></div>
+  <div class="summary-bar">
+    <div class="summary-text" id="summaryText"></div>
+    <button class="select-all-btn hidden" id="selectAllBtn" onclick="toggleSelectAll()">全選択</button>
+  </div>
   <div id="cardList"></div>
 </div>
 
-<!-- 送信確認モーダル -->
+<!-- 一括処理フローティングバー -->
+<div class="bulk-bar hidden" id="bulkBar">
+  <span class="bulk-count" id="bulkCount">0件選択中</span>
+  <button class="bulk-action-btn" onclick="openBulkModal()">
+    <i class="fa-solid fa-paper-plane"></i>
+    <span id="bulkBtnLabel">一括処理</span>
+  </button>
+</div>
+
+<!-- 一括確認モーダル -->
+<div class="modal-overlay hidden" id="bulkModal" onclick="if(event.target===this)closeBulkModal()">
+  <div id="bulkModalContent"></div>
+</div>
+
+<!-- 単体送信確認モーダル（入金済未送信用） -->
 <div class="modal-overlay hidden" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -261,8 +362,8 @@
       領収書メールを送信しますか？
     </div>
     <div class="modal-target">
-      <div class="modal-target-name" id="modalName"></div>
-      <div class="modal-target-sub"  id="modalMonth"></div>
+      <div class="modal-target-name"  id="modalName"></div>
+      <div class="modal-target-sub"   id="modalMonth"></div>
       <div class="modal-target-email" id="modalEmail"></div>
       <div class="modal-target-amount" id="modalAmount"></div>
     </div>
@@ -281,129 +382,285 @@
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  let allUnsent    = [];   // 未送信レコード
-  let allSent      = [];   // 送信済レコード
-  let offices      = [];   // 事業所一覧
-  let activeOffice = '';   // 選択中の事業所
-  let activeStatus = 'unsent'; // 'unsent' | 'sent'
-  let activeRecord = null; // モーダル対象レコード
+  let allUnpaid    = [];          // 未入金レコード
+  let allUnsent    = [];          // 入金済・未送信レコード
+  let allSent      = [];          // 送信済レコード
+  let activeStatus = 'unpaid';    // 'unpaid' | 'unsent' | 'sent'
+  let selectedIds  = new Set();   // 選択中のrecordId
+  let activeRecord = null;        // 単体送信モーダル対象レコード
+
+  // XSS対策のHTMLエスケープ
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
   // ===== 初期化 =====
   async function init() {
     try {
-      const r = await fetch(`${API_BASE}/api/payment/paid-records`);
+      const r = await fetch(`${API_BASE}/api/payment/all-records`);
       const j = await r.json();
       if (!j.ok) throw new Error(j.error);
 
+      allUnpaid = j.unpaid;
       allUnsent = j.unsent;
       allSent   = j.sent;
-      offices   = j.officeOptions;
-
-      buildTabs();
-      if (offices.length > 0) switchOffice(offices[0]);
 
       document.getElementById('loadingScreen').classList.add('hidden');
       document.getElementById('statusTabs').classList.remove('hidden');
       document.getElementById('mainContent').classList.remove('hidden');
+      renderCards();
 
     } catch (err) {
       document.getElementById('loadingScreen').innerHTML =
-        `<div style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 読み込み失敗<br><small>${err.message}</small></div>`;
+        `<div style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 読み込み失敗<br><small>${esc(err.message)}</small></div>`;
     }
-  }
-
-  // ===== 事業所タブを生成する =====
-  function buildTabs() {
-    const bar = document.getElementById('tabBar');
-    bar.innerHTML = '<span class="page-header-label"><i class="fa-solid fa-envelope-circle-check"></i> 入金回収</span>';
-    offices.forEach(office => {
-      const btn = document.createElement('button');
-      btn.className   = 'office-tab';
-      btn.textContent = office;
-      btn.onclick = () => switchOffice(office);
-      bar.appendChild(btn);
-    });
-  }
-
-  // ===== 事業所切り替え =====
-  function switchOffice(office) {
-    activeOffice = office;
-    document.querySelectorAll('.office-tab').forEach(b =>
-      b.classList.toggle('active', b.textContent.trim() === office));
-    renderCards();
   }
 
   // ===== ステータスタブ切り替え =====
   function switchStatus(status) {
     activeStatus = status;
+    selectedIds.clear();
+    document.getElementById('tabUnpaid').classList.toggle('active', status === 'unpaid');
     document.getElementById('tabUnsent').classList.toggle('active', status === 'unsent');
     document.getElementById('tabSent').classList.toggle('active',   status === 'sent');
     renderCards();
+    updateBulkBar();
   }
 
-  // ===== カード一覧を描画する =====
+  // ===== チェックボックス切り替え =====
+  function toggleSelect(recordId) {
+    if (selectedIds.has(recordId)) selectedIds.delete(recordId);
+    else selectedIds.add(recordId);
+
+    // カードと円チェックの見た目を更新する
+    const card  = document.querySelector(`.payment-card[data-rid="${CSS.escape(recordId)}"]`);
+    const check = document.querySelector(`.card-check[data-rid="${CSS.escape(recordId)}"]`);
+    if (card)  card.classList.toggle('card-selected', selectedIds.has(recordId));
+    if (check) check.classList.toggle('checked', selectedIds.has(recordId));
+
+    // 全選択ボタンのラベルを更新する
+    updateSelectAllBtn();
+    updateBulkBar();
+  }
+
+  // ===== 全選択・全解除 =====
+  function toggleSelectAll() {
+    const list = activeStatus === 'unpaid' ? allUnpaid : allUnsent;
+    const allSelected = list.length > 0 && list.every(r => selectedIds.has(r.recordId));
+    if (allSelected) list.forEach(r => selectedIds.delete(r.recordId));
+    else             list.forEach(r => selectedIds.add(r.recordId));
+    renderCards();
+    updateBulkBar();
+  }
+
+  // ===== 全選択ボタンのラベル更新 =====
+  function updateSelectAllBtn() {
+    const list = activeStatus === 'unpaid' ? allUnpaid : allUnsent;
+    const allSelected = list.length > 0 && list.every(r => selectedIds.has(r.recordId));
+    document.getElementById('selectAllBtn').textContent = allSelected ? '全解除' : '全選択';
+  }
+
+  // ===== 一括バー更新 =====
+  function updateBulkBar() {
+    const bar   = document.getElementById('bulkBar');
+    const count = selectedIds.size;
+    if (count === 0 || activeStatus === 'sent') {
+      bar.classList.add('hidden');
+      return;
+    }
+    bar.classList.remove('hidden');
+    document.getElementById('bulkCount').textContent   = `${count}件選択中`;
+    document.getElementById('bulkBtnLabel').textContent =
+      activeStatus === 'unpaid' ? '一括入金登録＋送信' : '一括メール送信';
+  }
+
+  // ===== カード一覧描画 =====
   function renderCards() {
-    const records = (activeStatus === 'unsent' ? allUnsent : allSent)
-      .filter(r => r.office === activeOffice);
+    const list   = activeStatus === 'unpaid' ? allUnpaid : activeStatus === 'unsent' ? allUnsent : allSent;
+    const listEl = document.getElementById('cardList');
 
-    const label = activeStatus === 'unsent' ? '未送信' : '送信済';
-    document.getElementById('summaryBar').innerHTML =
-      `${label} <strong>${records.length}</strong> 件（${activeOffice}）`;
+    // サマリーバー
+    const labels = { unpaid:'未入金', unsent:'入金済（未送信）', sent:'送信済' };
+    document.getElementById('summaryText').innerHTML =
+      `${labels[activeStatus]} <strong>${list.length}</strong> 件`;
 
-    const list = document.getElementById('cardList');
-    list.innerHTML = '';
+    const selBtn = document.getElementById('selectAllBtn');
+    if (activeStatus !== 'sent' && list.length > 0) {
+      selBtn.classList.remove('hidden');
+      const allSelected = list.every(r => selectedIds.has(r.recordId));
+      selBtn.textContent = allSelected ? '全解除' : '全選択';
+    } else {
+      selBtn.classList.add('hidden');
+    }
 
-    if (records.length === 0) {
-      const icon  = activeStatus === 'sent' ? 'fa-circle-check' : 'fa-clock';
-      const color = activeStatus === 'sent' ? 'var(--green)' : 'var(--border-color)';
-      const msg   = activeStatus === 'sent' ? '送信済の領収書はありません' : '未送信の領収書はありません';
-      list.innerHTML = `<div class="empty-msg"><i class="fa-solid ${icon}" style="color:${color}"></i>${msg}</div>`;
+    listEl.innerHTML = '';
+
+    if (list.length === 0) {
+      const cfg = {
+        unpaid: { icon:'fa-circle-exclamation', color:'var(--red)',    msg:'未入金の記録はありません' },
+        unsent: { icon:'fa-clock',              color:'var(--yellow)', msg:'未送信の領収書はありません' },
+        sent:   { icon:'fa-circle-check',       color:'var(--green)',  msg:'送信済の領収書はありません' },
+      }[activeStatus];
+      listEl.innerHTML =
+        `<div class="empty-msg"><i class="fa-solid ${cfg.icon}" style="color:${cfg.color}"></i>${cfg.msg}</div>`;
       return;
     }
 
-    records.forEach(record => {
-      const card = document.createElement('div');
-      card.className = `payment-card ${activeStatus === 'sent' ? 'card-sent' : 'card-unsent'}`;
+    list.forEach(record => {
+      const card      = document.createElement('div');
+      const isChecked = selectedIds.has(record.recordId);
+      const amtStr    = record.amount != null ? '¥' + record.amount.toLocaleString() : '―';
+      const emailStr  = esc(record.email || '（メールアドレス未登録）');
+      const subStr    = esc(record.month || '―') + (record.office ? ' ／ ' + esc(record.office) : '');
 
-      const amountStr = record.amount != null ? '¥' + record.amount.toLocaleString() : '―';
-      const emailStr  = record.email || '（メールアドレス未登録）';
-
-      if (activeStatus === 'unsent') {
-        // 未送信カード：送信ボタン付き
-        card.innerHTML = `
-          <div class="payment-card-body">
-            <div class="card-info">
-              <div class="card-name">${record.name}</div>
-              <div class="card-month">${record.month || '―'}</div>
-              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:0.65rem"></i> ${emailStr}</div>
-            </div>
-            <div class="card-amount">
-              <div class="card-amount-value">${amountStr}</div>
-            </div>
-            <button class="send-btn" onclick="openModal(event, '${record.recordId}')">
-              <i class="fa-solid fa-paper-plane"></i> 送信
-            </button>
-          </div>`;
-      } else {
-        // 送信済カード：バッジ表示
+      if (activeStatus === 'sent') {
+        // 送信済カード（選択不可・バッジ表示）
+        card.className = 'payment-card card-sent';
         card.innerHTML = `
           <div class="payment-card-body">
             <span class="sent-badge"><i class="fa-solid fa-circle-check"></i> 送信済</span>
             <div class="card-info">
-              <div class="card-name">${record.name}</div>
-              <div class="card-month">${record.month || '―'}</div>
-              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:0.65rem"></i> ${emailStr}</div>
+              <div class="card-name">${esc(record.name)}</div>
+              <div class="card-sub">${subStr}</div>
+              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
             </div>
-            <div class="card-amount">
-              <div class="card-amount-value">${amountStr}</div>
+            <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
+          </div>`;
+
+      } else {
+        // 未入金・入金済未送信カード（チェックボックス付き・タップで選択）
+        const borderClass = activeStatus === 'unpaid' ? 'card-unpaid' : 'card-unsent';
+        card.className = `payment-card ${borderClass} selectable ${isChecked ? 'card-selected' : ''}`;
+        card.dataset.rid = record.recordId;
+        card.onclick = () => toggleSelect(record.recordId);
+
+        // 入金済未送信のみ単体送信ボタンを表示する
+        const sendBtn = activeStatus === 'unsent'
+          ? `<button class="send-btn" onclick="event.stopPropagation();openModal(event,'${esc(record.recordId)}')">
+               <i class="fa-solid fa-paper-plane"></i>
+             </button>`
+          : '';
+
+        card.innerHTML = `
+          <div class="payment-card-body">
+            <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
+              <i class="fa-solid fa-check"></i>
             </div>
+            <div class="card-info">
+              <div class="card-name">${esc(record.name)}</div>
+              <div class="card-sub">${subStr}</div>
+              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
+            </div>
+            <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
+            ${sendBtn}
           </div>`;
       }
-      list.appendChild(card);
+      listEl.appendChild(card);
     });
   }
 
-  // ===== モーダルを開く =====
+  // ===== 一括処理モーダルを開く =====
+  function openBulkModal() {
+    if (selectedIds.size === 0) return;
+    const list    = activeStatus === 'unpaid' ? allUnpaid : allUnsent;
+    const targets = list.filter(r => selectedIds.has(r.recordId));
+
+    // 今日の日付（JST）を表示用に生成する
+    const nowJST   = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = `${nowJST.getUTCFullYear()}年${nowJST.getUTCMonth()+1}月${nowJST.getUTCDate()}日`;
+
+    const isUnpaid = activeStatus === 'unpaid';
+    const title    = isUnpaid
+      ? `<i class="fa-solid fa-file-invoice-dollar" style="color:var(--red)"></i> 一括入金登録＋送信`
+      : `<i class="fa-solid fa-paper-plane" style="color:var(--green)"></i> 一括メール送信`;
+    const notice   = isUnpaid
+      ? `<div class="bulk-notice">今日（${todayStr}）付けで入金済に登録し、領収書メールを送信します。</div>`
+      : `<div class="bulk-notice">選択した ${targets.length} 件に領収書メールを送信します。</div>`;
+
+    const recordRows = targets.map(r =>
+      `<div class="bulk-record-item">
+        <span class="bulk-record-name">${esc(r.name)}</span>
+        <span class="bulk-record-sub">${esc(r.month||'―')}</span>
+        <span class="bulk-record-amount">${r.amount!=null?'¥'+r.amount.toLocaleString():'―'}</span>
+       </div>`
+    ).join('');
+
+    document.getElementById('bulkModalContent').innerHTML = `
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">${title}</div>
+        ${notice}
+        <div class="bulk-record-list">${recordRows}</div>
+        <button class="confirm-btn" id="bulkConfirmBtn" onclick="submitBulk()">
+          <i class="fa-solid fa-check"></i> ${targets.length}件を実行する
+        </button>
+        <button class="cancel-btn" id="bulkCancelBtn" onclick="closeBulkModal()">キャンセル</button>
+      </div>`;
+    document.getElementById('bulkModal').classList.remove('hidden');
+  }
+
+  function closeBulkModal() {
+    document.getElementById('bulkModal').classList.add('hidden');
+  }
+
+  // ===== 一括処理を実行する =====
+  async function submitBulk() {
+    const list    = activeStatus === 'unpaid' ? allUnpaid : allUnsent;
+    const targets = list.filter(r => selectedIds.has(r.recordId));
+    if (targets.length === 0) return;
+
+    const isUnpaid = activeStatus === 'unpaid';
+    const records  = targets.map(r => ({ recordId: r.recordId, needsPayment: isUnpaid }));
+
+    const confirmBtn = document.getElementById('bulkConfirmBtn');
+    const cancelBtn  = document.getElementById('bulkCancelBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 処理中... (0/${records.length})`;
+    cancelBtn.style.display = 'none';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/payment/bulk-process`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ records }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '処理に失敗しました');
+
+      const succeeded = data.results.filter(r => r.ok);
+      const failed    = data.results.filter(r => !r.ok);
+      const successIds = new Set(succeeded.map(r => r.recordId));
+
+      // 成功したレコードを送信済リストへ移動する
+      if (isUnpaid) {
+        const moved = allUnpaid.filter(r => successIds.has(r.recordId)).map(r => ({...r, sent:true}));
+        allUnpaid = allUnpaid.filter(r => !successIds.has(r.recordId));
+        allSent   = [...moved, ...allSent];
+      } else {
+        const moved = allUnsent.filter(r => successIds.has(r.recordId)).map(r => ({...r, sent:true}));
+        allUnsent = allUnsent.filter(r => !successIds.has(r.recordId));
+        allSent   = [...moved, ...allSent];
+      }
+      selectedIds.clear();
+      closeBulkModal();
+      renderCards();
+      updateBulkBar();
+
+      if (failed.length === 0) {
+        showToast(`${succeeded.length}件の処理が完了しました`, 'success');
+      } else {
+        showToast(`${succeeded.length}件成功・${failed.length}件失敗`, 'error');
+      }
+
+    } catch (err) {
+      showToast(`エラー: ${err.message}`, 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-check"></i> 再試行`;
+      if (cancelBtn) cancelBtn.style.display = '';
+    }
+  }
+
+  // ===== 単体送信モーダルを開く（入金済未送信用） =====
   function openModal(event, recordId) {
     event.stopPropagation();
     const record = allUnsent.find(r => r.recordId === recordId);
@@ -416,25 +673,22 @@
       ? `送信先: ${record.email}` : '⚠ メールアドレス未登録（送信スキップ）';
     document.getElementById('modalAmount').textContent =
       record.amount != null ? '¥' + record.amount.toLocaleString() : '―';
-
     document.getElementById('confirmBtn').disabled = false;
     document.getElementById('confirmBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> 送信する';
     document.getElementById('modal').classList.remove('hidden');
   }
 
-  // ===== モーダルを閉じる =====
   function closeModal() {
     document.getElementById('modal').classList.add('hidden');
     activeRecord = null;
   }
 
-  // ===== 送信処理を実行する =====
+  // ===== 単体送信を実行する =====
   async function submitSend() {
     if (!activeRecord) return;
     const btn = document.getElementById('confirmBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送信中...';
-
     try {
       const res  = await fetch(`${API_BASE}/api/payment/send-receipt`, {
         method:  'POST',
@@ -444,15 +698,18 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || '送信に失敗しました');
 
-      // 送信成功：未送信リストから除外して送信済リストに移動する
-      const record = { ...activeRecord, sent: true };
+      const moved = { ...activeRecord, sent: true };
       allUnsent = allUnsent.filter(r => r.recordId !== activeRecord.recordId);
-      allSent.unshift(record);
+      allSent.unshift(moved);
+      selectedIds.delete(activeRecord.recordId);
 
       closeModal();
       renderCards();
+      updateBulkBar();
 
-      const msg = data.skipped ? `${record.name}：メール未登録のためスキップしました` : `${record.name}に領収書を送信しました`;
+      const msg = data.skipped
+        ? `${activeRecord.name}：メール未登録のためスキップしました`
+        : `${activeRecord.name}に領収書を送信しました`;
       showToast(msg, 'success');
 
     } catch (err) {
@@ -462,12 +719,12 @@
     }
   }
 
-  // ===== トースト通知を表示する =====
+  // ===== トースト通知 =====
   function showToast(msg, type = '') {
     const el = document.getElementById('toast');
     el.textContent = msg;
     el.className   = `toast ${type} show`;
-    setTimeout(() => { el.className = `toast ${type}`; }, 3000);
+    setTimeout(() => { el.className = `toast ${type}`; }, 3500);
   }
 
   document.addEventListener('DOMContentLoaded', init);
