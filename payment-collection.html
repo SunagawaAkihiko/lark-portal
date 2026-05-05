@@ -160,10 +160,17 @@
       padding: 0.55rem 0.8rem;
       align-items: center;
     }
-    .card-month {
+    .card-compact-info {
       flex: 1; min-width: 0;
-      font-size: 0.95rem; font-weight: 700;
+      display: flex; flex-direction: column; gap: 0.1rem;
+    }
+    .card-compact-name {
+      font-size: 0.9rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-month {
+      font-size: 0.75rem; color: var(--text-muted);
+      white-space: nowrap;
     }
     .card-date-input {
       flex-shrink: 0; width: 130px;
@@ -588,14 +595,17 @@
           : '';
 
         if (activeStatus === 'unpaid') {
-          // 未入金カード：●月分・入金日・請求額のみのコンパクト表示
+          // 未入金カード：利用者名・月分・入金日・請求額のコンパクト表示
           const dateVal = cardDates[record.recordId] || todayDateStr();
           card.innerHTML = `
             <div class="payment-card-body payment-card-body--compact">
               <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
                 <i class="fa-solid fa-check"></i>
               </div>
-              <span class="card-month">${esc(record.month || '―')}</span>
+              <div class="card-compact-info">
+                <span class="card-compact-name">${esc(record.name)}</span>
+                <span class="card-month">${esc(record.month || '―')}</span>
+              </div>
               <input type="date" class="card-date-input"
                 value="${dateVal}"
                 onclick="event.stopPropagation()"
