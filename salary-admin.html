@@ -204,8 +204,10 @@
     }
     /* Chrome/Safari: スクロールバーを非表示（スペースも予約しない） */
     .split-frozen-panel::-webkit-scrollbar { display: none; }
-    /* 境界線divider: flex item として物理的に挟むことで、スクロールやclipの影響を受けない確実な縦線 */
-    .split-divider { width: 2px; flex-shrink: 0; background: #aaa; }
+    /* 境界線: 固定パネルのborder-rightで縦線を描画する（dividerはdisplay:noneで除去） */
+    /* overflow-x:hiddenはchildrenのclipのみ行いborder自体はclipしないため常に表示される */
+    .split-frozen-panel { border-right: 2px solid #aaa; }
+    .split-divider { display: none; }
     /* データパネル: 縦横スクロールを担当するスクロールコンテナ */
     .split-data-panel { flex: 1; min-width: 0; overflow: auto; }
 
@@ -233,18 +235,34 @@
     .salary-table .col-staff { min-width: 82px; background: #f2e8dc; font-weight: 700; text-align: center; }
     /* 合計列 */
     .salary-table .col-total { background: #fdf0e0 !important; font-weight: 700; min-width: 82px; }
-    /* 行ハイライト（区分ごとの背景色） */
-    .salary-table .row-kintai td { background: #f0f5f8; }
-    .salary-table .row-gross  td { background: #eef6e8; font-weight: 700; }
-    .salary-table .row-net    td { background: #fff8e1; font-weight: 700; font-size: 0.88rem; }
-    .salary-table .row-ref    td { background: #f5f5f5; color: var(--muted); font-size: 0.75rem; }
+    /* 区分ラベル列（縦書き・固定パネル内の1列目） */
+    .salary-table .col-sec {
+      writing-mode: vertical-rl;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.72rem;
+      width: 22px;
+      min-width: 22px;
+      padding: 6px 3px;
+    }
+    .salary-table .sec-kintai { background: #7a9db0; color: white; }
+    .salary-table .sec-pay    { background: #c4a882; color: white; }
+    .salary-table .sec-ded    { background: #9b7a5e; color: white; }
+    .salary-table .sec-ref    { background: #888;    color: white; }
+    /* 行ハイライト（col-sec以外のセルに背景色を適用） */
+    .salary-table .row-kintai td:not(.col-sec) { background: #f0f5f8; }
+    .salary-table .row-gross  td:not(.col-sec) { background: #eef6e8; font-weight: 700; }
+    .salary-table .row-net    td:not(.col-sec) { background: #fff8e1; font-weight: 700; font-size: 0.88rem; }
+    .salary-table .row-ref    td:not(.col-sec) { background: #f5f5f5; color: var(--muted); font-size: 0.75rem; }
     /* 全tdに白背景を設定（各行クラスがより高い詳細度で上書きする） */
     .salary-table td { background: white; }
     /* ゼロ値 */
     .salary-table td.zero { color: #ccc; font-weight: normal; }
-    /* データパネルの最左カラムの border-left を非表示にする                              */
-    /* スクロール前は「2px固定パネル境界」+「1px データ1列目 border-left」= 3px に見えるが  */
-    /* スクロール後は 2px のみになりラインが消えたように見えるため、常に 2px に統一する      */
+    /* 固定テーブルの最右列（col-item）は border-right をなくし、パネルの border-right 2px と重ならないようにする */
+    #salary-frozen-table tr > :last-child { border-right: none; }
+    /* 出勤簿固定テーブルも同様 */
+    #kintai-frozen-table tr > :last-child { border-right: none; }
+    /* データパネルの最左カラムの border-left を非表示にする（固定パネルのborder-rightと隣接するため） */
     #salary-data-table tr > :first-child { border-left: none; }
 
     .print-toolbar {
@@ -374,6 +392,8 @@
       padding: 4px 6px; text-align: center; white-space: nowrap;
     }
     .kintai-table tr > :first-child { border-left: 1px solid #ccc; }
+    /* データパネルの最左列はborder-leftなし（固定パネルのborder-rightと隣接するため） */
+    #kintai-data-table tr > :first-child { border-left: none; }
     .kintai-table thead tr:first-child th { border-top: 1px solid #ccc; }
     /* データパネル（overflow:auto）内でヘッダーを縦スクロール時に固定する */
     .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
@@ -874,7 +894,7 @@ function syncRowHeights(frozenTbl, dataTbl) {
 /**
  * 給与一覧表をレンダリングする（2パネル分割方式）
  * 固定パネル（項目名列）とスクロールパネル（スタッフ値列）に分けて描画する
- * 区分列（col-sec）は廃止し、セクション境界を二重線で表現する
+ * 固定パネルに区分列（col-sec）と項目名列（col-item）を持つ2列構成で描画する
  */
 function renderSalaryTable(rows, month) {
   const frozenTbl = document.getElementById('salary-frozen-table');
@@ -942,8 +962,20 @@ function renderSalaryTable(rows, month) {
     { k:'有給残日数', label:'有給残日数',     sec:'ref', fmt:'int' },
   ];
 
-  // ── 固定テーブル（項目名列のみ）ヘッダー ──
+  // ── 区分ラベル定義（col-sec列のrowspan・色・ラベルに使用） ──
+  const secDef = {
+    kintai: { label: '勤怠区分', cls: 'sec-kintai' },
+    pay:    { label: '支　給',   cls: 'sec-pay'    },
+    ded:    { label: '控除・差引', cls: 'sec-ded'  },
+    ref:    { label: '参考',     cls: 'sec-ref'    },
+  };
+  // セクションごとの行数をカウント（rowspan値の算出に使用）
+  const secCounts = {};
+  rowDefs.forEach(r => { secCounts[r.sec] = (secCounts[r.sec] || 0) + 1; });
+
+  // ── 固定テーブル（区分列＋項目名列）ヘッダー ──
   let frozenHtml = '<thead><tr>';
+  frozenHtml += '<th class="col-sec" style="background:#e8d8c4">区分</th>';
   frozenHtml += '<th class="col-item" style="background:#e8d8c4">項　　目</th>';
   frozenHtml += '</tr></thead><tbody>';
 
@@ -954,16 +986,26 @@ function renderSalaryTable(rows, month) {
   dataHtml += '</tr></thead><tbody>';
 
   // ── データ行（両テーブル同時生成）──
+  const secUsed = {};  // セクションごとに初回行かどうかを管理
   rowDefs.forEach(def => {
-    // 行の基本クラス（背景色・強調）— セクション区切り線は廃止
+    // 行の基本クラス（背景色・強調）
     const rowCls = def.hl === 'net'  ? 'row-net'
       : def.hl === 'gross'           ? 'row-gross'
       : def.sec === 'kintai'         ? 'row-kintai'
       : def.sec === 'ref'            ? 'row-ref'
       : '';
 
-    // 固定テーブル: 項目名セルのみ
-    frozenHtml += `<tr class="${rowCls}"><td class="col-item">${def.label}</td></tr>`;
+    // セクション初回行の判定（col-secのrowspanを初回のみ出力するため）
+    const isFirstInSec = !secUsed[def.sec];
+    if (isFirstInSec) secUsed[def.sec] = true;
+
+    // 固定テーブル: 区分セル（初回のみrowspan付き）+ 項目名セル
+    frozenHtml += `<tr class="${rowCls}">`;
+    if (isFirstInSec) {
+      const sd = secDef[def.sec];
+      frozenHtml += `<td class="col-sec ${sd.cls}" rowspan="${secCounts[def.sec]}">${sd.label}</td>`;
+    }
+    frozenHtml += `<td class="col-item">${def.label}</td></tr>`;
 
     // スクロールテーブル: スタッフ値 + 合計
     dataHtml += `<tr class="${rowCls}">`;
@@ -1081,6 +1123,17 @@ async function downloadSalary() {
     .salary-table thead th { position: static !important; top: auto !important; }
     #salary-frozen-panel { overflow: visible !important; }
     #salary-data-panel   { overflow: visible !important; height: auto !important; }
+    /* html2canvasはwriting-mode:vertical-rlを正常描画できないため横書き+折り返しで縦並びを再現 */
+    .salary-table .col-sec {
+      writing-mode: horizontal-tb !important;
+      word-break: break-all !important;
+      white-space: normal !important;
+      width: 1.2em !important;
+      min-width: 1.2em !important;
+      max-width: 1.2em !important;
+      line-height: 1.3 !important;
+      overflow: hidden !important;
+    }
   `;
   document.head.appendChild(tmpStyle);
 
