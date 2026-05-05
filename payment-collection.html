@@ -172,9 +172,13 @@
       font-size: 0.75rem; color: var(--text-muted);
       white-space: nowrap;
     }
-    .card-date-label {
+    /* 入金日ラベルを入力欄の上に縦並びで配置する */
+    .card-date-col {
       flex-shrink: 0;
-      font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem;
+    }
+    .card-date-label {
+      font-size: 0.65rem; color: var(--text-muted); white-space: nowrap;
     }
     .card-date-input {
       flex-shrink: 0; width: 130px;
@@ -610,11 +614,13 @@
                 <span class="card-compact-name">${esc(record.name)}</span>
                 <span class="card-month">${esc(record.month || '―')}</span>
               </div>
-              <span class="card-date-label">入金日</span>
-              <input type="date" class="card-date-input"
-                value="${dateVal}"
-                onclick="event.stopPropagation()"
-                oninput="event.stopPropagation(); updateCardDate('${esc(record.recordId)}', this.value)">
+              <div class="card-date-col">
+                <span class="card-date-label">入金日</span>
+                <input type="date" class="card-date-input"
+                  value="${dateVal}"
+                  onclick="event.stopPropagation()"
+                  oninput="event.stopPropagation(); updateCardDate('${esc(record.recordId)}', this.value)">
+              </div>
               <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
             </div>`;
         } else {
