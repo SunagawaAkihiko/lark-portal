@@ -155,19 +155,21 @@
     .card-sub   { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
     .card-email { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.08rem; }
 
-    /* 未入金カード内の入金日入力行 */
-    .card-date-row {
-      display: flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.35rem;
+    /* 未入金カード：コンパクト1行レイアウト */
+    .payment-card-body--compact {
+      padding: 0.55rem 0.8rem;
+      align-items: center;
     }
-    .card-date-label {
-      font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
+    .card-month {
+      flex: 1; min-width: 0;
+      font-size: 0.95rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .card-date-input {
-      flex: 1; max-width: 145px;
-      padding: 0.22rem 0.35rem;
+      flex-shrink: 0; width: 130px;
+      padding: 0.22rem 0.3rem;
       border: 1.5px solid var(--border-color); border-radius: 6px;
-      font-family: inherit; font-size: 0.78rem; color: var(--text-color);
+      font-family: inherit; font-size: 0.8rem; color: var(--text-color);
       background: white;
     }
 
@@ -585,32 +587,37 @@
              </button>`
           : '';
 
-        // 未入金カードは入金日入力欄を表示する（入金済未送信は不要）
-        const dateRow = activeStatus === 'unpaid' ? (() => {
+        if (activeStatus === 'unpaid') {
+          // 未入金カード：●月分・入金日・請求額のみのコンパクト表示
           const dateVal = cardDates[record.recordId] || todayDateStr();
-          return `<div class="card-date-row">
-            <span class="card-date-label">入金日</span>
-            <input type="date" class="card-date-input"
-              value="${dateVal}"
-              onclick="event.stopPropagation()"
-              oninput="event.stopPropagation(); updateCardDate('${esc(record.recordId)}', this.value)">
-          </div>`;
-        })() : '';
-
-        card.innerHTML = `
-          <div class="payment-card-body">
-            <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
-              <i class="fa-solid fa-check"></i>
-            </div>
-            <div class="card-info">
-              <div class="card-name">${esc(record.name)}</div>
-              <div class="card-sub">${subStr}</div>
-              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
-              ${dateRow}
-            </div>
-            <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
-            ${sendBtn}
-          </div>`;
+          card.innerHTML = `
+            <div class="payment-card-body payment-card-body--compact">
+              <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <span class="card-month">${esc(record.month || '―')}</span>
+              <input type="date" class="card-date-input"
+                value="${dateVal}"
+                onclick="event.stopPropagation()"
+                oninput="event.stopPropagation(); updateCardDate('${esc(record.recordId)}', this.value)">
+              <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
+            </div>`;
+        } else {
+          // 入金済未送信カード：氏名・月・メール・金額・送信ボタン
+          card.innerHTML = `
+            <div class="payment-card-body">
+              <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <div class="card-info">
+                <div class="card-name">${esc(record.name)}</div>
+                <div class="card-sub">${subStr}</div>
+                <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
+              </div>
+              <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
+              ${sendBtn}
+            </div>`;
+        }
       }
       listEl.appendChild(card);
     });
