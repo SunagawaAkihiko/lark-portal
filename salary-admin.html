@@ -29,8 +29,10 @@
       color: var(--text);
       -webkit-font-smoothing: antialiased;
       /* bodyをflexコンテナにして高さを100dvhに固定し、各タブが残りの高さを使えるようにする */
+      /* overflow:clip はhiddenと同様に描画クリップするが、スクロールコンテナを作らないため */
+      /* position:sticky の基準がズレる問題を防ぐ */
       height: 100dvh;
-      overflow: hidden;
+      overflow: clip;
       display: flex;
       flex-direction: column;
     }
@@ -103,7 +105,9 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
-      overflow: hidden;
+      /* overflow:clip はhiddenと同様にクリップするがスクロールコンテナを作らず */
+      /* 内部のposition:sticky が正しいスクロールコンテナ（*-scroll）を基準にできる */
+      overflow: clip;
     }
 
     /* ==================== コントロールバー ==================== */
