@@ -190,26 +190,10 @@
     /* PDF用の印刷ヘッダーは画面では非表示（PDF生成時にインラインで表示） */
     .salary-print-header { display: none; }
 
-    /* ── テーブル分割レイアウト共通（給与一覧表・出勤簿で共有） ── */
-    .split-outer { display: flex; flex: 1; min-height: 0; }
-    /* 固定パネル: overflow-x:hidden で横方向クリップ。overflow-y:scroll はJSでscrollTopを同期するため */
-    /* transform は一切使わないためスタッキングコンテキスト問題が発生しない              */
-    /* ホイール操作はJSでデータパネルに転送するためユーザーはfrozenパネル上でも縦スクロール可能 */
-    .split-frozen-panel {
-      flex-shrink: 0;
-      overflow-x: hidden;
-      overflow-y: scroll;
-      scrollbar-width: none; /* Firefox: スクロールバーを非表示にしてレイアウトに影響しないようにする */
-      background: white;
-    }
-    /* Chrome/Safari: スクロールバーを非表示（スペースも予約しない） */
-    .split-frozen-panel::-webkit-scrollbar { display: none; }
-    /* 境界線: 固定パネルのborder-rightで縦線を描画する（dividerはdisplay:noneで除去） */
-    /* overflow-x:hiddenはchildrenのclipのみ行いborder自体はclipしないため常に表示される */
-    .split-frozen-panel { border-right: 2px solid #aaa; }
-    .split-divider { display: none; }
-    /* データパネル: 縦横スクロールを担当するスクロールコンテナ */
-    .split-data-panel { flex: 1; min-width: 0; overflow: auto; }
+    /* ── テーブルスクロールラッパー（給与一覧表・出勤簿で共有） ── */
+    /* パネル分割方式を廃止し、1枚のテーブル + position:sticky で固定列を実現する。        */
+    /* 2テーブル方式では行高さのサブピクセル蓄積により横罫線がズレる問題が発生したため廃止。 */
+    .table-scroll-wrap { flex: 1; min-height: 0; overflow: auto; }
 
     /* ── 給与一覧テーブル ── */
     /* border-separate でセルボーダーを各セル固有にし、レンダリングの一貫性を保つ */
@@ -221,24 +205,13 @@
       border-right: 1px solid #bbb; border-bottom: 1px solid #bbb;
       padding: 3px 6px; text-align: right; white-space: nowrap;
     }
-    /* tbody/tfootのline-heightを整数pxで固定し、frozen/dataパネル間の行高さ蓄積ズレを防ぐ */
-    .salary-table tbody td, .salary-table tfoot td { line-height: 16px; }
     .salary-table tr > :first-child { border-left: 1px solid #bbb; }
     .salary-table thead tr:first-child th { border-top: 1px solid #bbb; }
-    /* データパネル（overflow:auto）内でヘッダーを縦スクロール時に固定する */
-    /* background を明示的に指定してtbody行が透けないようにする（出勤簿と同じ方式） */
+    /* ヘッダーを縦スクロール時に固定する（background必須：tbody行が透けないようにする） */
     .salary-table thead th { position: sticky; top: 0; z-index: 4; background: #e8d8c4; }
-    /* 固定パネル内の項目名列 */
-    .salary-table .col-item {
-      text-align: left; min-width: 88px; font-weight: 500; background: #f5ede0;
-    }
-    .salary-table th.col-item { background: #e8d8c4; font-weight: 700; }
-    /* スタッフ名ヘッダー */
-    .salary-table .col-staff { min-width: 82px; background: #f2e8dc; font-weight: 700; text-align: center; }
-    /* 合計列 */
-    .salary-table .col-total { background: #fdf0e0 !important; font-weight: 700; min-width: 82px; }
-    /* 区分ラベル列（縦書き・固定パネル内の1列目） */
+    /* 区分ラベル列（縦書き・sticky left:0 で左端に固定する） */
     .salary-table .col-sec {
+      position: sticky; left: 0; z-index: 2; /* 左端固定列 */
       writing-mode: vertical-rl;
       text-align: center;
       font-weight: 700;
@@ -246,11 +219,29 @@
       width: 22px;
       min-width: 22px;
       padding: 6px 3px;
+      /* rowspan廃止で全行に個別配置するため上下罫線を消し、連続した帯として見せる */
+      border-top: none;
+      border-bottom: none;
     }
+    /* セクション最初の行のみ上罫線を表示して前セクションとの区切りを示す */
+    .salary-table .sec-start .col-sec { border-top: 1px solid #bbb; }
     .salary-table .sec-kintai { background: #7a9db0; color: white; }
     .salary-table .sec-pay    { background: #c4a882; color: white; }
     .salary-table .sec-ded    { background: #9b7a5e; color: white; }
     .salary-table .sec-ref    { background: #888;    color: white; }
+    /* 項目名列（sticky left:22px で col-sec の右隣に固定する） */
+    .salary-table .col-item {
+      position: sticky; left: 22px; z-index: 2; /* col-sec(22px)の右隣に固定 */
+      text-align: left; min-width: 88px; font-weight: 500; background: #f5ede0;
+    }
+    .salary-table th.col-item { background: #e8d8c4; font-weight: 700; }
+    /* 固定列ヘッダーは sticky-top と sticky-left を兼ねる角セルとして最高 z-index を設定 */
+    .salary-table thead th.col-sec,
+    .salary-table thead th.col-item { z-index: 6; }
+    /* スタッフ名ヘッダー */
+    .salary-table .col-staff { min-width: 82px; background: #f2e8dc; font-weight: 700; text-align: center; }
+    /* 合計列 */
+    .salary-table .col-total { background: #fdf0e0 !important; font-weight: 700; min-width: 82px; }
     /* 行ハイライト（col-sec以外のセルに背景色を適用） */
     .salary-table .row-kintai td:not(.col-sec) { background: #f0f5f8; }
     .salary-table .row-gross  td:not(.col-sec) { background: #eef6e8; font-weight: 700; }
@@ -260,12 +251,6 @@
     .salary-table td { background: white; }
     /* ゼロ値 */
     .salary-table td.zero { color: #ccc; font-weight: normal; }
-    /* 固定テーブルの最右列（col-item）は border-right をなくし、パネルの border-right 2px と重ならないようにする */
-    #salary-frozen-table tr > :last-child { border-right: none; }
-    /* 出勤簿固定テーブルも同様 */
-    #kintai-frozen-table tr > :last-child { border-right: none; }
-    /* データパネルの最左カラムの border-left を非表示にする（固定パネルのborder-rightと隣接するため） */
-    #salary-data-table tr > :first-child { border-left: none; }
 
     .print-toolbar {
       display: flex;
@@ -393,24 +378,25 @@
       border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;
       padding: 4px 6px; text-align: center; white-space: nowrap;
     }
-    /* tbody/tfootのline-heightを整数pxで固定し、frozen/dataパネル間の行高さ蓄積ズレを防ぐ */
-    .kintai-table tbody td, .kintai-table tfoot td { line-height: 16px; }
     .kintai-table tr > :first-child { border-left: 1px solid #ccc; }
-    /* データパネルの最左列はborder-leftなし（固定パネルのborder-rightと隣接するため） */
-    #kintai-data-table tr > :first-child { border-left: none; }
     .kintai-table thead tr:first-child th { border-top: 1px solid #ccc; }
-    /* データパネル（overflow:auto）内でヘッダーを縦スクロール時に固定する */
+    /* ヘッダーを縦スクロール時に固定する */
     .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
     .kintai-table td { background: white; }
-    /* 固定パネル内の日付列スタイル（left:stickyは不要、パネルが固定する） */
-    .kintai-table td.kintai-date { text-align: left; font-weight: 700; background: white; }
+    /* 日付列を sticky left:0 で左端に固定する（1テーブル sticky 方式） */
+    .kintai-table .kintai-date {
+      position: sticky; left: 0; z-index: 2;
+      text-align: left; font-weight: 700; background: white;
+    }
+    /* 日付列ヘッダーは sticky-top + sticky-left の角セルとして最高 z-index を設定 */
+    .kintai-table thead .kintai-date { z-index: 6; background: #f2e8dc; }
     .kintai-table tr.sat td { background: #eef4fb; }
     .kintai-table tr.sun td { background: #fdf0f0; }
-    .kintai-table tr.sat td.kintai-date { background: #eef4fb; }
-    .kintai-table tr.sun td.kintai-date { background: #fdf0f0; }
-    .kintai-table tr.leave-row td.kintai-date { background: #e8f5e9; }
-    .kintai-table tr.absence-row td.kintai-date { background: #fce4ec; }
+    .kintai-table tr.sat .kintai-date  { background: #eef4fb; }
+    .kintai-table tr.sun .kintai-date  { background: #fdf0f0; }
+    .kintai-table tr.leave-row   .kintai-date { background: #e8f5e9; }
+    .kintai-table tr.absence-row .kintai-date { background: #fce4ec; }
     /* ── 出勤簿 コントロールバー: ラベル・スタッフ選択のモバイル調整 ── */
     @media (max-width: 640px) {
       #tab-kintai .ctrl-bar label { font-size: 0.72rem; white-space: nowrap; }
@@ -560,16 +546,9 @@
       <h2 id="salary-print-title"></h2>
       <p id="salary-print-sub"></p>
     </div>
-    <!-- 分割レイアウト: 固定パネル（項目名列）＋境界線div＋スクロールパネル（スタッフ値列） -->
-    <div class="split-outer">
-      <div class="split-frozen-panel" id="salary-frozen-panel">
-        <table class="salary-table" id="salary-frozen-table"></table>
-      </div>
-      <!-- split-divider: CSSボーダーでなく独立したflex要素として縦線を描画する（スクロール・clip非依存） -->
-      <div class="split-divider"></div>
-      <div class="split-data-panel" id="salary-data-panel">
-        <table class="salary-table" id="salary-data-table"></table>
-      </div>
+    <!-- 1テーブル sticky 方式: col-sec・col-item 列を position:sticky で左固定する -->
+    <div class="table-scroll-wrap">
+      <table class="salary-table" id="salary-table"></table>
     </div>
   </div>
 </section>
@@ -682,16 +661,9 @@
       <h2 id="kintai-print-title"></h2>
       <p id="kintai-print-sub"></p>
     </div>
-    <!-- 分割レイアウト: 固定パネル（日付列）＋境界線div＋スクロールパネル（勤怠データ列） -->
-    <div class="split-outer">
-      <div class="split-frozen-panel" id="kintai-frozen-panel">
-        <table class="kintai-table" id="kintai-frozen-table"></table>
-      </div>
-      <!-- split-divider: CSSボーダーでなく独立したflex要素として縦線を描画する（スクロール・clip非依存） -->
-      <div class="split-divider"></div>
-      <div class="split-data-panel" id="kintai-data-panel">
-        <table class="kintai-table" id="kintai-data-table"></table>
-      </div>
+    <!-- 1テーブル sticky 方式: 日付列を position:sticky で左固定する -->
+    <div class="table-scroll-wrap">
+      <table class="kintai-table" id="kintai-table"></table>
     </div>
   </div>
 </section>
@@ -853,62 +825,12 @@ async function loadSalary() {
 }
 
 // ============================================================
-// 固定パネルの縦スクロール同期設定
-// データパネル（split-data-panel）がスクロールするたびに
-// frozenPanelEl の scrollTop を同じ値に設定して行の位置を揃える。
-// transform は使わないためスタッキングコンテキスト問題が発生せず
-// ボーダーラインが消えない。frozen パネルの thead sticky は CSS で完結する。
+// 給与一覧表レンダリング（1テーブル sticky 列方式）
+// col-sec・col-item 列を CSS sticky で左固定し、1枚のテーブルで描画する。
+// 2テーブル分割方式を廃止することで横罫線ズレ問題を根本的に解消する。
 // ============================================================
-function setupFrozenPanelSync(dataPanelEl, frozenPanelEl) {
-  if (!dataPanelEl || !frozenPanelEl) return;
-  // データパネルのスクロール → frozen パネル scrollTop を同期
-  dataPanelEl.addEventListener('scroll', () => {
-    frozenPanelEl.scrollTop = dataPanelEl.scrollTop;
-  }, { passive: true });
-  // frozen パネル上のマウスホイール → データパネルに転送（frozen パネルの独立スクロール防止）
-  frozenPanelEl.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    dataPanelEl.scrollTop += e.deltaY;
-    dataPanelEl.scrollLeft += e.deltaX;
-  }, { passive: false });
-}
-
-// ============================================================
-// 2分割テーブルの行高さ同期
-// frozenTbl と dataTbl の対応する全行を同じ高さに揃える
-// ============================================================
-function syncRowHeights(frozenTbl, dataTbl) {
-  // 一旦高さ指定をリセットしてから、次フレームで実際のレンダリング高さを計測して揃える
-  // requestAnimationFrameを使うことでinnerHTML設定後のブラウザ再レンダリングを待ち
-  // 正確な高さを取得できる（同期実行だと再レンダリング前の古い値になる）
-  [...frozenTbl.querySelectorAll('tr'), ...dataTbl.querySelectorAll('tr')]
-    .forEach(r => r.style.height = '');
-  requestAnimationFrame(() => {
-    const frozenRows = [...frozenTbl.querySelectorAll('tr')];
-    const dataRows   = [...dataTbl.querySelectorAll('tr')];
-    const len = Math.max(frozenRows.length, dataRows.length);
-    for (let i = 0; i < len; i++) {
-      const fa = frozenRows[i], da = dataRows[i];
-      if (fa && da) {
-        const h = Math.ceil(Math.max(
-          fa.getBoundingClientRect().height,
-          da.getBoundingClientRect().height
-        ));
-        fa.style.height = h + 'px';
-        da.style.height = h + 'px';
-      }
-    }
-  });
-}
-
-/**
- * 給与一覧表をレンダリングする（2パネル分割方式）
- * 固定パネル（項目名列）とスクロールパネル（スタッフ値列）に分けて描画する
- * 固定パネルに区分列（col-sec）と項目名列（col-item）を持つ2列構成で描画する
- */
 function renderSalaryTable(rows, month) {
-  const frozenTbl = document.getElementById('salary-frozen-table');
-  const dataTbl   = document.getElementById('salary-data-table');
+  const tbl = document.getElementById('salary-table');
 
   // ── 行（項目）定義 ─ PDF順序に準拠 ──────────────────────────
   const rowDefs = [
@@ -972,53 +894,44 @@ function renderSalaryTable(rows, month) {
     { k:'有給残日数', label:'有給残日数',     sec:'ref', fmt:'int' },
   ];
 
-  // ── 区分ラベル定義（col-sec列のrowspan・色・ラベルに使用） ──
+  // ── 区分ラベル定義（col-sec 列の色・ラベルに使用） ──
   const secDef = {
     kintai: { label: '勤怠区分', cls: 'sec-kintai' },
     pay:    { label: '支　給',   cls: 'sec-pay'    },
     ded:    { label: '控除・差引', cls: 'sec-ded'  },
     ref:    { label: '参考',     cls: 'sec-ref'    },
   };
-  // セクションごとの行数をカウント（rowspan値の算出に使用）
-  const secCounts = {};
-  rowDefs.forEach(r => { secCounts[r.sec] = (secCounts[r.sec] || 0) + 1; });
 
-  // ── 固定テーブル（区分列＋項目名列）ヘッダー ──
-  let frozenHtml = '<thead><tr>';
-  frozenHtml += '<th class="col-sec" style="background:#e8d8c4">区分</th>';
-  frozenHtml += '<th class="col-item" style="background:#e8d8c4">項　　目</th>';
-  frozenHtml += '</tr></thead><tbody>';
+  // ── ヘッダー行（区分・項目・スタッフ全員・合計） ──
+  let html = '<thead><tr>';
+  html += '<th class="col-sec">区分</th>';
+  html += '<th class="col-item">項　　目</th>';
+  rows.forEach(row => { html += `<th class="col-staff">${row.staffName}</th>`; });
+  html += '<th class="col-total">合　計</th>';
+  html += '</tr></thead><tbody>';
 
-  // ── スクロールテーブル（スタッフ値 + 合計列）ヘッダー ──
-  let dataHtml = '<thead><tr>';
-  rows.forEach(row => { dataHtml += `<th class="col-staff">${row.staffName}</th>`; });
-  dataHtml += '<th class="col-total" style="background:#e8d8c4">合　計</th>';
-  dataHtml += '</tr></thead><tbody>';
-
-  // ── データ行（両テーブル同時生成）──
-  const secUsed = {};  // セクションごとに初回行かどうかを管理
+  // ── データ行（全カラムを1行にまとめて生成） ──
+  const secUsed = {};  // セクションごとの初回行フラグ
   rowDefs.forEach(def => {
-    // 行の基本クラス（背景色・強調）
+    // 行の背景色・強調クラス
     const rowCls = def.hl === 'net'  ? 'row-net'
       : def.hl === 'gross'           ? 'row-gross'
       : def.sec === 'kintai'         ? 'row-kintai'
       : def.sec === 'ref'            ? 'row-ref'
       : '';
 
-    // セクション初回行の判定（col-secのrowspanを初回のみ出力するため）
+    // セクション最初の行に sec-start クラスを付与（CSS で上罫線を表示するため）
     const isFirstInSec = !secUsed[def.sec];
     if (isFirstInSec) secUsed[def.sec] = true;
+    const trCls = [rowCls, isFirstInSec ? 'sec-start' : ''].filter(Boolean).join(' ');
 
-    // 固定テーブル: 区分セル（初回のみrowspan付き）+ 項目名セル
-    frozenHtml += `<tr class="${rowCls}">`;
-    if (isFirstInSec) {
-      const sd = secDef[def.sec];
-      frozenHtml += `<td class="col-sec ${sd.cls}" rowspan="${secCounts[def.sec]}">${sd.label}</td>`;
-    }
-    frozenHtml += `<td class="col-item">${def.label}</td></tr>`;
+    const sd = secDef[def.sec];
+    html += `<tr class="${trCls}">`;
+    // col-sec: 全行に配置してstickyで左固定。セクション先頭行のみラベルを表示し、以降は空欄にして帯として見せる
+    html += `<td class="col-sec ${sd.cls}">${isFirstInSec ? sd.label : ''}</td>`;
+    html += `<td class="col-item">${def.label}</td>`;
 
-    // スクロールテーブル: スタッフ値 + 合計
-    dataHtml += `<tr class="${rowCls}">`;
+    // スタッフ値列
     let total = 0;
     rows.forEach(row => {
       let val;
@@ -1030,29 +943,24 @@ function renderSalaryTable(rows, month) {
         val = row[def.k] ?? 0;
       }
       if (def.fmt === 'str') {
-        dataHtml += `<td style="text-align:center">${val || ''}</td>`;
+        html += `<td style="text-align:center">${val || ''}</td>`;
       } else {
         const n = Number(val);
         total += n;
-        dataHtml += `<td class="${n === 0 ? 'zero' : ''}">${n ? fmtNum(n) : ''}</td>`;
+        html += `<td class="${n === 0 ? 'zero' : ''}">${n ? fmtNum(n) : ''}</td>`;
       }
     });
-    // 合計列（文字列・勤怠数値・null・参考欄は合計なし）
+    // 合計列（文字列・勤怠数値・null・参考欄は合計不要）
     const noTotal = def.fmt === 'str' || def.k === null
       || (def.k && def.k.startsWith('kintai.')) || def.sec === 'ref';
-    dataHtml += noTotal
+    html += noTotal
       ? '<td class="col-total"></td>'
       : `<td class="col-total ${total === 0 ? 'zero' : ''}">${total ? fmtNum(total) : ''}</td>`;
-    dataHtml += '</tr>';
+    html += '</tr>';
   });
 
-  frozenHtml += '</tbody>';
-  dataHtml   += '</tbody>';
-  frozenTbl.innerHTML = frozenHtml;
-  dataTbl.innerHTML   = dataHtml;
-
-  // 対応行の高さを揃えてレイアウトのずれを防ぐ
-  syncRowHeights(frozenTbl, dataTbl);
+  html += '</tbody>';
+  tbl.innerHTML = html;
 }
 
 // ============================================================
@@ -1117,23 +1025,15 @@ async function downloadSalary() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-  // PDF用: overflow 制約を解除してすべての行をキャプチャ可能にする
-  const frozenPanel = document.getElementById('salary-frozen-panel');
-  const dataPanel   = document.getElementById('salary-data-panel');
-  const savedFrozenOv = frozenPanel?.style.overflow || '';
-  const savedDataOv   = dataPanel?.style.overflow   || '';
-  const savedDataH    = dataPanel?.style.height     || '';
-  if (frozenPanel) frozenPanel.style.overflow = 'visible';
-  if (dataPanel)   { dataPanel.style.overflow = 'visible'; dataPanel.style.height = 'auto'; }
-
-  // position:sticky の thead はキャプチャ時に重複描画されるため static にリセットする
+  // position:sticky の thead/col-sec はキャプチャ時に重複描画されるため static にリセットする
+  // また html2canvas は writing-mode:vertical-rl を正常描画できないため横書き+折り返しで代替する
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
     .salary-table thead th { position: static !important; top: auto !important; }
-    #salary-frozen-panel { overflow: visible !important; }
-    #salary-data-panel   { overflow: visible !important; height: auto !important; }
-    /* html2canvasはwriting-mode:vertical-rlを正常描画できないため横書き+折り返しで縦並びを再現 */
+    .salary-table .col-sec, .salary-table .col-item { position: static !important; left: auto !important; }
+    .table-scroll-wrap { overflow: visible !important; }
+    /* writing-mode:vertical-rlをhtml2canvas用に横書き+折り返しで代替する */
     .salary-table .col-sec {
       writing-mode: horizontal-tb !important;
       word-break: break-all !important;
@@ -1188,9 +1088,6 @@ async function downloadSalary() {
     scroll.style.width        = saved.sW;
     scroll.style.overflow     = saved.sOv;
     scroll.style.maxHeight    = saved.sMxH;
-    // 分割パネルの overflow を元に戻す
-    if (frozenPanel) frozenPanel.style.overflow = savedFrozenOv;
-    if (dataPanel)   { dataPanel.style.overflow = savedDataOv; dataPanel.style.height = savedDataH; }
     document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
@@ -1314,11 +1211,13 @@ async function loadKintai() {
   }
 }
 
+// ============================================================
+// 出勤簿テーブルレンダリング（1テーブル sticky 列方式）
+// 日付列を CSS sticky left:0 で固定し、1枚のテーブルで描画する。
+// ============================================================
 function renderKintaiTable(records, month, staffName) {
-  const frozenTbl = document.getElementById('kintai-frozen-table');
-  const dataTbl   = document.getElementById('kintai-data-table');
-  frozenTbl.innerHTML = '';
-  dataTbl.innerHTML   = '';
+  const tbl = document.getElementById('kintai-table');
+  tbl.innerHTML = '';
   const [y, m] = month.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   const dayOfWeek   = ['日','月','火','水','木','金','土'];
@@ -1346,14 +1245,12 @@ function renderKintaiTable(records, month, staffName) {
   };
 
   if (staffName) {
-    // ── 1人の日別一覧（2パネル分割）──
+    // ── 1人の日別一覧（1テーブル：日付列 + 勤怠列を同一行に並べる） ──
     const byDate = {};
     records.forEach(r => { byDate[r.date] = r; });
 
-    // 固定パネル（日付列）
-    let fHtml = '<thead><tr><th>日付</th></tr></thead><tbody>';
-    // スクロールパネル（勤怠データ列）
-    let dHtml = `<thead><tr>
+    let html = `<thead><tr>
+      <th class="kintai-date">日付</th>
       <th>出勤</th><th>退勤</th><th>実働時間</th><th>残業</th><th>遅刻</th><th>早退</th>
     </tr></thead><tbody>`;
 
@@ -1366,14 +1263,15 @@ function renderKintaiTable(records, month, staffName) {
       if (rec?.leaveType === '有休') rowCls += ' leave-row';
       else if (rec?.leaveType === '欠勤') rowCls += ' absence-row';
 
-      // 固定パネル: 日付セルのみ
-      fHtml += `<tr class="${rowCls}"><td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td></tr>`;
-
-      // スクロールパネル: 勤怠データ
+      // 日付列（sticky left:0）とデータ列を同一の <tr> に並べる
       if (rec?.leaveType) {
-        dHtml += `<tr class="${rowCls}"><td colspan="6" style="text-align:center">${leaveBadge(rec.leaveType)}</td></tr>`;
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
+          <td colspan="6" style="text-align:center">${leaveBadge(rec.leaveType)}</td>
+        </tr>`;
       } else {
-        dHtml += `<tr class="${rowCls}">
+        html += `<tr class="${rowCls}">
+          <td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>
           <td class="col-attend">${rec?.attendTime || ''}</td>
           <td class="col-leave">${rec?.leaveTime   || ''}</td>
           <td>${rec?.workingHours || ''}</td>
@@ -1385,25 +1283,25 @@ function renderKintaiTable(records, month, staffName) {
     }
 
     // 集計行
-    const workRecs      = records.filter(r => !r.leaveType);
-    const dayDays       = workRecs.filter(r => (r.dayCount   || 0) > 0).length;
-    const nightDays     = workRecs.filter(r => (r.nightCount || 0) > 0).length;
-    const workDays      = dayDays + nightDays;
-    const yuukyuDays    = records.filter(r => r.leaveType === '有休').length;
-    const kekkinDays    = records.filter(r => r.leaveType === '欠勤').length;
-    const workMinTotal  = workRecs.reduce((s, r) => s + hhmmToMin(r.workingHours), 0);
+    const workRecs       = records.filter(r => !r.leaveType);
+    const dayDays        = workRecs.filter(r => (r.dayCount   || 0) > 0).length;
+    const nightDays      = workRecs.filter(r => (r.nightCount || 0) > 0).length;
+    const workDays       = dayDays + nightDays;
+    const yuukyuDays     = records.filter(r => r.leaveType === '有休').length;
+    const kekkinDays     = records.filter(r => r.leaveType === '欠勤').length;
+    const workMinTotal   = workRecs.reduce((s, r) => s + hhmmToMin(r.workingHours), 0);
     const overtimeHTotal = workRecs.reduce((s, r) => s + (r.overtime || 0), 0);
-    const lateMinTotal  = records.reduce((s, r) => s + (r.lateMin  || 0), 0);
-    const earlyMinTotal = records.reduce((s, r) => s + (r.earlyMin || 0), 0);
-    let summaryParts = [];
+    const lateMinTotal   = records.reduce((s, r) => s + (r.lateMin  || 0), 0);
+    const earlyMinTotal  = records.reduce((s, r) => s + (r.earlyMin || 0), 0);
+    const summaryParts = [];
     if (dayDays > 0)   summaryParts.push(`日勤 ${dayDays}日`);
     if (nightDays > 0) summaryParts.push(`夜勤 ${nightDays}日`);
     summaryParts.push(`計 ${workDays}日`);
     if (yuukyuDays > 0) summaryParts.push(`有休 ${yuukyuDays}日`);
     if (kekkinDays > 0) summaryParts.push(`欠勤 ${kekkinDays}日`);
 
-    fHtml += `</tbody><tfoot><tr class="summary-row"><td style="text-align:left">合計</td></tr></tfoot>`;
-    dHtml += `</tbody><tfoot><tr class="summary-row">
+    html += `</tbody><tfoot><tr class="summary-row">
+      <td class="kintai-date" style="text-align:left">合計</td>
       <td colspan="2" style="text-align:left">${summaryParts.join(' / ')}</td>
       <td>${workMinTotal > 0 ? minToHhmm(workMinTotal) : ''}</td>
       <td>${overtimeHTotal > 0 ? hoursToHhmm(overtimeHTotal) : ''}</td>
@@ -1411,16 +1309,13 @@ function renderKintaiTable(records, month, staffName) {
       <td>${earlyMinTotal > 0 ? earlyMinTotal+'分' : ''}</td>
     </tr></tfoot>`;
 
-    frozenTbl.innerHTML = fHtml;
-    dataTbl.innerHTML   = dHtml;
-    syncRowHeights(frozenTbl, dataTbl);
+    tbl.innerHTML = html;
 
   } else {
-    // ── 全員マトリクス（2パネル分割）──
+    // ── 全員マトリクス（1テーブル：日付列 + スタッフ列を同一行に並べる） ──
     const names = [...new Set(records.map(r => r.staffName).filter(Boolean))].sort();
     if (names.length === 0) {
-      frozenTbl.innerHTML = '<tr><td>データがありません。</td></tr>';
-      dataTbl.innerHTML   = '';
+      tbl.innerHTML = '<tr><td>データがありません。</td></tr>';
       return;
     }
     const matrix = {};
@@ -1440,51 +1335,42 @@ function renderKintaiTable(records, month, staffName) {
       }
     });
 
-    // 固定パネル（日付列）
-    let fHtml = '<thead><tr><th>日付</th></tr></thead><tbody>';
-    // スクロールパネル（スタッフ列）
-    let dHtml = '<thead><tr>';
-    names.forEach(n => { dHtml += `<th>${n}</th>`; });
-    dHtml += '</tr></thead><tbody>';
+    let html = '<thead><tr><th class="kintai-date">日付</th>';
+    names.forEach(n => { html += `<th>${n}</th>`; });
+    html += '</tr></thead><tbody>';
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${month}-${String(d).padStart(2,'0')}`;
       const dow     = new Date(dateStr).getDay();
       const rowCls  = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
 
-      fHtml += `<tr class="${rowCls}"><td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td></tr>`;
-
-      dHtml += `<tr class="${rowCls}">`;
+      html += `<tr class="${rowCls}"><td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>`;
       names.forEach(n => {
         const rec     = matrix[dateStr]?.[n];
         const openId  = rec?.openId || nameToOpenId[n] || '';
         const payload = `'${openId}','${n}','${dateStr}','${rec?.attendTime||''}','${rec?.leaveTime||''}','${rec?.leaveType||''}'`;
         if (rec?.leaveType) {
-          dHtml += `<td style="text-align:center;cursor:pointer" onclick="openKintaiEdit(${payload})">${leaveBadge(rec.leaveType)}</td>`;
+          html += `<td style="text-align:center;cursor:pointer" onclick="openKintaiEdit(${payload})">${leaveBadge(rec.leaveType)}</td>`;
         } else if (rec) {
-          dHtml += `<td style="font-size:0.72rem;cursor:pointer" onclick="openKintaiEdit(${payload})">
+          html += `<td style="font-size:0.72rem;cursor:pointer" onclick="openKintaiEdit(${payload})">
             <span class="col-attend">${rec.attendTime}</span>〜<span class="col-leave">${rec.leaveTime||'?'}</span>
           </td>`;
         } else {
-          dHtml += `<td style="cursor:pointer" onclick="openKintaiEdit(${payload})"></td>`;
+          html += `<td style="cursor:pointer" onclick="openKintaiEdit(${payload})"></td>`;
         }
       });
-      dHtml += '</tr>';
+      html += '</tr>';
     }
 
-    // 集計行（合計行はスタッフ列の高さが高くなる可能性があるためsyncRowHeightsで調整）
-    fHtml += '</tbody><tfoot><tr class="summary-row"><td style="text-align:left">合計</td></tr></tfoot>';
-    dHtml += '</tbody><tfoot><tr class="summary-row">';
+    html += '</tbody><tfoot><tr class="summary-row"><td class="kintai-date" style="text-align:left">合計</td>';
     names.forEach(n => {
       const s = colSummary[n];
       const total = s.day + s.night;
-      dHtml += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>計${total}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
+      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>計${total}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
     });
-    dHtml += '</tr></tfoot>';
+    html += '</tr></tfoot>';
 
-    frozenTbl.innerHTML = fHtml;
-    dataTbl.innerHTML   = dHtml;
-    syncRowHeights(frozenTbl, dataTbl);
+    tbl.innerHTML = html;
   }
 }
 
@@ -1574,22 +1460,13 @@ async function downloadKintai() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-  // PDF用: overflow 制約を解除してすべての行をキャプチャ可能にする
-  const frozenPanel = document.getElementById('kintai-frozen-panel');
-  const dataPanel   = document.getElementById('kintai-data-panel');
-  const savedFrozenOv = frozenPanel?.style.overflow || '';
-  const savedDataOv   = dataPanel?.style.overflow   || '';
-  const savedDataH    = dataPanel?.style.height     || '';
-  if (frozenPanel) frozenPanel.style.overflow = 'visible';
-  if (dataPanel)   { dataPanel.style.overflow = 'visible'; dataPanel.style.height = 'auto'; }
-
-  // position:sticky のヘッダー行はキャプチャ時に重複描画されるため static にリセットする
+  // position:sticky の thead・kintai-date 列はキャプチャ時に重複描画されるため static にリセットする
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
     .kintai-table thead th { position: static !important; top: auto !important; }
-    #kintai-frozen-panel { overflow: visible !important; }
-    #kintai-data-panel   { overflow: visible !important; height: auto !important; }
+    .kintai-table .kintai-date { position: static !important; left: auto !important; }
+    .table-scroll-wrap { overflow: visible !important; }
   `;
   document.head.appendChild(tmpStyle);
 
@@ -1630,8 +1507,6 @@ async function downloadKintai() {
     scroll.style.width        = saved.sW;
     scroll.style.overflow     = saved.sOv;
     scroll.style.maxHeight    = saved.sMxH;
-    if (frozenPanel) frozenPanel.style.overflow = savedFrozenOv;
-    if (dataPanel)   { dataPanel.style.overflow = savedDataOv; dataPanel.style.height = savedDataH; }
     document.getElementById('pdf-sticky-reset')?.remove();
     if (header) header.style.display = '';
     btn.disabled = false;
@@ -1955,16 +1830,6 @@ function equalizeCtrlBars() {
 
 document.addEventListener('DOMContentLoaded', () => {
   equalizeCtrlBars();
-
-  // テーブル要素でなくパネル要素を渡す（scrollTop同期方式のため）
-  setupFrozenPanelSync(
-    document.getElementById('salary-data-panel'),
-    document.getElementById('salary-frozen-panel')
-  );
-  setupFrozenPanelSync(
-    document.getElementById('kintai-data-panel'),
-    document.getElementById('kintai-frozen-panel')
-  );
 });
 </script>
 </body>
