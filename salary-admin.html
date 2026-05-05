@@ -397,6 +397,22 @@
       background: none; border: 1px solid #ccc; border-radius: 4px;
       color: #888; font-size: 0.75rem; padding: 1px 5px; cursor: pointer; line-height: 1.4;
     }
+    /* 本人確認ステータスバー */
+    .confirm-bar-confirmed {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; background: #e8f5e9; border-radius: 6px;
+      border: 1px solid #a5d6a7; color: #2e7d32;
+      font-size: 0.8rem; font-weight: 700;
+    }
+    .confirm-bar-confirmed .confirm-bar-date {
+      font-weight: 400; color: #388e3c; margin-left: 4px;
+    }
+    .confirm-bar-unconfirmed {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; background: #fff8e1; border-radius: 6px;
+      border: 1px solid #ffe082; color: #e65100;
+      font-size: 0.8rem; font-weight: 700;
+    }
     .kintai-edit-btn:hover { background: #f0e8dc; border-color: #a0896c; color: #5a3e2b; }
     /* 出勤簿編集モーダル内の削除ボタン */
     .modal-btns .btn-delete { background: #fce4ec; color: #c62828; flex: none; padding: 0.55rem 1rem; }
@@ -655,6 +671,8 @@
       <h2 id="kintai-print-title"></h2>
       <p id="kintai-print-sub"></p>
     </div>
+    <!-- 個別スタッフ表示時の本人確認ステータスバー（全員マトリクス時は非表示） -->
+    <div id="kintai-confirm-bar" style="display:none; padding:6px 8px 2px;"></div>
     <!-- 1テーブル sticky 方式: 日付列を position:sticky で左固定する -->
     <div class="table-scroll-wrap">
       <table class="kintai-table" id="kintai-table"></table>
@@ -1225,6 +1243,9 @@ function renderKintaiTable(records, month, staffName) {
 
   if (staffName) {
     // ── 1人の日別一覧（1テーブル：日付列 + 勤怠列を同一行に並べる） ──
+    // 個別表示時は本人確認バーを非表示にする（確認状態は全員表示のヘッダー行にのみ表示）
+    document.getElementById('kintai-confirm-bar').style.display = 'none';
+
     const byDate = {};
     records.forEach(r => { byDate[r.date] = r; });
     // openId は records 内の任意レコードから取得する（日付レコードがない日の編集でも使用）
@@ -1300,6 +1321,8 @@ function renderKintaiTable(records, month, staffName) {
 
   } else {
     // ── 全員マトリクス（1テーブル：日付列 + スタッフ列を同一行に並べる） ──
+    // 全員表示時は confirm-bar エリア自体は非表示（確認状態はtheadの行内に表示）
+    document.getElementById('kintai-confirm-bar').style.display = 'none';
     const names = [...new Set(records.map(r => r.staffName).filter(Boolean))].sort();
     if (names.length === 0) {
       tbl.innerHTML = '<tr><td>データがありません。</td></tr>';
@@ -1325,9 +1348,52 @@ function renderKintaiTable(records, month, staffName) {
       }
     });
 
-    let html = '<thead><tr><th class="kintai-date">日付</th>';
+    // thead を2行構成にする:
+    //   1行目: 本人確認ステータス行（id="confirm-th-{index}" で後から非同期更新）
+    //   2行目: スタッフ氏名行
+    let html = '<thead>';
+    // 確認状態行（初期は「…」。非同期で取得後に更新する）
+    html += '<tr><th class="kintai-date" style="font-size:0.7rem;font-weight:400;color:#888">本人確認</th>';
+    names.forEach((n, i) => { html += `<th id="kintai-confirm-th-${i}" style="font-size:0.7rem;font-weight:400;color:#aaa">…</th>`; });
+    html += '</tr>';
+    // スタッフ氏名行
+    html += '<tr><th class="kintai-date">日付</th>';
     names.forEach(n => { html += `<th>${n}</th>`; });
     html += '</tr></thead><tbody>';
+
+    // 確認状態を一括取得してヘッダーセルを更新する（非同期）
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/attendance/confirm-all?yearMonth=${month}`);
+        const j   = await res.json();
+        // openId → 確認情報のマップを作る
+        const confirmMap = {};
+        (j.list || []).forEach(item => { confirmMap[item.openId] = item; });
+
+        names.forEach((n, i) => {
+          const openId = nameToOpenId[n];
+          const th     = document.getElementById(`kintai-confirm-th-${i}`);
+          if (!th) return;
+          const info = openId ? confirmMap[openId] : null;
+          if (info) {
+            // 確認済み: 緑チェックアイコン + 確認完了テキスト
+            th.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#2e7d32"></i><br>確認済';
+            th.style.color = '#2e7d32';
+            th.title = `確認日時: ${new Date(info.confirmedAt).toLocaleString('ja-JP')}`;
+          } else {
+            // 未確認: グレーテキスト
+            th.innerHTML = '未確認';
+            th.style.color = '#bbb';
+          }
+        });
+      } catch(e) {
+        // 取得失敗時は全員「未確認」表示のままにする
+        names.forEach((n, i) => {
+          const th = document.getElementById(`kintai-confirm-th-${i}`);
+          if (th) { th.textContent = '未確認'; th.style.color = '#bbb'; }
+        });
+      }
+    })();
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${month}-${String(d).padStart(2,'0')}`;
