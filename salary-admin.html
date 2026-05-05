@@ -326,6 +326,14 @@
     .leave-badge { display:inline-block; padding:1px 6px; border-radius:4px; font-size:0.78rem; font-weight:700; }
     .leave-badge.yuukyu { background:#c8e6c9; color:#2e7d32; }
     .leave-badge.kekkin  { background:#ffcdd2; color:#c62828; }
+    /* 出勤簿行編集ボタン */
+    .kintai-edit-btn {
+      background: none; border: 1px solid #ccc; border-radius: 4px;
+      color: #888; font-size: 0.75rem; padding: 1px 5px; cursor: pointer; line-height: 1.4;
+    }
+    .kintai-edit-btn:hover { background: #f0e8dc; border-color: #a0896c; color: #5a3e2b; }
+    /* 出勤簿編集モーダル内の削除ボタン */
+    .modal-btns .btn-delete { background: #fce4ec; color: #c62828; flex: none; padding: 0.55rem 1rem; }
     /* ==================== ▼ タブ4: 設定 ==================== */
     /* flex: 1 + min-height: 0 + overflow-y: auto で縦スクロールを発生させる */
     .settings-wrap { padding: 1rem; max-width: 700px; margin: 0 auto; overflow-y: auto; flex: 1; min-height: 0; }
@@ -498,6 +506,35 @@
     <div class="modal-btns">
       <button class="btn-ok" onclick="submitGrant()">付与する</button>
       <button class="btn-cancel" onclick="closeGrantModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- 出勤簿編集モーダル -->
+<div class="modal-overlay hidden" id="kintai-edit-modal">
+  <div class="modal-box">
+    <h3 id="kintai-edit-title">出勤簿 編集</h3>
+    <div class="modal-field">
+      <label>出勤時刻</label>
+      <input type="time" id="edit-attend-time">
+    </div>
+    <div class="modal-field">
+      <label>退勤時刻</label>
+      <input type="time" id="edit-leave-time">
+    </div>
+    <div class="modal-field">
+      <label>種別</label>
+      <select id="edit-leave-type">
+        <option value="">通常出勤</option>
+        <option value="有休">有休</option>
+        <option value="欠勤">欠勤</option>
+      </select>
+    </div>
+    <div id="kintai-edit-status" class="status-area" style="padding:0.3rem 0;font-size:0.82rem;text-align:left;"></div>
+    <div class="modal-btns">
+      <button class="btn-ok" onclick="saveKintaiEdit()"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
+      <button class="btn-delete" onclick="deleteKintaiDay()"><i class="fa-solid fa-trash"></i> 削除</button>
+      <button class="btn-cancel" onclick="closeKintaiEditModal()">キャンセル</button>
     </div>
   </div>
 </div>
@@ -1122,7 +1159,7 @@ function renderKintaiTable(records, month, staffName) {
 
     let html = `<thead><tr>
       <th>日付</th><th>出勤</th><th>退勤</th>
-      <th>実働時間</th><th>残業</th><th>遅刻</th><th>早退</th>
+      <th>実働時間</th><th>残業</th><th>遅刻</th><th>早退</th><th></th>
     </tr></thead><tbody>`;
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -1192,6 +1229,9 @@ function renderKintaiTable(records, month, staffName) {
       if (!matrix[r.date]) matrix[r.date] = {};
       matrix[r.date][r.staffName] = r;
     });
+    // スタッフ名→openId マップ（編集ボタン用・打刻のないスタッフも含め有休レコードから補完）
+    const nameToOpenId = {};
+    records.forEach(r => { if (r.openId && r.staffName) nameToOpenId[r.staffName] = r.openId; });
     // スタッフごとの日勤・夜勤・実働時間を集計する（workingHours文字列から計算して表示値と一致させる）
     const colSummary = {};
     names.forEach(n => { colSummary[n] = { day: 0, night: 0, workMin: 0 }; });
@@ -1211,15 +1251,18 @@ function renderKintaiTable(records, month, staffName) {
       const rowCls  = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
       html += `<tr class="${rowCls}"><td class="kintai-date">${d}日 (${dayOfWeek[dow]})</td>`;
       names.forEach(n => {
-        const rec = matrix[dateStr]?.[n];
+        const rec     = matrix[dateStr]?.[n];
+        const openId  = rec?.openId || nameToOpenId[n] || '';
+        // セルクリックで編集モーダルを開く（onclick引数はシングルクォートで囲む）
+        const payload = `'${openId}','${n}','${dateStr}','${rec?.attendTime||''}','${rec?.leaveTime||''}','${rec?.leaveType||''}'`;
         if (rec?.leaveType) {
-          html += `<td style="text-align:center">${leaveBadge(rec.leaveType)}</td>`;
+          html += `<td style="text-align:center;cursor:pointer" onclick="openKintaiEdit(${payload})">${leaveBadge(rec.leaveType)}</td>`;
         } else if (rec) {
-          html += `<td style="font-size:0.72rem">
+          html += `<td style="font-size:0.72rem;cursor:pointer" onclick="openKintaiEdit(${payload})">
             <span class="col-attend">${rec.attendTime}</span>〜<span class="col-leave">${rec.leaveTime||'?'}</span>
           </td>`;
         } else {
-          html += '<td></td>';
+          html += `<td style="cursor:pointer" onclick="openKintaiEdit(${payload})"></td>`;
         }
       });
       html += '</tr>';
@@ -1233,6 +1276,82 @@ function renderKintaiTable(records, month, staffName) {
     });
     html += '</tr></tfoot>';
     tbl.innerHTML = html;
+  }
+}
+
+// ============================================================
+// 出勤簿編集モーダル
+// ============================================================
+
+// 現在編集中のセル情報（openId・date）を保持する
+let kintaiEditState = null;
+
+// セルクリック時に呼ばれる。引数はマトリクス描画側からポジション情報として渡される
+function openKintaiEdit(openId, staffName, date, attendTime, leaveTime, leaveType) {
+  if (!openId) {
+    alert('スタッフIDが取得できません。一度「取得」ボタンで再読み込みしてください。');
+    return;
+  }
+  kintaiEditState = { openId, date };
+  const [, m, d] = date.split('-');
+  document.getElementById('kintai-edit-title').textContent =
+    `出勤簿 編集 — ${staffName}  ${parseInt(m)}月${parseInt(d)}日`;
+  document.getElementById('edit-attend-time').value = attendTime || '';
+  document.getElementById('edit-leave-time').value  = leaveTime  || '';
+  document.getElementById('edit-leave-type').value  = leaveType  || '';
+  document.getElementById('kintai-edit-status').textContent = '';
+  document.getElementById('kintai-edit-modal').classList.remove('hidden');
+}
+
+function closeKintaiEditModal() {
+  document.getElementById('kintai-edit-modal').classList.add('hidden');
+  kintaiEditState = null;
+}
+
+// 出勤・有休・欠勤を保存する
+async function saveKintaiEdit() {
+  if (!kintaiEditState) return;
+  const { openId, date } = kintaiEditState;
+  const attendTime = document.getElementById('edit-attend-time').value;
+  const leaveTime  = document.getElementById('edit-leave-time').value;
+  const leaveType  = document.getElementById('edit-leave-type').value;
+  const statusEl   = document.getElementById('kintai-edit-status');
+  statusEl.textContent = '保存中...';
+  try {
+    const r = await fetch(`${API_BASE}/api/attendance/admin-edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ openId, date, attendTime, leaveTime, leaveType })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '保存失敗');
+    statusEl.textContent = '✅ 保存しました';
+    // 800ms 後にモーダルを閉じて出勤簿を再取得する
+    setTimeout(() => { closeKintaiEditModal(); loadKintai(); }, 800);
+  } catch(e) {
+    statusEl.textContent = '❌ ' + e.message;
+  }
+}
+
+// 指定日の打刻・有休欠勤をすべて削除する
+async function deleteKintaiDay() {
+  if (!kintaiEditState) return;
+  const { openId, date } = kintaiEditState;
+  if (!confirm(`${date}の出勤・有休記録をすべて削除しますか？`)) return;
+  const statusEl = document.getElementById('kintai-edit-status');
+  statusEl.textContent = '削除中...';
+  try {
+    const r = await fetch(`${API_BASE}/api/attendance/admin-edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ openId, date, attendTime: '', leaveTime: '', leaveType: '' })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '削除失敗');
+    statusEl.textContent = '✅ 削除しました';
+    setTimeout(() => { closeKintaiEditModal(); loadKintai(); }, 800);
+  } catch(e) {
+    statusEl.textContent = '❌ ' + e.message;
   }
 }
 
