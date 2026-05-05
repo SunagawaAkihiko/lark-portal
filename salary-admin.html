@@ -628,20 +628,13 @@
     <!-- 残業時間フィールド：個別スタッフ表示時のみ表示する（30分刻みプルダウン） -->
     <div class="modal-field" id="edit-overtime-field" style="display:none">
       <label>残業時間</label>
+      <!-- value は Lark 残業申請テーブルの単一選択オプション文字列と完全一致させる -->
       <select id="edit-overtime" style="width:110px">
         <option value="0">なし</option>
         <option value="0.5">0:30</option>
         <option value="1">1:00</option>
         <option value="1.5">1:30</option>
-        <option value="2">2:00</option>
-        <option value="2.5">2:30</option>
-        <option value="3">3:00</option>
-        <option value="3.5">3:30</option>
-        <option value="4">4:00</option>
-        <option value="4.5">4:30</option>
-        <option value="5">5:00</option>
-        <option value="5.5">5:30</option>
-        <option value="6">6:00</option>
+        <option value="2.0">2:00</option>
       </select>
     </div>
     <div id="kintai-edit-status" class="status-area" style="padding:0.3rem 0;font-size:0.82rem;text-align:left;"></div>
@@ -1441,12 +1434,13 @@ function openKintaiEdit(openId, staffName, date, attendTime, leaveTime, leaveTyp
   document.getElementById('edit-attend-time').value = attendTime || '';
   document.getElementById('edit-leave-time').value  = leaveTime  || '';
   document.getElementById('edit-leave-type').value  = leaveType  || '';
-  // overtime は "H:MM" 文字列で渡されるのでプルダウン用の小数時間に変換してセットする
-  // 例: "1:30" → 1.5 → select の value="1.5" にマッチする
+  // overtime は "H:MM" 文字列で渡されるのでプルダウン用の Lark オプション文字列に変換してセットする
+  // Lark の選択肢は "0.5","1","1.5","2.0" のため、2時間だけ "2.0" と特別扱いする
   if (overtime) {
     const parts = overtime.split(':');
     const overtimeNum = (parseInt(parts[0], 10) || 0) + (parseInt(parts[1], 10) || 0) / 60;
-    document.getElementById('edit-overtime').value = String(Math.round(overtimeNum * 2) / 2);
+    const rounded = Math.round(overtimeNum * 2) / 2;
+    document.getElementById('edit-overtime').value = rounded === 2 ? '2.0' : String(rounded);
   } else {
     document.getElementById('edit-overtime').value = '0';
   }
@@ -1470,10 +1464,11 @@ async function saveKintaiEdit() {
   const statusEl   = document.getElementById('kintai-edit-status');
 
   // 残業時間フィールドが表示中の場合のみ送信する
-  // プルダウンの value がすでに小数時間（0.5刻み）なので parseFloat するだけでよい
+  // select の value は Lark の単一選択オプション文字列そのもの（"0","0.5","1","1.5","2.0"）
+  // parseFloat せず文字列のまま送ることで、サーバー側が Lark に直接書き込める
   let overtime = undefined;
   if (document.getElementById('edit-overtime-field').style.display !== 'none') {
-    overtime = parseFloat(document.getElementById('edit-overtime').value) || 0;
+    overtime = document.getElementById('edit-overtime').value;
   }
 
   statusEl.textContent = '保存中...';
