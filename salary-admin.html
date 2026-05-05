@@ -625,11 +625,24 @@
         <option value="欠勤">欠勤</option>
       </select>
     </div>
-    <!-- 残業時間フィールド：個別スタッフ表示時のみ表示する -->
+    <!-- 残業時間フィールド：個別スタッフ表示時のみ表示する（30分刻みプルダウン） -->
     <div class="modal-field" id="edit-overtime-field" style="display:none">
       <label>残業時間</label>
-      <input type="text" id="edit-overtime" placeholder="例: 1:30" style="width:100px">
-      <span style="font-size:0.78rem;color:#888;margin-left:0.4rem">H:MM 形式</span>
+      <select id="edit-overtime" style="width:110px">
+        <option value="0">なし</option>
+        <option value="0.5">0:30</option>
+        <option value="1">1:00</option>
+        <option value="1.5">1:30</option>
+        <option value="2">2:00</option>
+        <option value="2.5">2:30</option>
+        <option value="3">3:00</option>
+        <option value="3.5">3:30</option>
+        <option value="4">4:00</option>
+        <option value="4.5">4:30</option>
+        <option value="5">5:00</option>
+        <option value="5.5">5:30</option>
+        <option value="6">6:00</option>
+      </select>
     </div>
     <div id="kintai-edit-status" class="status-area" style="padding:0.3rem 0;font-size:0.82rem;text-align:left;"></div>
     <div class="modal-btns">
@@ -1428,7 +1441,15 @@ function openKintaiEdit(openId, staffName, date, attendTime, leaveTime, leaveTyp
   document.getElementById('edit-attend-time').value = attendTime || '';
   document.getElementById('edit-leave-time').value  = leaveTime  || '';
   document.getElementById('edit-leave-type').value  = leaveType  || '';
-  document.getElementById('edit-overtime').value    = overtime   || '';
+  // overtime は "H:MM" 文字列で渡されるのでプルダウン用の小数時間に変換してセットする
+  // 例: "1:30" → 1.5 → select の value="1.5" にマッチする
+  if (overtime) {
+    const parts = overtime.split(':');
+    const overtimeNum = (parseInt(parts[0], 10) || 0) + (parseInt(parts[1], 10) || 0) / 60;
+    document.getElementById('edit-overtime').value = String(Math.round(overtimeNum * 2) / 2);
+  } else {
+    document.getElementById('edit-overtime').value = '0';
+  }
 
   document.getElementById('kintai-edit-status').textContent = '';
   document.getElementById('kintai-edit-modal').classList.remove('hidden');
@@ -1448,17 +1469,11 @@ async function saveKintaiEdit() {
   const leaveType  = document.getElementById('edit-leave-type').value;
   const statusEl   = document.getElementById('kintai-edit-status');
 
-  // 残業時間フィールドが表示中の場合のみパース・送信する
-  // "H:MM" 形式 → 小数時間（例: "1:30" → 1.5）に変換する
+  // 残業時間フィールドが表示中の場合のみ送信する
+  // プルダウンの value がすでに小数時間（0.5刻み）なので parseFloat するだけでよい
   let overtime = undefined;
   if (document.getElementById('edit-overtime-field').style.display !== 'none') {
-    const ot = document.getElementById('edit-overtime').value.trim();
-    if (ot) {
-      const parts = ot.split(':');
-      overtime = (parseInt(parts[0], 10) || 0) + (parseInt(parts[1], 10) || 0) / 60;
-    } else {
-      overtime = 0; // 空欄は残業なしとして送信する
-    }
+    overtime = parseFloat(document.getElementById('edit-overtime').value) || 0;
   }
 
   statusEl.textContent = '保存中...';
