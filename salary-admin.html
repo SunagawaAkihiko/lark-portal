@@ -315,18 +315,26 @@
     .kintai-table thead th { position: sticky; top: 0; z-index: 3; background: #f2e8dc; }
     .kintai-table th { background: #f2e8dc; font-weight: 700; }
     /* 日付列を横スクロール時に左端へ固定する */
+    /* border-collapse:collapse と sticky の組み合わせでボーダーが消えるため
+       box-shadow で右側の仕切りを代替し、背面コンテンツの透け防止も兼ねる */
     .kintai-table td.kintai-date {
       text-align: left; font-weight: 700;
-      position: sticky; left: 0; z-index: 1;
+      position: sticky; left: 0; z-index: 2;
       background: white;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.12);
+      clip-path: inset(0 -6px 0 0); /* box-shadowを右側のみに限定する */
     }
     .kintai-table tr.sat td { background: #eef4fb; }
     .kintai-table tr.sun td { background: #fdf0f0; }
     /* 土日の日付セルは行の背景色に合わせる */
     .kintai-table tr.sat td.kintai-date { background: #eef4fb; }
     .kintai-table tr.sun td.kintai-date { background: #fdf0f0; }
-    /* 左上コーナーのヘッダーセルは縦・横両方固定（z-indexを他のthより高くする） */
-    .kintai-table thead th:first-child { position: sticky; left: 0; z-index: 4; }
+    /* 左上コーナーのヘッダーセルは縦・横両方固定（最高z-indexで他を覆う） */
+    .kintai-table thead th:first-child {
+      position: sticky; left: 0; z-index: 5;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.12);
+      clip-path: inset(0 -6px 0 0);
+    }
     .kintai-table .col-attend { color: #1a6e2e; font-weight: 700; }
     .kintai-table .col-leave  { color: #7b2d8b; font-weight: 700; }
     .kintai-table .summary-row td { background: #fdf0e0; font-weight: 700; border-top: 2px solid #aaa; }
