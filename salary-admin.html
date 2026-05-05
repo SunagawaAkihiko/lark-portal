@@ -209,44 +209,25 @@
     .salary-table thead tr:first-child th { border-top: 1px solid #bbb; }
     /* ヘッダーを縦スクロール時に固定する（background必須：tbody行が透けないようにする） */
     .salary-table thead th { position: sticky; top: 0; z-index: 4; background: #e8d8c4; }
-    /* 区分ラベル列（縦書き・sticky left:0 で左端に固定する） */
-    .salary-table .col-sec {
-      position: sticky; left: 0; z-index: 2; /* 左端固定列 */
-      writing-mode: vertical-rl;
-      text-align: center;
-      font-weight: 700;
-      font-size: 0.72rem;
-      width: 22px;
-      min-width: 22px;
-      padding: 6px 3px;
-      /* rowspan廃止で全行に個別配置するため上下罫線を消し、連続した帯として見せる */
-      border-top: none;
-      border-bottom: none;
-    }
-    /* セクション最初の行のみ上罫線を表示して前セクションとの区切りを示す */
-    .salary-table .sec-start .col-sec { border-top: 1px solid #bbb; }
-    .salary-table .sec-kintai { background: #7a9db0; color: white; }
-    .salary-table .sec-pay    { background: #c4a882; color: white; }
-    .salary-table .sec-ded    { background: #9b7a5e; color: white; }
-    .salary-table .sec-ref    { background: #888;    color: white; }
-    /* 項目名列（sticky left:22px で col-sec の右隣に固定する） */
+    /* セクション最初の行に上罫線を表示して前セクションとの区切りを示す */
+    .salary-table .sec-start td { border-top: 1px solid #bbb; }
+    /* 項目名列（sticky left:0 で左端に固定する） */
     .salary-table .col-item {
-      position: sticky; left: 22px; z-index: 2; /* col-sec(22px)の右隣に固定 */
+      position: sticky; left: 0; z-index: 2;
       text-align: left; min-width: 88px; font-weight: 500; background: #f5ede0;
     }
     .salary-table th.col-item { background: #e8d8c4; font-weight: 700; }
     /* 固定列ヘッダーは sticky-top と sticky-left を兼ねる角セルとして最高 z-index を設定 */
-    .salary-table thead th.col-sec,
     .salary-table thead th.col-item { z-index: 6; }
     /* スタッフ名ヘッダー */
     .salary-table .col-staff { min-width: 82px; background: #f2e8dc; font-weight: 700; text-align: center; }
     /* 合計列 */
     .salary-table .col-total { background: #fdf0e0 !important; font-weight: 700; min-width: 82px; }
-    /* 行ハイライト（col-sec以外のセルに背景色を適用） */
-    .salary-table .row-kintai td:not(.col-sec) { background: #f0f5f8; }
-    .salary-table .row-gross  td:not(.col-sec) { background: #eef6e8; font-weight: 700; }
-    .salary-table .row-net    td:not(.col-sec) { background: #fff8e1; font-weight: 700; font-size: 0.88rem; }
-    .salary-table .row-ref    td:not(.col-sec) { background: #f5f5f5; color: var(--muted); font-size: 0.75rem; }
+    /* 行ハイライト */
+    .salary-table .row-kintai td { background: #f0f5f8; }
+    .salary-table .row-gross  td { background: #eef6e8; font-weight: 700; }
+    .salary-table .row-net    td { background: #fff8e1; font-weight: 700; font-size: 0.88rem; }
+    .salary-table .row-ref    td { background: #f5f5f5; color: var(--muted); font-size: 0.75rem; }
     /* 全tdに白背景を設定（各行クラスがより高い詳細度で上書きする） */
     .salary-table td { background: white; }
     /* ゼロ値 */
@@ -917,7 +898,6 @@ function renderSalaryTable(rows, month) {
 
   // ── ヘッダー行（区分・項目・スタッフ全員・合計） ──
   let html = '<thead><tr>';
-  html += '<th class="col-sec"></th>'; /* 区分列ヘッダーはテキストなし（色帯で識別） */
   html += '<th class="col-item">項　　目</th>';
   rows.forEach(row => { html += `<th class="col-staff">${row.staffName}</th>`; });
   html += '<th class="col-total">合　計</th>';
@@ -940,9 +920,6 @@ function renderSalaryTable(rows, month) {
 
     const sd = secDef[def.sec];
     html += `<tr class="${trCls}">`;
-    // col-sec: 全行に配置してstickyで左固定。セクション先頭行のみラベルを表示し、以降は空欄にして帯として見せる
-    // col-sec はテキストなし（色のみで区分を識別）。テキストを入れると先頭行だけ高くなるため
-    html += `<td class="col-sec ${sd.cls}"></td>`;
     html += `<td class="col-item">${def.label}</td>`;
 
     // スタッフ値列
@@ -1039,25 +1016,13 @@ async function downloadSalary() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-  // position:sticky の thead/col-sec はキャプチャ時に重複描画されるため static にリセットする
-  // また html2canvas は writing-mode:vertical-rl を正常描画できないため横書き+折り返しで代替する
+  // position:sticky の thead/col-item はキャプチャ時に重複描画されるため static にリセットする
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
     .salary-table thead th { position: static !important; top: auto !important; }
-    .salary-table .col-sec, .salary-table .col-item { position: static !important; left: auto !important; }
+    .salary-table .col-item { position: static !important; left: auto !important; }
     .table-scroll-wrap { overflow: visible !important; }
-    /* writing-mode:vertical-rlをhtml2canvas用に横書き+折り返しで代替する */
-    .salary-table .col-sec {
-      writing-mode: horizontal-tb !important;
-      word-break: break-all !important;
-      white-space: normal !important;
-      width: 1.2em !important;
-      min-width: 1.2em !important;
-      max-width: 1.2em !important;
-      line-height: 1.3 !important;
-      overflow: hidden !important;
-    }
   `;
   document.head.appendChild(tmpStyle);
 
