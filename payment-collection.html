@@ -152,8 +152,24 @@
       font-size: 1rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .card-sub  { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
+    .card-sub   { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.12rem; }
     .card-email { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.08rem; }
+
+    /* 未入金カード内の入金日入力行 */
+    .card-date-row {
+      display: flex; align-items: center; gap: 0.35rem;
+      margin-top: 0.35rem;
+    }
+    .card-date-label {
+      font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
+    }
+    .card-date-input {
+      flex: 1; max-width: 145px;
+      padding: 0.22rem 0.35rem;
+      border: 1.5px solid var(--border-color); border-radius: 6px;
+      font-family: inherit; font-size: 0.78rem; color: var(--text-color);
+      background: white;
+    }
 
     /* ===== 金額 ===== */
     .card-amount { flex-shrink: 0; text-align: right; }
@@ -395,6 +411,12 @@
   let activeStatus = 'unpaid';    // 'unpaid' | 'unsent' | 'sent'
   let selectedIds  = new Set();   // 選択中のrecordId
   let activeRecord = null;        // 単体送信モーダル対象レコード
+  let cardDates    = {};          // 未入金カードの入金日（recordId → YYYY-MM-DD）
+
+  // 未入金カードの入金日変更時にcardDatesを更新する
+  function updateCardDate(recordId, value) {
+    cardDates[recordId] = value;
+  }
 
   // XSS対策のHTMLエスケープ
   function esc(s) {
@@ -563,6 +585,18 @@
              </button>`
           : '';
 
+        // 未入金カードは入金日入力欄を表示する（入金済未送信は不要）
+        const dateRow = activeStatus === 'unpaid' ? (() => {
+          const dateVal = cardDates[record.recordId] || todayDateStr();
+          return `<div class="card-date-row">
+            <span class="card-date-label">入金日</span>
+            <input type="date" class="card-date-input"
+              value="${dateVal}"
+              onclick="event.stopPropagation()"
+              oninput="event.stopPropagation(); updateCardDate('${esc(record.recordId)}', this.value)">
+          </div>`;
+        })() : '';
+
         card.innerHTML = `
           <div class="payment-card-body">
             <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
@@ -572,6 +606,7 @@
               <div class="card-name">${esc(record.name)}</div>
               <div class="card-sub">${subStr}</div>
               <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
+              ${dateRow}
             </div>
             <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
             ${sendBtn}
@@ -599,17 +634,20 @@
       ? `<div class="bulk-notice">今日（${todayStr}）付けで入金済に登録し、領収書メールを送信します。</div>`
       : `<div class="bulk-notice">選択した ${targets.length} 件に領収書メールを送信します。</div>`;
 
-    const today = todayDateStr();
     const recordRows = targets.map(r => {
-      // 未入金はデフォルト今日、入金済はLarkに記録済みの入金日をデフォルトにする
-      const defaultDate = isUnpaid ? today : nyukinDateToStr(r.nyukinDate);
-      const amtStr = r.amount != null ? '¥' + r.amount.toLocaleString() : '―';
+      const amtStr  = r.amount != null ? '¥' + r.amount.toLocaleString() : '―';
+      // 未入金はカードで設定した入金日、入金済未送信はLark記録済みの入金日を表示する
+      const dateStr = isUnpaid
+        ? (cardDates[r.recordId] || todayDateStr())
+        : nyukinDateToStr(r.nyukinDate);
+      const [y, m, d] = dateStr.split('-');
+      const dateDisplay = `${y}年${parseInt(m)}月${parseInt(d)}日`;
       return `<div class="bulk-record-item">
         <div class="bulk-record-info">
           <div class="bulk-record-name">${esc(r.name)}</div>
           <div class="bulk-record-sub">${esc(r.month||'―')} / ${amtStr}</div>
         </div>
-        <input type="date" class="bulk-date-input" data-rid="${esc(r.recordId)}" value="${defaultDate}">
+        <span style="flex-shrink:0;font-size:.8rem;color:var(--text-muted);white-space:nowrap">${dateDisplay}</span>
       </div>`;
     }).join('');
 
@@ -639,15 +677,13 @@
 
     const isUnpaid = activeStatus === 'unpaid';
 
-    // モーダル内の各日付入力から発行日を収集する
-    const dateMap = {};
-    document.querySelectorAll('.bulk-date-input').forEach(inp => {
-      dateMap[inp.dataset.rid] = inp.value;
-    });
     const records = targets.map(r => ({
-      recordId:    r.recordId,
+      recordId:     r.recordId,
       needsPayment: isUnpaid,
-      payDate:     dateMap[r.recordId] || todayDateStr(),
+      // 未入金はカードの入金日入力欄の値、入金済未送信はLark記録済みの入金日を使う
+      payDate: isUnpaid
+        ? (cardDates[r.recordId] || todayDateStr())
+        : nyukinDateToStr(r.nyukinDate),
     }));
 
     const confirmBtn = document.getElementById('bulkConfirmBtn');
