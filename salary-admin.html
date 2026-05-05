@@ -904,7 +904,7 @@ function renderSalaryTable(rows, month) {
 
   // ── ヘッダー行（区分・項目・スタッフ全員・合計） ──
   let html = '<thead><tr>';
-  html += '<th class="col-sec">区分</th>';
+  html += '<th class="col-sec"></th>'; /* 区分列ヘッダーはテキストなし（色帯で識別） */
   html += '<th class="col-item">項　　目</th>';
   rows.forEach(row => { html += `<th class="col-staff">${row.staffName}</th>`; });
   html += '<th class="col-total">合　計</th>';
@@ -928,7 +928,8 @@ function renderSalaryTable(rows, month) {
     const sd = secDef[def.sec];
     html += `<tr class="${trCls}">`;
     // col-sec: 全行に配置してstickyで左固定。セクション先頭行のみラベルを表示し、以降は空欄にして帯として見せる
-    html += `<td class="col-sec ${sd.cls}">${isFirstInSec ? sd.label : ''}</td>`;
+    // col-sec はテキストなし（色のみで区分を識別）。テキストを入れると先頭行だけ高くなるため
+    html += `<td class="col-sec ${sd.cls}"></td>`;
     html += `<td class="col-item">${def.label}</td>`;
 
     // スタッフ値列
