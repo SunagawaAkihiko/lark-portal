@@ -1141,19 +1141,6 @@
           <label class="form-label">どういう形でサービス実施しましたか？ <span class="form-required">*</span></label>
           <input type="text" id="ijoTentoServiceSonota" class="form-input" placeholder="実施内容を入力してください">
         </div>
-        <!-- 写真添付（転倒・怪我） -->
-        <div class="form-row">
-          <label class="form-label">写真（任意）</label>
-          <div class="photo-input-wrap">
-            <input type="file" id="ijoTentoPhotoInput" accept="image/*" style="display:none"
-              onchange="onIjoPhotoChange('ijoTentoPhotoInput','ijoTentoPhotoBtn','ijoTentoPhotoPreview')">
-            <button type="button" id="ijoTentoPhotoBtn" class="photo-input-btn"
-              onclick="document.getElementById('ijoTentoPhotoInput').click()">
-              <i class="fa-solid fa-camera"></i> 写真を選択
-            </button>
-            <div id="ijoTentoPhotoPreview" class="photo-preview hidden"></div>
-          </div>
-        </div>
       </div>
 
       <!-- ② その他のサブ質問 -->
@@ -1232,19 +1219,6 @@
           <label class="form-label">どういう形でサービス実施しましたか？ <span class="form-required">*</span></label>
           <input type="text" id="ijoSonotaServiceSonota" class="form-input" placeholder="実施内容を入力してください">
         </div>
-        <!-- 写真添付（その他） -->
-        <div class="form-row">
-          <label class="form-label">写真（任意）</label>
-          <div class="photo-input-wrap">
-            <input type="file" id="ijoSonotaPhotoInput" accept="image/*" style="display:none"
-              onchange="onIjoPhotoChange('ijoSonotaPhotoInput','ijoSonotaPhotoBtn','ijoSonotaPhotoPreview')">
-            <button type="button" id="ijoSonotaPhotoBtn" class="photo-input-btn"
-              onclick="document.getElementById('ijoSonotaPhotoInput').click()">
-              <i class="fa-solid fa-camera"></i> 写真を選択
-            </button>
-            <div id="ijoSonotaPhotoPreview" class="photo-preview hidden"></div>
-          </div>
-        </div>
       </div>
 
       <!-- 補足：全ての異常内容選択時に表示する共通項目 -->
@@ -1252,6 +1226,22 @@
         <div class="form-row">
           <label class="form-label">補足（その他報告事項あれば入力）</label>
           <textarea id="ijoHosoku" class="form-input" rows="2" placeholder="補足事項があれば入力してください"></textarea>
+        </div>
+      </div>
+
+      <!-- 写真：転倒・怪我・その他のときのみ表示 -->
+      <div id="ijoSection-photo" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">写真（任意）</label>
+          <div class="photo-input-wrap">
+            <input type="file" id="ijoPhotoInput" accept="image/*" style="display:none"
+              onchange="onIjoPhotoChange('ijoPhotoInput','ijoPhotoBtn','ijoPhotoPreview')">
+            <button type="button" id="ijoPhotoBtn" class="photo-input-btn"
+              onclick="document.getElementById('ijoPhotoInput').click()">
+              <i class="fa-solid fa-camera"></i> 写真を選択
+            </button>
+            <div id="ijoPhotoPreview" class="photo-preview hidden"></div>
+          </div>
         </div>
       </div>
 
@@ -2001,18 +1991,14 @@
       ['taichou','tento','sonota','hosoku'].forEach(k =>
         document.getElementById(`ijoSection-${k}`).classList.add('hidden')
       );
-      // 写真添付欄をリセットする（転倒・怪我・その他共通）
-      ['ijoTentoPhotoInput','ijoSonotaPhotoInput'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-      });
-      ['ijoTentoPhotoBtn','ijoSonotaPhotoBtn'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.classList.remove('has-file'); el.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を選択'; }
-      });
-      ['ijoTentoPhotoPreview','ijoSonotaPhotoPreview'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
-      });
+      // 写真添付欄をリセットする
+      const photoInput = document.getElementById('ijoPhotoInput');
+      if (photoInput) photoInput.value = '';
+      const photoBtn = document.getElementById('ijoPhotoBtn');
+      if (photoBtn) { photoBtn.classList.remove('has-file'); photoBtn.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を選択'; }
+      const photoPreview = document.getElementById('ijoPhotoPreview');
+      if (photoPreview) { photoPreview.classList.add('hidden'); photoPreview.innerHTML = ''; }
+      document.getElementById('ijoSection-photo').classList.add('hidden');
       document.getElementById('ijoModal').classList.remove('hidden');
     }
 
@@ -2032,6 +2018,9 @@
       if (type === 'その他')    document.getElementById('ijoSection-sonota').classList.remove('hidden');
       // 補足は全ての異常内容選択時に表示する
       document.getElementById('ijoSection-hosoku').classList.toggle('hidden', !type);
+      // 写真は転倒・怪我・その他のときのみ表示する
+      const showPhoto = type === '転倒・怪我' || type === 'その他';
+      document.getElementById('ijoSection-photo').classList.toggle('hidden', !showPhoto);
     }
 
     // 症状プルダウンで「その他」を選んだとき入力欄を表示する
@@ -2344,11 +2333,8 @@
       try {
         // 転倒・怪我またはその他の場合、写真があればアップロードしてfile_tokenを取得する
         let photoTokens = [];
-        if (type === '転倒・怪我') {
-          const token = await uploadIjoPhoto('ijoTentoPhotoInput').catch(() => null);
-          if (token) photoTokens.push(token);
-        } else if (type === 'その他') {
-          const token = await uploadIjoPhoto('ijoSonotaPhotoInput').catch(() => null);
+        if (type === '転倒・怪我' || type === 'その他') {
+          const token = await uploadIjoPhoto('ijoPhotoInput').catch(() => null);
           if (token) photoTokens.push(token);
         }
 
