@@ -1356,6 +1356,22 @@
         </div>
       </div>
 
+      <!-- 写真：体調不良の為・その他のときのみ表示 -->
+      <div id="chushiSection-photo" class="ijo-section hidden">
+        <div class="form-row">
+          <label class="form-label">写真（任意）</label>
+          <div class="photo-input-wrap">
+            <input type="file" id="chushiPhotoInput" accept="image/*" style="display:none"
+              onchange="onIjoPhotoChange('chushiPhotoInput','chushiPhotoBtn','chushiPhotoPreview')">
+            <button type="button" id="chushiPhotoBtn" class="photo-input-btn"
+              onclick="document.getElementById('chushiPhotoInput').click()">
+              <i class="fa-solid fa-camera"></i> 写真を選択
+            </button>
+            <div id="chushiPhotoPreview" class="photo-preview hidden"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="modal-footer">
         <button id="chushiSaveBtn" class="btn-save" onclick="submitChushi()">
           <i class="fa-solid fa-floppy-disk"></i> 保存する
@@ -2379,9 +2395,16 @@
       ['chushiShijiRow','chushiTaioSonotaRow'].forEach(id =>
         document.getElementById(id).classList.add('hidden')
       );
-      ['chushiSection-taichou','chushiSection-sonota','chushiSection-hosoku'].forEach(id =>
+      ['chushiSection-taichou','chushiSection-sonota','chushiSection-hosoku','chushiSection-photo'].forEach(id =>
         document.getElementById(id).classList.add('hidden')
       );
+      // 写真入力欄をリセットする
+      const photoInput = document.getElementById('chushiPhotoInput');
+      if (photoInput) photoInput.value = '';
+      const photoBtn = document.getElementById('chushiPhotoBtn');
+      if (photoBtn) { photoBtn.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を選択'; photoBtn.classList.remove('has-file'); }
+      const photoPreview = document.getElementById('chushiPhotoPreview');
+      if (photoPreview) { photoPreview.innerHTML = ''; photoPreview.classList.add('hidden'); }
       document.getElementById('chushiModal').classList.remove('hidden');
     }
 
@@ -2397,6 +2420,9 @@
       document.getElementById('chushiSection-sonota').classList.toggle('hidden', val !== 'その他');
       // 補足は中止理由が選択されたら表示する
       document.getElementById('chushiSection-hosoku').classList.toggle('hidden', !val);
+      // 写真は体調不良・その他のときのみ表示する
+      const showPhoto = val === '体調不良の為' || val === 'その他';
+      document.getElementById('chushiSection-photo').classList.toggle('hidden', !showPhoto);
     }
 
     // 対応内容プルダウンの選択に応じて条件欄を切り替える（中止用）
@@ -2464,14 +2490,23 @@
 
       const kirokuNaiyou = parts.join('　');
 
+      // 写真のアップロード（体調不良・その他のみ対象）
+      let photoTokens = [];
+      if (riyuu === '体調不良の為' || riyuu === 'その他') {
+        const token = await uploadIjoPhoto('chushiPhotoInput').catch(() => null);
+        if (token) photoTokens.push(token);
+      }
+
       const btn = document.getElementById('chushiSaveBtn');
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中...';
+      const reqBody = { 記録分類: 'サービス中止', 記録内容: kirokuNaiyou };
+      if (photoTokens.length > 0) reqBody.photoTokens = photoTokens;
       try {
         const res = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録分類: 'サービス中止', 記録内容: kirokuNaiyou }),
+          body: JSON.stringify(reqBody),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
