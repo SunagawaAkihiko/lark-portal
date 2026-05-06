@@ -1336,15 +1336,16 @@ function renderKintaiTable(records, month, staffName) {
     const nameToOpenId = {};
     records.forEach(r => { if (r.openId && r.staffName) nameToOpenId[r.staffName] = r.openId; });
     const colSummary = {};
-    names.forEach(n => { colSummary[n] = { day: 0, night: 0, workMin: 0, yuukyu: 0 }; });
+    names.forEach(n => { colSummary[n] = { day: 0, night: 0, workMin: 0, yuukyu: 0, overtimeMin: 0 }; });
     records.forEach(r => {
       if (!colSummary[r.staffName]) return;
       if (r.leaveType === '有休') {
         colSummary[r.staffName].yuukyu += 1;
       } else if (!r.leaveType) {
-        colSummary[r.staffName].day     += r.dayCount   || 0;
-        colSummary[r.staffName].night   += r.nightCount || 0;
-        colSummary[r.staffName].workMin += hhmmToMin(r.workingHours);
+        colSummary[r.staffName].day        += r.dayCount   || 0;
+        colSummary[r.staffName].night      += r.nightCount || 0;
+        colSummary[r.staffName].workMin    += hhmmToMin(r.workingHours);
+        colSummary[r.staffName].overtimeMin += Math.round((r.overtime || 0) * 60);
       }
     });
 
@@ -1421,7 +1422,7 @@ function renderKintaiTable(records, month, staffName) {
     html += '</tbody><tfoot><tr class="summary-row"><td class="kintai-date" style="text-align:left">合計</td>';
     names.forEach(n => {
       const s = colSummary[n];
-      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>有休${s.yuukyu > 0 ? s.yuukyu : '-'}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
+      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>有休${s.yuukyu > 0 ? s.yuukyu : '-'}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}<br>残${s.overtimeMin > 0 ? minToHhmm(s.overtimeMin) : '-'}</td>`;
     });
     html += '</tr></tfoot>';
 
