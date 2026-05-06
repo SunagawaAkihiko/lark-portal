@@ -308,6 +308,33 @@
 
     /* ===== 異常記録モーダル専用 ===== */
     .ijo-section { display: flex; flex-direction: column; gap: 0.85rem; }
+    /* 画像添付インプット */
+    .photo-input-wrap {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .photo-input-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      padding: 0.55rem 1rem; border-radius: 8px;
+      border: 1.5px dashed var(--border-color);
+      background: var(--bg-color); color: var(--text-muted);
+      font-family: inherit; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; width: 100%;
+    }
+    .photo-input-btn:active { background: #f0e0d8; }
+    /* 選択後はボーダーをプライマリカラーに変える */
+    .photo-input-btn.has-file {
+      border-color: var(--primary-color); color: var(--primary-color); background: #fdf0eb;
+    }
+    /* プレビュー画像 */
+    .photo-preview {
+      border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--border-color);
+      max-height: 180px; display: flex; align-items: center; justify-content: center;
+      background: #f9f9f9;
+    }
+    .photo-preview img {
+      width: 100%; max-height: 180px; object-fit: contain; display: block;
+    }
     /* バイタル入力：care-recordの入浴バイタル・不調バイタルと同じコンパクトグリッド形式 */
     .vital-input-grid {
       display: grid;
@@ -1114,6 +1141,19 @@
           <label class="form-label">どういう形でサービス実施しましたか？ <span class="form-required">*</span></label>
           <input type="text" id="ijoTentoServiceSonota" class="form-input" placeholder="実施内容を入力してください">
         </div>
+        <!-- 写真添付（転倒・怪我） -->
+        <div class="form-row">
+          <label class="form-label">写真（任意）</label>
+          <div class="photo-input-wrap">
+            <input type="file" id="ijoTentoPhotoInput" accept="image/*" style="display:none"
+              onchange="onIjoPhotoChange('ijoTentoPhotoInput','ijoTentoPhotoBtn','ijoTentoPhotoPreview')">
+            <button type="button" id="ijoTentoPhotoBtn" class="photo-input-btn"
+              onclick="document.getElementById('ijoTentoPhotoInput').click()">
+              <i class="fa-solid fa-camera"></i> 写真を選択
+            </button>
+            <div id="ijoTentoPhotoPreview" class="photo-preview hidden"></div>
+          </div>
+        </div>
       </div>
 
       <!-- ② その他のサブ質問 -->
@@ -1191,6 +1231,19 @@
         <div class="form-row hidden" id="ijoSonotaServiceSonotaRow">
           <label class="form-label">どういう形でサービス実施しましたか？ <span class="form-required">*</span></label>
           <input type="text" id="ijoSonotaServiceSonota" class="form-input" placeholder="実施内容を入力してください">
+        </div>
+        <!-- 写真添付（その他） -->
+        <div class="form-row">
+          <label class="form-label">写真（任意）</label>
+          <div class="photo-input-wrap">
+            <input type="file" id="ijoSonotaPhotoInput" accept="image/*" style="display:none"
+              onchange="onIjoPhotoChange('ijoSonotaPhotoInput','ijoSonotaPhotoBtn','ijoSonotaPhotoPreview')">
+            <button type="button" id="ijoSonotaPhotoBtn" class="photo-input-btn"
+              onclick="document.getElementById('ijoSonotaPhotoInput').click()">
+              <i class="fa-solid fa-camera"></i> 写真を選択
+            </button>
+            <div id="ijoSonotaPhotoPreview" class="photo-preview hidden"></div>
+          </div>
         </div>
       </div>
 
@@ -1948,6 +2001,18 @@
       ['taichou','tento','sonota','hosoku'].forEach(k =>
         document.getElementById(`ijoSection-${k}`).classList.add('hidden')
       );
+      // 写真添付欄をリセットする（転倒・怪我・その他共通）
+      ['ijoTentoPhotoInput','ijoSonotaPhotoInput'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      ['ijoTentoPhotoBtn','ijoSonotaPhotoBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('has-file'); el.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を選択'; }
+      });
+      ['ijoTentoPhotoPreview','ijoSonotaPhotoPreview'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+      });
       document.getElementById('ijoModal').classList.remove('hidden');
     }
 
@@ -2039,6 +2104,59 @@
     function onIjoSonotaServiceChange() {
       const isSonota = document.getElementById('ijoSonotaService').value === 'その他';
       document.getElementById('ijoSonotaServiceSonotaRow').classList.toggle('hidden', !isSonota);
+    }
+
+    // ── 写真添付ヘルパー関数 ──
+
+    // ファイルを選択したときにプレビューを表示してボタンのラベルを変える
+    function onIjoPhotoChange(inputId, btnId, previewId) {
+      const input   = document.getElementById(inputId);
+      const btn     = document.getElementById(btnId);
+      const preview = document.getElementById(previewId);
+      const file    = input.files[0];
+      if (!file) {
+        btn.classList.remove('has-file');
+        btn.innerHTML = '<i class="fa-solid fa-camera"></i> 写真を選択';
+        preview.classList.add('hidden');
+        preview.innerHTML = '';
+        return;
+      }
+      // ボタンのラベルをファイル名に変える
+      btn.classList.add('has-file');
+      btn.innerHTML = `<i class="fa-solid fa-check"></i> ${file.name}`;
+      // プレビュー表示
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.innerHTML = `<img src="${e.target.result}" alt="プレビュー">`;
+        preview.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 画像をbase64に変換してサーバーにアップロードし、file_token を返す
+    // ファイルが選択されていない場合は null を返す
+    async function uploadIjoPhoto(inputId) {
+      const input = document.getElementById(inputId);
+      const file  = input.files[0];
+      if (!file) return null;
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async e => {
+          try {
+            const base64 = e.target.result.split(',')[1];
+            const res  = await fetch(`${API_BASE}/api/purchase-request/upload`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ fileName: file.name, base64, mimeType: file.type }),
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || 'アップロード失敗');
+            resolve(data.fileToken);
+          } catch (err) { reject(err); }
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
     // 異常記録を保存する：フォームの入力値を記録内容テキストに変換してPUTする
@@ -2224,10 +2342,23 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中...';
       try {
+        // 転倒・怪我またはその他の場合、写真があればアップロードしてfile_tokenを取得する
+        let photoTokens = [];
+        if (type === '転倒・怪我') {
+          const token = await uploadIjoPhoto('ijoTentoPhotoInput').catch(() => null);
+          if (token) photoTokens.push(token);
+        } else if (type === 'その他') {
+          const token = await uploadIjoPhoto('ijoSonotaPhotoInput').catch(() => null);
+          if (token) photoTokens.push(token);
+        }
+
+        const body = { 記録分類: type, 記録内容: kirokuNaiyou };
+        if (photoTokens.length > 0) body.photoTokens = photoTokens;
+
         const res  = await fetch(`${API_BASE}/api/helper/records/${r.recordId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 記録分類: type, 記録内容: kirokuNaiyou }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
