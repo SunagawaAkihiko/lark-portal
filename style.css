@@ -178,28 +178,27 @@ header p { color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
 
 footer { text-align: center; margin-top: 4rem; color: var(--text-muted); font-size: 0.9rem; }
 
-/* スマホ縦画面：コンテナ余白を詰める */
-@media (max-width: 600px) {
-    .container {
-        padding: 0.8rem 0.6rem 2rem;
-    }
-    .card {
-        padding: 0.45rem 0.65rem;
-    }
+/* 横画面時にJSが付与するクラスで2列レイアウトに切り替える
+   CSS media queryはiOS Safariの回転後に更新されない場合があるためJSで制御する */
+.container--landscape {
+    max-width: 900px;
+    padding: 0.8rem 1rem 2rem;
+}
+.grid--landscape {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem 0.6rem;
+}
+/* セクション見出し帯は横画面時に2列全幅にまたがる */
+.grid--landscape .section-divider {
+    grid-column: 1 / -1;
 }
 
-/* 横画面：2列グリッドに切り替える */
-@media (orientation: landscape) {
-    .container {
-        max-width: 900px;
-        padding: 0.8rem 1rem 2rem;
+/* 縦画面の狭い画面では余白をさらに詰める */
+@media (max-width: 600px) {
+    .container:not(.container--landscape) {
+        padding: 0.8rem 0.6rem 2rem;
     }
-    .grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.35rem 0.6rem;
-    }
-    /* セクション見出し帯は2列全幅にまたがる */
-    .section-divider {
-        grid-column: 1 / -1;
+    .container:not(.container--landscape) .card {
+        padding: 0.45rem 0.65rem;
     }
 }

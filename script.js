@@ -201,17 +201,29 @@ function createCard(link) {
 }
 
 // Run on DOM loaded
-document.addEventListener('DOMContentLoaded', buildDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    buildDashboard();
+    syncLayout();
+});
 
-// iOS Safariは画面回転時にビューポート幅を自動更新しない場合があるため
-// orientationchange 後に viewport の content を書き換えて強制的に再評価させる
-(function () {
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) return;
-    const base = 'width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover';
-    window.addEventListener('orientationchange', () => {
-        // いったん固定幅にしてから元に戻すことでSafariに再描画を促す
-        meta.setAttribute('content', base + ', width=1');
-        requestAnimationFrame(() => meta.setAttribute('content', base));
-    });
-}());
+// ============================================================
+// 画面サイズに応じてレイアウトを切り替える
+// CSS media query は iOS Safari の回転後に更新されない場合があるため
+// resize イベント（回転時も確実に発火する）でクラスを付け替えて対応する
+// ============================================================
+function syncLayout() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const isLandscape = w > h;
+
+    const container = document.querySelector('.container');
+    const grid      = document.getElementById('link-grid');
+    if (!container || !grid) return;
+
+    container.classList.toggle('container--landscape', isLandscape);
+    grid.classList.toggle('grid--landscape', isLandscape);
+}
+
+// resize は回転時・ブラウザのアドレスバー表示/非表示でも発火するため
+// orientationchange より信頼性が高い
+window.addEventListener('resize', syncLayout);
