@@ -1422,7 +1422,7 @@ function renderKintaiTable(records, month, staffName) {
     html += '</tbody><tfoot><tr class="summary-row"><td class="kintai-date" style="text-align:left">合計</td>';
     names.forEach(n => {
       const s = colSummary[n];
-      html += `<td style="font-size:0.72rem;line-height:1.5">日${s.day}<br>夜${s.night}<br>有休${s.yuukyu > 0 ? s.yuukyu : '0'}<br>残業${s.overtimeMin > 0 ? minToHhmm(s.overtimeMin) : '0'}<br>${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
+      html += `<td style="font-size:0.72rem;line-height:1.5">日勤${s.day}<br>夜勤${s.night}<br>有休${s.yuukyu > 0 ? s.yuukyu : '0'}<br>残業${s.overtimeMin > 0 ? minToHhmm(s.overtimeMin) : '0'}<br>実働${s.workMin > 0 ? minToHhmm(s.workMin) : '-'}</td>`;
     });
     html += '</tr></tfoot>';
 
