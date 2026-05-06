@@ -207,23 +207,35 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// 画面サイズに応じてレイアウトを切り替える
-// CSS media query は iOS Safari の回転後に更新されない場合があるため
-// resize イベント（回転時も確実に発火する）でクラスを付け替えて対応する
+// レイアウト切り替え
 // ============================================================
 function syncLayout() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const isLandscape = w > h;
-
-    const container = document.querySelector('.container');
-    const grid      = document.getElementById('link-grid');
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const container   = document.querySelector('.container');
+    const grid        = document.getElementById('link-grid');
     if (!container || !grid) return;
-
     container.classList.toggle('container--landscape', isLandscape);
     grid.classList.toggle('grid--landscape', isLandscape);
 }
 
-// resize は回転時・ブラウザのアドレスバー表示/非表示でも発火するため
-// orientationchange より信頼性が高い
+// Android・PC: resize で確実に反映
 window.addEventListener('resize', syncLayout);
+
+// iOS Safari: 回転後も viewport の CSS 幅が portrait のまま残るバグがある。
+// viewport の width を一瞬 "1" に固定 → device-width に戻すことで
+// iOS に viewport を再計算させてからレイアウトを同期する。
+(function () {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    const BASE = 'width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover';
+    window.addEventListener('orientationchange', () => {
+        // ステップ1: width=1 で viewport を強制リセット
+        meta.content = 'width=1, initial-scale=1';
+        // ステップ2: iOS が viewport を再計算する猶予を与えてから元に戻す
+        setTimeout(() => {
+            meta.content = BASE;
+            // ステップ3: viewport 更新後にレイアウトを同期する
+            setTimeout(syncLayout, 50);
+        }, 150);
+    });
+}());
