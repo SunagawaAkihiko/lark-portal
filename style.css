@@ -178,12 +178,28 @@ header p { color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
 
 footer { text-align: center; margin-top: 4rem; color: var(--text-muted); font-size: 0.9rem; }
 
-/* スマホではコンテナ余白をさらに詰める */
+/* スマホ縦画面：コンテナ余白を詰める */
 @media (max-width: 600px) {
     .container {
         padding: 0.8rem 0.6rem 2rem;
     }
     .card {
         padding: 0.45rem 0.65rem;
+    }
+}
+
+/* 横画面：2列グリッドに切り替える */
+@media (orientation: landscape) {
+    .container {
+        max-width: 900px;
+        padding: 0.8rem 1rem 2rem;
+    }
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.35rem 0.6rem;
+    }
+    /* セクション見出し帯は2列全幅にまたがる */
+    .section-divider {
+        grid-column: 1 / -1;
     }
 }
