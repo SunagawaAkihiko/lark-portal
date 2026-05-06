@@ -281,6 +281,18 @@
       border: 1px solid #ffcc80; border-radius: 5px;
       padding: 0.2rem 0.5rem;
     }
+    /* カード名前行：氏名と付与履歴ボタンを横並びにする */
+    .leave-card .lc-name-row {
+      display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;
+    }
+    .leave-card .lc-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0; flex: 1; min-width: 0; }
+    .leave-card .btn-history {
+      flex-shrink: 0;
+      padding: 0.15rem 0.5rem; border-radius: 5px;
+      border: 1px solid #a0aec0; background: #f7fafc; color: #4a5568;
+      font-size: 0.72rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .leave-card .btn-history:hover { background: #e2e8f0; }
     .leave-card .btn-grant {
       width: 100%; padding: 0.35rem;
       border-radius: 6px; border: 1.5px solid var(--primary);
@@ -288,6 +300,43 @@
       font-size: 0.82rem; font-weight: 700;
     }
     .leave-card .btn-grant:hover { background: var(--primary); color: white; }
+
+    /* 付与履歴モーダル */
+    .history-modal-box {
+      background: white; border-radius: 14px; padding: 1.25rem;
+      width: 100%; max-width: 480px; max-height: 80vh;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    .history-modal-title {
+      font-size: 1rem; font-weight: 700; color: var(--brown-dark);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-table-wrap { overflow-y: auto; flex: 1; min-height: 0; }
+    .history-table {
+      width: 100%; border-collapse: collapse; font-size: 0.83rem;
+    }
+    .history-table th {
+      background: #f5ede4; color: var(--brown-dark);
+      padding: 0.4rem 0.6rem; font-weight: 700; text-align: left;
+      border-bottom: 2px solid var(--border);
+      position: sticky; top: 0;
+    }
+    .history-table td {
+      padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    /* 有効期限切れの行はグレーアウトする */
+    .history-table tr.expired td { color: var(--muted); text-decoration: line-through; }
+    .history-days-badge {
+      display: inline-block; min-width: 2rem; text-align: center;
+      font-weight: 700; background: #e8f5e9; color: #2e7d32;
+      border-radius: 4px; padding: 0.05rem 0.3rem;
+    }
+    .history-empty {
+      text-align: center; color: var(--muted); font-size: 0.88rem; padding: 1.5rem 0;
+    }
 
     /* 有休付与モーダル */
     .modal-overlay {
@@ -562,6 +611,30 @@
   <div id="leave-status" class="status-area">「最新状況を取得」を押してください。</div>
   <div class="leave-grid hidden" id="leave-grid"></div>
 </section>
+
+<!-- 有休付与履歴モーダル -->
+<div class="modal-overlay hidden" id="history-modal" onclick="if(event.target===this)closeHistoryModal()">
+  <div class="history-modal-box">
+    <div class="history-modal-title">
+      <span><i class="fa-solid fa-clock-rotate-left"></i> 付与履歴 — <span id="history-staff-name"></span></span>
+      <button onclick="closeHistoryModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--muted);">✕</button>
+    </div>
+    <div id="history-status" class="status-area" style="display:none;"></div>
+    <div class="history-table-wrap">
+      <table class="history-table" id="history-table">
+        <thead>
+          <tr>
+            <th>付与日</th>
+            <th>有効期限</th>
+            <th>付与日数</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <!-- 有休付与モーダル -->
 <div class="modal-overlay hidden" id="grant-modal">
@@ -1122,7 +1195,12 @@ function renderLeaveGrid(data) {
     const card = document.createElement('div');
     card.className = 'leave-card';
     card.innerHTML = `
-      <div class="lc-name"><i class="fa-solid fa-user" style="opacity:.5;margin-right:.3rem"></i>${d.staffName}</div>
+      <div class="lc-name-row">
+        <div class="lc-name"><i class="fa-solid fa-user" style="opacity:.5;margin-right:.3rem"></i>${d.staffName}</div>
+        <button class="btn-history" onclick="openHistoryModal('${d.openId}','${d.staffName}')">
+          <i class="fa-solid fa-clock-rotate-left"></i> 付与履歴
+        </button>
+      </div>
       <div class="lc-bar-wrap"><div class="lc-bar" style="width:${pct.toFixed(1)}%"></div></div>
       <div class="lc-nums">
         <span style="font-size:0.72rem;color:var(--muted)">有効期間内</span>
@@ -1142,6 +1220,54 @@ function renderLeaveGrid(data) {
     grid.appendChild(card);
   });
 }
+
+// ── 付与履歴モーダル ──
+
+// 履歴モーダルを開き、指定スタッフの付与履歴をサーバーから取得して表示する
+async function openHistoryModal(openId, staffName) {
+  document.getElementById('history-staff-name').textContent = staffName;
+  document.getElementById('history-tbody').innerHTML = '';
+  const statusEl = document.getElementById('history-status');
+  statusEl.style.display = '';
+  statusEl.className = 'status-area loading';
+  statusEl.innerHTML = '<span class="spinner"></span> 取得中…';
+  document.getElementById('history-modal').classList.remove('hidden');
+
+  try {
+    const r = await fetch(`${API_BASE}/api/paid-leave/history?openId=${encodeURIComponent(openId)}`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '取得失敗');
+
+    statusEl.style.display = 'none';
+    const tbody = document.getElementById('history-tbody');
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (j.grants.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="history-empty">付与履歴がありません</td></tr>`;
+      return;
+    }
+
+    // 付与日の新しい順（降順）で表示する
+    [...j.grants].reverse().forEach(g => {
+      const isExpired = g.expiryDate && g.expiryDate < today;
+      const tr = document.createElement('tr');
+      if (isExpired) tr.className = 'expired';
+      tr.innerHTML = `
+        <td>${g.grantDate}</td>
+        <td>${g.expiryDate || '—'}${isExpired ? ' <span style="color:#e74c3c;font-size:0.72rem;">失効</span>' : ''}</td>
+        <td><span class="history-days-badge">${g.days}</span> 日</td>
+        <td style="color:var(--muted)">${g.memo || '—'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    statusEl.className = 'status-area error';
+    statusEl.textContent = `エラー: ${e.message}`;
+  }
+}
+
+// 履歴モーダルを閉じる
+function closeHistoryModal() { document.getElementById('history-modal').classList.add('hidden'); }
 
 function openGrantModal(openId, staffName) {
   document.getElementById('grant-open-id').value    = openId;
