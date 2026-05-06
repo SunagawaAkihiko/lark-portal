@@ -54,95 +54,89 @@ body {
     background: radial-gradient(circle, #fff1e6 0%, transparent 70%);
 }
 
-.container { 
-    max-width: 900px; /* 2列配置に合わせて少しだけ広く変更 */
-    margin: 0 auto; 
-    padding: 3rem 1.5rem; 
+.container {
+    max-width: 600px; /* 1列リスト用に幅を絞る */
+    margin: 0 auto;
+    padding: 1.2rem 1rem 3rem;
 }
 
-header { text-align: center; margin-bottom: 1rem; }
-header h1 { font-size: 2.4rem; display: flex; align-items: center; justify-content: center; gap: 1rem; color: #3b3026; }
+header { text-align: center; margin-bottom: 0.75rem; }
+header h1 { font-size: 1.6rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: #3b3026; }
 header h1 i { color: var(--primary-color); }
-header p { color: var(--text-muted); margin-top: 1rem; font-weight: 500; }
+header p { color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
 
-/* 2列レイアウトの適用 */
-.grid { 
-    display: grid; 
-    grid-template-columns: repeat(2, 1fr);  /* 2列均等配置 */
-    gap: 1.5rem; 
+/* 1列リストレイアウト */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
 }
 
-/* ボタン（カード）のデザイン：枠線をはっきりさせる */
-.card { 
-    background: var(--card-bg); 
-    border: 2px solid var(--card-border); 
-    border-radius: 12px; 
-    padding: 1.5rem; 
-    
-    /* カード内のレイアウト設定 */
-    display: grid; 
-    grid-template-columns: auto 1fr; /* 1列目はアイコン、2列目はテキスト */
-    grid-template-rows: auto auto; /* タイトルと説明文を縦に並べる */
-    column-gap: 1.2rem; 
-    row-gap: 0.3rem;
-    align-items: center; 
-    
-    text-decoration: none; 
-    color: inherit; 
-    box-shadow: 0 4px 6px var(--shadow-color);
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); 
+/* カード：アイコン＋タイトルを1行に収めたコンパクトリスト形式 */
+.card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--card-border);
+    border-radius: 10px;
+    padding: 0.5rem 0.8rem;
+
+    /* アイコンとタイトルを横1行に並べる */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    transition: all 0.15s ease;
 }
 
-/* ホバー（マウスオーバー）時の演出 */
-.card:hover { 
-    border-color: var(--primary-color); 
-    box-shadow: 0 8px 15px rgba(231, 111, 81, 0.2); 
-    transform: translateY(-4px); 
-    background: #fff8f0; /* ホバー時は少し明るく */
+/* ホバー時の演出 */
+.card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 10px rgba(231, 111, 81, 0.2);
+    transform: translateX(3px);
+    background: #fff8f0;
 }
 
-.card-icon { 
-    grid-row: 1 / 3; /* アイコンは縦2マスの高さを占有 */
-    font-size: 1.8rem; 
-    color: #fff; 
-    background: var(--primary-color); 
-    width: 60px; 
-    height: 60px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    border-radius: 12px; 
-    margin: 0;
-    box-shadow: 0 4px 8px rgba(231, 111, 81, 0.3);
+.card-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: #fff;
+    background: var(--primary-color);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(231, 111, 81, 0.3);
 }
 
-.card-title { 
-    font-size: 1.2rem; 
-    font-weight: 700; 
+.card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #3b3026;
     margin: 0;
-    align-self: end; /* 下揃えで説明文に近づける */
+    flex: 1;
+    min-width: 0;
 }
 
-.card-desc { 
-    font-size: 0.95rem; 
-    color: var(--text-muted); 
-    margin: 0;
-    align-self: start; /* 上揃えでタイトルに近づける */
+/* 説明文は非表示にして縦幅を最小化する */
+.card-desc {
+    display: none;
 }
 
 /* ===== セクション見出し帯 ===== */
-/* グリッド全幅（2列）にまたがる区切り見出し */
 .section-divider {
-    grid-column: 1 / -1;   /* 2列グリッドを全幅で横断 */
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.6rem 1rem;
+    padding: 0.45rem 0.8rem;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
 }
 
 /* スタッフ共通ツール：コーラル系（ページ全体のテーマカラーに合わせた温かみのある配色） */
@@ -168,39 +162,12 @@ header p { color: var(--text-muted); margin-top: 1rem; font-weight: 500; }
 
 footer { text-align: center; margin-top: 4rem; color: var(--text-muted); font-size: 0.9rem; }
 
-/* スマホ用（画面が狭い場合）でも2列を維持し、スマホアプリ風にする設定 */
-@media (max-width: 700px) { 
-    .grid { 
-        grid-template-columns: repeat(2, 1fr); 
-        gap: 0.8rem; 
-    } 
-    .card { 
-        padding: 1.2rem 0.5rem; /* 少し縦に余白を増やす */
-        grid-template-columns: 1fr; /* アイコンとテキストを縦に並べる */
-        grid-template-rows: auto auto auto; /* アイコン、タイトル、説明文の3行 */
-        justify-items: center; 
-        text-align: center;
-        row-gap: 0.4rem;
+/* スマホではコンテナ余白をさらに詰める */
+@media (max-width: 600px) {
+    .container {
+        padding: 0.8rem 0.6rem 2rem;
     }
-    .card-icon { 
-        grid-row: 1; 
-        width: 45px; 
-        height: 45px; 
-        font-size: 1.2rem; 
-        margin-bottom: 0.2rem;
-    }
-    .card-title { 
-        grid-row: 2; 
-        font-size: 0.9rem; /* スマホの2列に入るように少し小さく */
-        text-align: center;
-        align-self: end;
-    }
-    .card-desc { 
-        grid-row: 3;
-        display: block; 
-        font-size: 0.72rem; /* スマホ画面で邪魔にならない極小サイズ */
-        line-height: 1.3;
-        color: #9c8e7e;
-        align-self: start;
+    .card {
+        padding: 0.45rem 0.65rem;
     }
 }
