@@ -57,20 +57,10 @@ body {
 .container {
     max-width: 600px; /* 1列リスト用に幅を絞る */
     margin: 0 auto;
-    padding: 0 1rem 3rem;
+    padding: 1.2rem 1rem 3rem;
 }
 
-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    text-align: center;
-    margin-bottom: 0.75rem;
-    background: var(--bg-color);
-    padding: 0.6rem 1rem 0.5rem;
-    /* スクロール時に下のコンテンツと分離して見えるよう薄い影を付ける */
-    box-shadow: 0 2px 8px rgba(139, 115, 95, 0.12);
-}
+header { text-align: center; margin-bottom: 0.75rem; }
 header h1 { font-size: 1.6rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; color: #3b3026; }
 header h1 i { color: var(--primary-color); }
 header p { color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
