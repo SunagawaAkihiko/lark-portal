@@ -107,8 +107,8 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
-        title: "利用者情報",
-        description: "利用者情報の閲覧・薬手帳の登録ができます",
+        title: "入居者情報",
+        description: "入居者情報の閲覧・薬手帳の登録ができます",
         icon: "fa-address-card",
         url: "customer-info.html"
     },
