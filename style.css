@@ -113,18 +113,34 @@ header p { color: var(--text-muted); margin-top: 0.5rem; font-weight: 500; }
     box-shadow: 0 2px 5px rgba(231, 111, 81, 0.3);
 }
 
+/* タイトルと説明文を縦に並べるラッパー */
+.card-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.08rem;
+}
+
 .card-title {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #3b3026;
     margin: 0;
-    flex: 1;
-    min-width: 0;
+    line-height: 1.2;
 }
 
-/* 説明文は非表示にして縦幅を最小化する */
+/* 説明文：アイコン高さに収まる極小フォントで1行省略表示 */
 .card-desc {
-    display: none;
+    display: block;
+    font-size: 0.67rem;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ===== セクション見出し帯 ===== */
