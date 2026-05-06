@@ -202,3 +202,16 @@ function createCard(link) {
 
 // Run on DOM loaded
 document.addEventListener('DOMContentLoaded', buildDashboard);
+
+// iOS Safariは画面回転時にビューポート幅を自動更新しない場合があるため
+// orientationchange 後に viewport の content を書き換えて強制的に再評価させる
+(function () {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    const base = 'width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover';
+    window.addEventListener('orientationchange', () => {
+        // いったん固定幅にしてから元に戻すことでSafariに再描画を促す
+        meta.setAttribute('content', base + ', width=1');
+        requestAnimationFrame(() => meta.setAttribute('content', base));
+    });
+}());
