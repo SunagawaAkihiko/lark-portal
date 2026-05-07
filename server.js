@@ -2,14 +2,14 @@
 // ============================================================
 // lark-portal 配信サーバー
 //
-// 機能:
-//   - 会社Wi-Fi（登録済み拠点IP）からのアクセスのみ許可する
-//   - それ以外のIPからは「会社Wi-Fiに接続してください」ページを返す
+// ルーティング:
+//   GET /staff    → 会社Wi-Fiチェック後に index.html を返す（スタッフ用入口）
+//   GET /staff/   → /staff へリダイレクト
+//   その他        → 制限なしで静的ファイルを配信（管理者用）
 //
-// IP設定:
-//   打刻サーバーと同じ環境変数名 SHOP_{KEY}_IP を使用する。
-//   例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
-//   カンマ区切りで複数IPを登録可能（例: SHOP_A_IP=1.2.3.4,1.2.3.5）
+// Wi-Fi制限の仕組み:
+//   環境変数 SHOP_{KEY}_IP に登録された拠点IPからのアクセスのみ /staff を許可する。
+//   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
 // ============================================================
 
 const express = require('express');
@@ -48,11 +48,8 @@ function getAllOfficeIPs() {
 }
 
 // ---- 会社Wi-Fiチェックミドルウェア ----
-// 登録済み拠点IP以外からのアクセスは 403 + wifi-required.html を返す
+// 登録済み拠点IP以外からのアクセスは wifi-required.html を返す
 function requireOfficeWifi(req, res, next) {
-  // wifi-required.html 自体は制限なしで返す（無限ループ防止）
-  if (req.path === '/wifi-required.html') return next();
-
   const clientIP  = getClientIP(req);
   const officeIPs = getAllOfficeIPs();
 
@@ -60,17 +57,27 @@ function requireOfficeWifi(req, res, next) {
     return next(); // 会社Wi-Fi → 通常配信
   }
 
-  // 会社Wi-Fi外 → アクセス拒否ページを返す
   console.log(`[Wi-Fi制限] 拒否 IP=${clientIP}`);
   res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
 }
 
-app.use(requireOfficeWifi);
-// HTMLファイルをルートディレクトリから配信する
+// ---- /staff ルート（スタッフ個人スマホ用・Wi-Fi限定）----
+// URLを /staff（末尾スラッシュなし）にすることで、index.html内の
+// 相対リンク（care-record.html等）が /care-record.html に正しく解決される
+app.get('/staff', requireOfficeWifi, (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// /staff/ → /staff にリダイレクト（末尾スラッシュ対策）
+app.get('/staff/', (req, res) => {
+  res.redirect(301, '/staff');
+});
+
+// ---- その他のルート（管理者用・制限なし）----
 app.use(express.static(__dirname));
 
 app.listen(PORT, () => {
   const ips = [...getAllOfficeIPs()];
   console.log(`lark-portal 起動中 (port=${PORT})`);
-  console.log(`登録済み拠点IP: ${ips.length > 0 ? ips.join(', ') : '未設定（全アクセス拒否）'}`);
+  console.log(`登録済み拠点IP: ${ips.length > 0 ? ips.join(', ') : '未設定（/staff は全拒否）'}`);
 });
