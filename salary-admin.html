@@ -1639,7 +1639,24 @@ function renderKintaiTable(records, month, staffName) {
     // ── 全員マトリクス（1テーブル：日付列 + スタッフ列を同一行に並べる） ──
     // 全員表示時は confirm-bar エリア自体は非表示（確認状態はtheadの行内に表示）
     document.getElementById('kintai-confirm-bar').style.display = 'none';
-    const names = [...new Set(records.map(r => r.staffName).filter(Boolean))].sort();
+
+    // ── スタッフ列の表示順を固定する（リスト外の新規入職者は末尾に追加） ──
+    const KINTAI_STAFF_ORDER = [
+      '中村 夢永', '砂川 竜馬', '榊 志満子',  '池田 祐子', '砂川 繁',
+      '秋吉 布美子', '小路 悦子', '川原 将也', '中村 ともみ', '井上 ひかる',
+      '鞍馬 玲菜',  '奥田 愛美', '中村 考',   '中川 いずみ', '御手洗 悦子',
+      '松山 朋美',  '吉山 康子', '三原 和樹', '荒木 由美子', '柏木 愛',
+      '田中 謹礼',
+    ];
+    const allNames = [...new Set(records.map(r => r.staffName).filter(Boolean))];
+    const names = allNames.sort((a, b) => {
+      const ia = KINTAI_STAFF_ORDER.indexOf(a);
+      const ib = KINTAI_STAFF_ORDER.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return  1;
+      return a.localeCompare(b, 'ja');
+    });
     if (names.length === 0) {
       tbl.innerHTML = '<tr><td>データがありません。</td></tr>';
       return;
