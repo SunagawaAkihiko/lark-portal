@@ -26,30 +26,34 @@
     }
     .hidden { display: none !important; }
 
-    /* ===== 事業所タブ ===== */
-    .office-tabs {
+    /* ===== ページヘッダー（事業所タブ含む上部全体） ===== */
+    .page-header {
       position: sticky;
       top: 0;
       z-index: 15;
-      display: flex;
-      flex-wrap: wrap;
       background: var(--text-color);
-      padding: 0 1rem 0.75rem;
-      gap: 0.5rem;
     }
-    .office-tabs-label {
-      width: 100%;
+
+    /* ===== ページタイトル行 ===== */
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem 0.3rem;
       color: white;
       font-size: 1.05rem;
       font-weight: 700;
-      padding: 0.75rem 0 0.1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
     }
-    .office-tab {
+
+    /* ===== 注文中 / 新規注文 タブ ===== */
+    .main-tab-row {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0 1rem 0.5rem;
+    }
+    .main-tab-btn {
       flex: 1;
-      padding: 0.55rem 0;
+      padding: 0.5rem 0;
       border: none;
       border-radius: 8px;
       font-family: inherit;
@@ -59,10 +63,53 @@
       transition: background 0.2s, color 0.2s;
       background: rgba(255,255,255,0.12);
       color: rgba(255,255,255,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
     }
-    .office-tab.active {
+    .main-tab-btn.active {
       background: var(--primary-color);
       color: white;
+    }
+    /* 注文中バッジ（件数表示） */
+    .pending-badge {
+      background: white;
+      color: var(--primary-color);
+      border-radius: 99px;
+      padding: 0 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      min-width: 1.4rem;
+      text-align: center;
+      display: none;
+    }
+    .pending-badge.show { display: inline-block; }
+
+    /* ===== 事業所タブ ===== */
+    .office-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.08);
+      padding: 0 1rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .office-tab {
+      flex: 1;
+      padding: 0.45rem 0;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+    }
+    .office-tab.active {
+      background: rgba(255,255,255,0.9);
+      color: var(--text-color);
     }
 
     /* ===== ローディング ===== */
@@ -162,7 +209,6 @@
       font-weight: 700;
       color: var(--text-color);
       appearance: none;
-      /* セレクト右端にドロップダウン矢印を表示する */
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 0.75rem center;
@@ -208,10 +254,6 @@
       min-width: 2rem;
       text-align: center;
     }
-    .count-unit {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
     .remove-btn {
       width: 28px; height: 28px;
       border-radius: 50%;
@@ -255,7 +297,6 @@
       text-align: left;
     }
     .picker-btn:focus { outline: none; }
-    /* 商品選択済みのボタンは枠と背景をプライマリカラーに変える */
     .picker-btn.selected {
       border-color: var(--primary-color);
       background: var(--primary-light);
@@ -272,7 +313,6 @@
       font-size: 1.1rem;
       position: relative;
     }
-    /* サムネイルの画像はボックスいっぱいに表示する */
     .picker-thumb img {
       position: absolute;
       inset: 0;
@@ -288,7 +328,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* 選択済みは商品名を強調表示する */
     .picker-btn.selected .picker-name {
       color: var(--text-color);
       font-weight: 700;
@@ -313,7 +352,6 @@
       opacity: 1;
       pointer-events: auto;
     }
-    /* シートは画面下端に固定し、初期状態では下に隠れている */
     .picker-sheet {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -353,7 +391,6 @@
       color: var(--text-muted);
       font-size: 0.9rem;
     }
-    /* カテゴリタブは折り返して全件表示するピル型 */
     .picker-cat-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -381,7 +418,6 @@
       border-color: var(--primary-color);
       color: white;
     }
-    /* 3列グリッドで商品カードを並べる */
     .picker-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -401,7 +437,6 @@
       border: 2px solid transparent;
       transition: border-color 0.15s, background 0.15s;
     }
-    /* 選択中のカードはプライマリカラーの枠をつける */
     .picker-card.selected {
       border-color: var(--primary-color);
       background: var(--primary-light);
@@ -418,14 +453,12 @@
       font-size: 1.4rem;
       color: var(--border-color);
     }
-    /* 画像が読み込まれたらアイコンの上に被せる */
     .picker-card-img img {
       position: absolute;
       inset: 0;
       width: 100%; height: 100%;
       object-fit: cover;
     }
-    /* 選択チェックバッジ（右上に重ねて表示） */
     .picker-check {
       position: absolute;
       top: 4px; right: 4px;
@@ -530,12 +563,120 @@
     .toast.success { background: #2d6a4f; }
     .toast.error   { background: #c1121f; }
 
+    /* ===== 注文中タブ：注文カード ===== */
+    .pending-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .pending-card-info { flex: 1; min-width: 0; }
+    .pending-product {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+      margin-bottom: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pending-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .pending-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .pending-count-badge {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      border-radius: 6px;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* 商品到着ボタン */
+    .arrived-btn {
+      flex-shrink: 0;
+      padding: 0.5rem 0.75rem;
+      border: none;
+      border-radius: 8px;
+      background: #d4edda;
+      color: #155724;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .arrived-btn:hover { background: #b8ddc4; }
+    .arrived-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* 空状態 */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
+    /* 更新ボタン */
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.9rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      background: white;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .refresh-btn:hover { background: var(--bg-color); }
   </style>
 </head>
 <body>
 
-<!-- 事業所タブ -->
-<div class="office-tabs" id="tabBar"></div>
+<!-- ページヘッダー（固定） -->
+<div class="page-header" id="pageHeader">
+
+  <!-- タイトル行 -->
+  <div class="page-title-row">
+    <i class="fa-solid fa-cart-shopping"></i>
+    消耗品発注
+  </div>
+
+  <!-- 注文中 / 新規注文 タブ -->
+  <div class="main-tab-row">
+    <button class="main-tab-btn" id="tabPending" onclick="switchMainTab('pending')">
+      <i class="fa-solid fa-hourglass-half"></i>
+      注文中
+      <span class="pending-badge" id="pendingBadge">0</span>
+    </button>
+    <button class="main-tab-btn active" id="tabNew" onclick="switchMainTab('new')">
+      <i class="fa-solid fa-plus"></i>
+      新規注文
+    </button>
+  </div>
+
+  <!-- 事業所タブ（両タブで共用） -->
+  <div class="office-tabs" id="tabBar"></div>
+</div>
 
 <!-- ローディング -->
 <div class="loading-screen" id="loadingScreen">
@@ -543,10 +684,23 @@
   <div>データを読み込み中...</div>
 </div>
 
-<!-- メインコンテンツ -->
-<div class="main-content hidden" id="mainContent">
+<!-- ===== 注文中タブ コンテンツ ===== -->
+<div class="main-content hidden" id="pendingContent">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:-0.25rem">
+    <span style="font-size:0.82rem; color:var(--text-muted); font-weight:700">
+      <i class="fa-solid fa-hourglass-half"></i> 到着待ちの注文
+    </span>
+    <button class="refresh-btn" onclick="loadPending()">
+      <i class="fa-solid fa-rotate"></i> 更新
+    </button>
+  </div>
+  <div id="pendingList"></div>
+</div>
 
-  <!-- ① 発注日・発注者（1枚のカードにまとめる） -->
+<!-- ===== 新規注文タブ コンテンツ ===== -->
+<div class="main-content hidden" id="newOrderContent">
+
+  <!-- ① 発注日・発注者 -->
   <div class="section-card" id="section-meta">
     <div class="field-row">
       <label class="field-label"><i class="fa-solid fa-calendar-day" style="color:var(--primary-color)"></i> 発注日</label>
@@ -560,7 +714,7 @@
     </div>
   </div>
 
-  <!-- ② 発注品リスト（複数追加可） -->
+  <!-- ② 発注品リスト -->
   <div class="section-card" id="section-orders">
     <div class="section-head">
       <i class="fa-solid fa-cart-shopping" style="color:var(--primary-color)"></i>
@@ -586,7 +740,7 @@
 
 </div>
 
-<!-- 固定フッター -->
+<!-- 固定フッター（新規注文タブのみ表示） -->
 <div class="footer-bar hidden" id="footerBar">
   <div class="order-count-chip">
     <div class="num" id="footerCount">0品</div>
@@ -600,10 +754,10 @@
 <!-- トースト通知 -->
 <div class="toast" id="toast"></div>
 
-<!-- 商品ピッカー：オーバーレイ（タップで閉じる） -->
+<!-- 商品ピッカー：オーバーレイ -->
 <div class="picker-overlay" id="pickerOverlay" onclick="closePicker()"></div>
 
-<!-- 商品ピッカー：ボトムシート（全アイテム共通で1つだけ用意して使い回す） -->
+<!-- 商品ピッカー：ボトムシート -->
 <div class="picker-sheet" id="pickerSheet">
   <div class="picker-sheet-header">
     <span class="picker-sheet-title">商品を選ぶ</span>
@@ -611,32 +765,40 @@
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
-  <!-- カテゴリのタブ（横スクロール可能なピル型） -->
   <div class="picker-cat-tabs" id="pickerCatTabs"></div>
-  <!-- 商品グリッド（3列） -->
   <div class="picker-grid" id="pickerGrid"></div>
 </div>
 
 <script>
-  // ローカル開発と本番Renderを自動で切り替える
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
   // ===== 状態管理 =====
-  // allProducts: [{ id: record_id, name, category, fileToken }]（消耗品マスタから取得）
-  // ordererOptions: [string]（発注リストの「注文者」フィールド定義から取得）
-  // allStaff: [{ name, offices[] }]（スタッフテーブルから取得、事業所フィルタ用）
-  // selectedProduct[itemId]: 各発注品アイテムで選択中の商品オブジェクト（null = 未選択）
   let allProducts    = [];
   let ordererOptions = [];
   let allStaff       = [];
   let offices        = [];
   let activeOffice   = '';
+  // 現在のメインタブ（'pending' | 'new'）
+  let activeMainTab  = 'new';
 
   // 商品ピッカーの状態
-  const selectedProduct    = {};   // itemId → { id, name, imageToken } | null
-  let pickerActiveItemId   = null; // 現在ピッカーが開いているアイテムのID
-  let pickerActiveCategory = '';   // ピッカー内で選択中のカテゴリ
+  const selectedProduct    = {};
+  let pickerActiveItemId   = null;
+  let pickerActiveCategory = '';
+
+  // ===== メインタブ切り替え =====
+  function switchMainTab(tab) {
+    activeMainTab = tab;
+    document.getElementById('tabPending').classList.toggle('active', tab === 'pending');
+    document.getElementById('tabNew').classList.toggle('active', tab === 'new');
+    document.getElementById('pendingContent').classList.toggle('hidden', tab !== 'pending');
+    document.getElementById('newOrderContent').classList.toggle('hidden', tab !== 'new');
+    document.getElementById('footerBar').classList.toggle('hidden', tab !== 'new');
+
+    // 注文中タブを開いたとき最新データを取得する
+    if (tab === 'pending') loadPending();
+  }
 
   // ===== 初期化 =====
   async function init() {
@@ -652,19 +814,18 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      allProducts    = data.products;       // { id, name, category, imageToken }[]
-      ordererOptions = data.ordererOptions; // string[] from Lark field definition
-      allStaff       = data.staffList;      // { name, offices[] }[] for filtering
+      allProducts    = data.products;
+      ordererOptions = data.ordererOptions;
+      allStaff       = data.staffList;
       offices        = data.officeOptions;
 
-      buildTabs();
+      buildOfficeTabs();
       if (offices.length > 0) switchOffice(offices[0]);
 
-      // 発注品リストの初期アイテムを1件追加する
       addOrderItem();
 
       document.getElementById('loadingScreen').classList.add('hidden');
-      document.getElementById('mainContent').classList.remove('hidden');
+      document.getElementById('newOrderContent').classList.remove('hidden');
       document.getElementById('footerBar').classList.remove('hidden');
 
     } catch (err) {
@@ -673,10 +834,10 @@
     }
   }
 
-  // ===== タブ生成 =====
-  function buildTabs() {
+  // ===== 事業所タブ生成 =====
+  function buildOfficeTabs() {
     const bar = document.getElementById('tabBar');
-    bar.innerHTML = '<span class="office-tabs-label"><i class="fa-solid fa-cart-shopping"></i> 消耗品発注</span>';
+    bar.innerHTML = '';
     offices.forEach(office => {
       const btn = document.createElement('button');
       btn.className = 'office-tab';
@@ -693,19 +854,18 @@
       btn.classList.toggle('active', btn.textContent === office);
     });
     renderOrdererSelect();
+    // 注文中タブが開いていれば事業所フィルタを再適用する
+    if (activeMainTab === 'pending') renderPendingList();
   }
 
   // ===== 注文者セレクトを描画する =====
-  // ordererOptions（Larkフィールド定義の選択肢）をベースに、
-  // スタッフテーブルの事業所情報でフィルタリングする。
-  // スタッフテーブルに登録がない名前は事業所フィルタの対象外として常に表示する。
   function renderOrdererSelect() {
     const sel        = document.getElementById('ordererSelect');
     const currentVal = sel.value;
 
     const filtered = ordererOptions.filter(name => {
       const staff = allStaff.find(s => s.name === name);
-      if (!staff) return true;  // スタッフテーブル未登録 → 常に表示
+      if (!staff) return true;
       return staff.offices.includes(activeOffice);
     });
 
@@ -717,16 +877,13 @@
       sel.appendChild(opt);
     });
 
-    // 事業所切り替え前の選択が今の事業所にも存在すれば維持する
     if (currentVal && filtered.includes(currentVal)) sel.value = currentVal;
-
     updateSummary();
   }
 
   // ===== 発注品アイテム追加 =====
   let orderIdCounter = 0;
 
-  // allProducts からカテゴリ一覧を重複なしで抽出する（マスタの順序を維持）
   function getCategories() {
     const seen = new Set();
     return allProducts
@@ -744,7 +901,6 @@
 
     item.innerHTML = `
       <div class="order-item-body">
-        <!-- 商品ピッカーボタン：タップするとボトムシートが開く -->
         <button class="picker-btn" id="picker-${id}" onclick="openPicker(${id})">
           <div class="picker-thumb" id="picker-thumb-${id}">
             <i class="fa-solid fa-box-open"></i>
@@ -771,8 +927,6 @@
   // ===== 商品ピッカーを開く =====
   function openPicker(id) {
     pickerActiveItemId = id;
-
-    // カテゴリタブを生成する（最初のカテゴリを選択状態にする）
     const categories = getCategories();
     pickerActiveCategory = categories[0] || '';
 
@@ -784,13 +938,11 @@
 
     renderPickerGrid();
 
-    // オーバーレイとシートを表示する
     document.getElementById('pickerOverlay').classList.add('open');
     document.getElementById('pickerSheet').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
-  // ===== ピッカー内カテゴリを切り替える =====
   function switchPickerCategory(btnEl, cat) {
     pickerActiveCategory = cat;
     document.querySelectorAll('.picker-cat-tab').forEach(btn => {
@@ -799,7 +951,6 @@
     renderPickerGrid();
   }
 
-  // ===== 現在のカテゴリの商品グリッドを描画する =====
   function renderPickerGrid() {
     const products        = allProducts.filter(p => p.category === pickerActiveCategory);
     const currentSelected = selectedProduct[pickerActiveItemId];
@@ -807,8 +958,6 @@
 
     grid.innerHTML = products.map(p => {
       const isSelected = currentSelected && currentSelected.id === p.id;
-      // imageToken があればプロキシ経由の URL を生成する（Lark 画像は直接アクセス不可）
-      // fileToken がある場合はプロキシ経由で画像を取得する（Lark 画像は直接アクセス不可）
       const imgSrc = p.fileToken
         ? `${API_BASE}/api/lark/image?token=${encodeURIComponent(p.fileToken)}`
         : null;
@@ -826,23 +975,19 @@
     }).join('');
   }
 
-  // ===== 商品を選択して確定する =====
   function selectProductById(productId) {
     const product = allProducts.find(p => p.id === productId);
     if (!product) return;
 
     selectedProduct[pickerActiveItemId] = product;
 
-    // ピッカーボタンのサムネイルと商品名を更新する
     const btn     = document.getElementById(`picker-${pickerActiveItemId}`);
     const thumbEl = document.getElementById(`picker-thumb-${pickerActiveItemId}`);
     const nameEl  = document.getElementById(`picker-name-${pickerActiveItemId}`);
 
-    // 選択済みスタイルを適用する
     btn.classList.add('selected');
     nameEl.textContent = product.name;
 
-    // サムネイル画像を設定する（fileToken がなければアイコンのまま）
     if (product.fileToken) {
       const imgSrc = `${API_BASE}/api/lark/image?token=${encodeURIComponent(product.fileToken)}`;
       thumbEl.innerHTML = `<img src="${imgSrc}" alt="" onerror="this.style.display='none'"><i class="fa-solid fa-box"></i>`;
@@ -854,7 +999,6 @@
     updateSummary();
   }
 
-  // ===== ピッカーを閉じる =====
   function closePicker() {
     document.getElementById('pickerOverlay').classList.remove('open');
     document.getElementById('pickerSheet').classList.remove('open');
@@ -862,7 +1006,6 @@
     pickerActiveItemId = null;
   }
 
-  // 個数の増減（最小1）
   function changeCount(id, delta) {
     const el  = document.getElementById(`count-${id}`);
     const cur = parseInt(el.textContent) || 1;
@@ -870,7 +1013,6 @@
     updateSummary();
   }
 
-  // 発注品アイテムを削除する（1件以上残す）
   function removeOrderItem(id) {
     const list = document.getElementById('orderList');
     if (list.children.length <= 1) {
@@ -878,27 +1020,24 @@
       return;
     }
     document.getElementById(`order-${id}`).remove();
-    delete selectedProduct[id]; // 選択状態を破棄する
+    delete selectedProduct[id];
     updateSummary();
   }
 
   document.getElementById('addOrderBtn').onclick = addOrderItem;
 
-  // ===== 有効な発注品リストを取得する =====
-  // 戻り値: [{ id: record_id, name, count }]
   function getValidItems() {
     const result = [];
     document.querySelectorAll('#orderList .order-item').forEach(item => {
       const domId   = item.id.replace('order-', '');
       const product = selectedProduct[domId];
-      if (!product) return; // 商品未選択はスキップする
+      if (!product) return;
       const count = parseInt(document.getElementById(`count-${domId}`).textContent) || 1;
       result.push({ id: product.id, name: product.name, count });
     });
     return result;
   }
 
-  // ===== サマリーとフッターを更新する =====
   function updateSummary() {
     const validItems = getValidItems();
     const orderer    = document.getElementById('ordererSelect').value;
@@ -919,7 +1058,7 @@
     document.getElementById('submitBtn').disabled = !(dateOk && orderer && validItems.length > 0);
   }
 
-  // ===== 登録処理 =====
+  // ===== 発注登録処理 =====
   document.getElementById('submitBtn').onclick = async () => {
     const date    = document.getElementById('dateInput').value;
     const orderer = document.getElementById('ordererSelect').value;
@@ -944,11 +1083,13 @@
 
       // 登録後に発注リストをリセットする
       document.getElementById('orderList').innerHTML = '';
-      // 選択状態をすべてクリアする
       Object.keys(selectedProduct).forEach(k => delete selectedProduct[k]);
       orderIdCounter = 0;
       addOrderItem();
       updateSummary();
+
+      // 注文中バッジを更新するためにバックグラウンドで件数を再取得する
+      refreshPendingBadge();
 
     } catch (err) {
       showToast(`発注失敗: ${err.message}`, 'error');
@@ -957,6 +1098,121 @@
       updateSummary();
     }
   };
+
+  // ===== 注文中タブ：注文一覧の取得と描画 =====
+  let allPendingOrders = []; // 全件キャッシュ（事業所フィルタはクライアント側で行う）
+
+  async function loadPending() {
+    document.getElementById('pendingList').innerHTML =
+      '<div class="loading-screen"><div class="spinner"></div><div>取得中...</div></div>';
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/orders/pending`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      allPendingOrders = data.data;
+      renderPendingList();
+    } catch (err) {
+      document.getElementById('pendingList').innerHTML =
+        `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i>取得失敗: ${err.message}</div>`;
+    }
+  }
+
+  // 現在の事業所でフィルタしてリストを描画する
+  function renderPendingList() {
+    const filtered = activeOffice
+      ? allPendingOrders.filter(o => o.office === activeOffice)
+      : allPendingOrders;
+
+    // バッジ更新（全件数を表示する）
+    const badge = document.getElementById('pendingBadge');
+    badge.textContent = allPendingOrders.length;
+    badge.classList.toggle('show', allPendingOrders.length > 0);
+
+    const container = document.getElementById('pendingList');
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-box-open"></i>
+          現在注文中の商品はありません
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    filtered.forEach(order => {
+      const card = document.createElement('div');
+      card.className = 'pending-card';
+      card.id = `pcard-${order.recordId}`;
+      card.innerHTML = `
+        <div class="pending-card-info">
+          <div class="pending-product">${order.product || '（商品名取得中）'}</div>
+          <div class="pending-meta">
+            <span class="pending-meta-item">
+              <i class="fa-solid fa-calendar-day"></i> ${order.date}
+            </span>
+            <span class="pending-meta-item">
+              <i class="fa-solid fa-building"></i> ${order.office}
+            </span>
+            <span class="pending-meta-item">
+              <i class="fa-solid fa-user"></i> ${order.orderer}
+            </span>
+          </div>
+        </div>
+        <span class="pending-count-badge">${order.count}個</span>
+        <button class="arrived-btn" onclick="markArrived('${order.recordId}', this)">
+          <i class="fa-solid fa-box-circle-check"></i> 商品到着
+        </button>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // ===== 商品到着ボタン押下処理 =====
+  async function markArrived(recordId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/orders/${recordId}/arrived`, {
+        method: 'PATCH',
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      // カードをフェードアウトして取り除く
+      const card = document.getElementById(`pcard-${recordId}`);
+      if (card) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => {
+          card.remove();
+          // allPendingOrders からも削除してバッジを更新する
+          allPendingOrders = allPendingOrders.filter(o => o.recordId !== recordId);
+          renderPendingList();
+        }, 300);
+      }
+
+      showToast('商品到着を記録しました', 'success');
+    } catch (err) {
+      showToast(`エラー: ${err.message}`, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-box-circle-check"></i> 商品到着';
+    }
+  }
+
+  // 新規注文登録後にバッジ件数だけ更新する（バックグラウンド処理）
+  async function refreshPendingBadge() {
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/orders/pending`);
+      const data = await res.json();
+      if (!data.ok) return;
+      allPendingOrders = data.data;
+      const badge = document.getElementById('pendingBadge');
+      badge.textContent = allPendingOrders.length;
+      badge.classList.toggle('show', allPendingOrders.length > 0);
+    } catch (_) { /* バッジ更新失敗は無視する */ }
+  }
 
   // ===== トースト表示 =====
   function showToast(msg, type = '') {
