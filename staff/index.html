@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スタッフポータル</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .icon { font-size: 56px; margin-bottom: 20px; }
+    h1 { font-size: 18px; font-weight: 700; color: #1a202c; margin-bottom: 10px; }
+    p  { font-size: 14px; color: #4a5568; line-height: 1.7; }
+    .hint {
+      margin-top: 24px;
+      background: #ebf8ff;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 13px;
+      color: #2b6cb0;
+      line-height: 1.6;
+    }
+    .retry-btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 13px 28px;
+      background: #4299e1;
+      color: #fff;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #4299e1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- 確認中 -->
+  <div class="card" id="checking">
+    <div class="spinner"></div>
+    <p>接続を確認しています...</p>
+  </div>
+
+  <!-- Wi-Fi外エラー -->
+  <div class="card" id="error" style="display:none">
+    <div class="icon">📶</div>
+    <h1>会社Wi-Fiに接続してください</h1>
+    <p>このツールは会社のWi-Fi接続中のみご利用いただけます。</p>
+    <div class="hint">
+      スマートフォンのWi-Fi設定から<br>
+      会社のWi-Fiに接続後、再度アクセスしてください。
+    </div>
+    <button class="retry-btn" onclick="location.reload()">再試行</button>
+  </div>
+
+  <!-- 通信エラー -->
+  <div class="card" id="netError" style="display:none">
+    <div class="icon">⚠️</div>
+    <h1>接続エラー</h1>
+    <p>サーバーに接続できませんでした。</p>
+    <button class="retry-btn" onclick="location.reload()">再試行</button>
+  </div>
+
+  <script>
+    // 打刻サーバーのWi-Fiチェック用APIを呼び出す
+    // アクセス元IPが登録済み拠点IPと一致するか確認する
+    fetch('https://attendance-app-irf1.onrender.com/api/check-wifi')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.allowed) {
+          // 会社Wi-Fi接続済み → ポータルトップへ移動
+          window.location.replace('/');
+        } else {
+          document.getElementById('checking').style.display = 'none';
+          document.getElementById('error').style.display = 'block';
+        }
+      })
+      .catch(function() {
+        document.getElementById('checking').style.display = 'none';
+        document.getElementById('netError').style.display = 'block';
+      });
+  </script>
+</body>
+</html>
