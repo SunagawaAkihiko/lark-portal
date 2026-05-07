@@ -1003,6 +1003,27 @@ async function loadSalary() {
 function renderSalaryTable(rows, month) {
   const tbl = document.getElementById('salary-table');
 
+  // ── スタッフ表示順（左→右の列順）を固定する ──────────────────
+  // リストにない新規入職者はサーバー返却順のまま末尾に追加される
+  const STAFF_ORDER = [
+    '砂川 明彦', '砂川 竜馬', '鞍馬 玲菜', '砂川 繁', '中村 ともみ',
+    '中村 考',   '榊 志満子', '御手洗 悦子', '中村 夢永', '中川 いずみ',
+    '井上 ひかる', '松山 朋美', '川原 将也', '奥田 愛美', '池田 祐子',
+    '三原 和樹', '吉山 康子', '田中 謹礼', '柏木 愛',   '小路 悦子',
+    '荒木 由美子', '秋吉 布美子',
+  ];
+  rows = [...rows].sort((a, b) => {
+    const ia = STAFF_ORDER.indexOf(a.staffName);
+    const ib = STAFF_ORDER.indexOf(b.staffName);
+    // どちらもリストにある → 指定順
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    // 片方だけリストにある → リストにある方を前に
+    if (ia !== -1) return -1;
+    if (ib !== -1) return  1;
+    // どちらもリストにない（新規入職者） → サーバー返却順を維持
+    return 0;
+  });
+
   // ── 行（項目）定義 ─ PDF順序に準拠 ──────────────────────────
   const rowDefs = [
     // ── 勤怠区分 ──
