@@ -79,6 +79,14 @@ const portalLinks = [
         selfEntry: true  // ご本人入力フォーム（お客様・入職者本人が入力）
     },
     {
+        title: "スタッフマイページ",
+        description: "給与明細・有休残日数・出勤記録などを本人が確認できます",
+        icon: "fa-id-card",
+        url: "https://attendance-app-irf1.onrender.com/staff-mypage.html",
+        adminOnly: true,
+        selfEntry: true  // ご本人入力フォーム（スタッフ本人が使用）
+    },
+    {
         title: "スタッフ勤務情報設定",
         description: "入職スタッフの雇用形態・手当・シフト・給与情報を設定します",
         icon: "fa-user-gear",
