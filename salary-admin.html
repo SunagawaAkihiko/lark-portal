@@ -301,6 +301,92 @@
     }
     .leave-card .btn-grant:hover { background: var(--primary); color: white; }
 
+    /* 5日取得義務セクション */
+    .ob-section {
+      margin: 0.5rem 0 0.5rem;
+      border: 1px solid #dde;
+      border-radius: 7px;
+      overflow: hidden;
+      font-size: 0.76rem;
+    }
+    .ob-header {
+      /* ヘッダー部分：薄い青紫系背景でセクション見出しを示す */
+      background: #eef2ff;
+      color: #3730a3;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ob-header .ob-toggle-icon {
+      margin-left: auto;
+      font-size: 0.65rem;
+      opacity: 0.6;
+      transition: transform 0.2s;
+    }
+    .ob-header.collapsed .ob-toggle-icon { transform: rotate(-90deg); }
+    .ob-body { padding: 0.35rem 0.55rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .ob-body.hidden { display: none; }
+    /* 各義務期間の行 */
+    .ob-period {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      padding: 0.3rem 0.4rem;
+      border-radius: 5px;
+      border: 1px solid #e0e0e0;
+      background: #fafafa;
+    }
+    /* 達成済み：緑枠 */
+    .ob-period.ob-met    { border-color: #a5d6a7; background: #f1f8f1; }
+    /* 進行中（未達成）：オレンジ枠 */
+    .ob-period.ob-active { border-color: #ffcc80; background: #fffde7; }
+    /* 未達成で期間終了：赤枠 */
+    .ob-period.ob-missed { border-color: #ef9a9a; background: #fff5f5; }
+
+    .ob-period-dates { font-size: 0.7rem; color: var(--muted); }
+    .ob-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .ob-pbar-wrap {
+      flex: 1;
+      background: #e0e0e0;
+      border-radius: 99px;
+      height: 7px;
+      overflow: hidden;
+    }
+    .ob-pbar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.4s;
+    }
+    /* 達成済みは緑、進行中はオレンジ、未達成は赤 */
+    .ob-met .ob-pbar-fill    { background: #4caf50; }
+    .ob-active .ob-pbar-fill { background: #ff9800; }
+    .ob-missed .ob-pbar-fill { background: #f44336; }
+    .ob-count { font-weight: 700; white-space: nowrap; }
+    .ob-met .ob-count    { color: #2e7d32; }
+    .ob-active .ob-count { color: #e65100; }
+    .ob-missed .ob-count { color: #c62828; }
+    /* 達成・未達成バッジ */
+    .ob-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.05rem 0.35rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .ob-badge-met    { background: #c8e6c9; color: #1b5e20; }
+    .ob-badge-active { background: #fff3e0; color: #bf360c; }
+    .ob-badge-missed { background: #ffcdd2; color: #b71c1c; }
+    /* 対象外スタッフ向けメッセージ（年10日未満付与） */
+    .ob-na { font-size: 0.72rem; color: var(--muted); padding: 0.15rem 0.55rem; }
+
     /* 付与履歴モーダル */
     .history-modal-box {
       background: white; border-radius: 14px; padding: 1.25rem;
@@ -1213,12 +1299,95 @@ function renderLeaveGrid(data) {
       <div class="lc-expiring ${d.expiringDays > 0 ? 'warn' : ''}">
         <i class="fa-solid fa-hourglass-half"></i> 次回付与日に失効予定: <b>${d.expiringDays}日</b>
       </div>
+      ${buildObligationSection(d.obligationPeriods)}
       <button class="btn-grant" onclick="openGrantModal('${d.openId}','${d.staffName}')">
         <i class="fa-solid fa-plus"></i> 特別付与
       </button>
     `;
+    // 5日義務セクションのヘッダークリックで展開・折りたたみを切り替える
+    const obHeader = card.querySelector('.ob-header');
+    if (obHeader) {
+      obHeader.addEventListener('click', () => {
+        const body = card.querySelector('.ob-body');
+        const icon = obHeader.querySelector('.ob-toggle-icon');
+        const collapsed = body.classList.toggle('hidden');
+        obHeader.classList.toggle('collapsed', collapsed);
+      });
+    }
     grid.appendChild(card);
   });
+}
+
+/**
+ * 5日取得義務セクションのHTMLを生成する。
+ * 各付与期間ごとに取得状況（達成・進行中・未達成）をプログレスバーと共に表示する。
+ * @param {Array|undefined} periods - サーバーから返された obligationPeriods 配列
+ * @returns {string} HTML文字列
+ */
+function buildObligationSection(periods) {
+  // 対象期間がない場合（年10日未満付与のスタッフ）は義務対象外を簡潔に表示する
+  if (!periods || periods.length === 0) {
+    return `
+      <div class="ob-section">
+        <div class="ob-header">
+          <i class="fa-solid fa-scale-balanced"></i> 5日取得義務
+          <span class="ob-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+        </div>
+        <div class="ob-body ob-na hidden">年10日未満付与のため義務対象外</div>
+      </div>`;
+  }
+
+  // 全期間中に未達成（期間終了済み）のものがあるかチェックしてヘッダー色を変える
+  const hasMissed  = periods.some(p => !p.isActive && !p.obligationMet);
+  // 現在進行中の期間に5日未取得があるかチェック
+  const hasWarning = periods.some(p => p.isActive && !p.obligationMet);
+
+  let headerStyle = '';
+  if (hasMissed) {
+    headerStyle = 'background:#fff0f0;color:#b91c1c;border-bottom:1px solid #fca5a5;';
+  } else if (hasWarning) {
+    headerStyle = 'background:#fffbeb;color:#92400e;border-bottom:1px solid #fde68a;';
+  }
+
+  const periodsHtml = periods.map(p => {
+    // 取得状況に応じてクラスを決定する
+    const cls = p.obligationMet ? 'ob-met' : (p.isActive ? 'ob-active' : 'ob-missed');
+    // プログレスバーの幅（5日が100%）
+    const barPct = Math.min(100, (p.usedInPeriod / 5) * 100);
+    // 期間ラベル（例: 2024-10-01 → 2025-09-30）
+    const label = `基準日 ${p.grantDate}（義務期間 ～ ${p.periodEnd}）`;
+    // バッジテキストと色
+    let badge = '';
+    if (p.obligationMet) {
+      badge = `<span class="ob-badge ob-badge-met"><i class="fa-solid fa-check"></i> 達成</span>`;
+    } else if (p.isActive) {
+      // 残り日数を計算して表示する（期間終了までの日数）
+      const daysLeft = Math.ceil((new Date(p.periodEnd) - new Date()) / 86400000);
+      badge = `<span class="ob-badge ob-badge-active">期間中（残${daysLeft}日）</span>`;
+    } else {
+      badge = `<span class="ob-badge ob-badge-missed"><i class="fa-solid fa-triangle-exclamation"></i> 未達成</span>`;
+    }
+    return `
+      <div class="ob-period ${cls}">
+        <div class="ob-period-dates">${label}</div>
+        <div class="ob-progress-row">
+          <div class="ob-pbar-wrap">
+            <div class="ob-pbar-fill" style="width:${barPct.toFixed(1)}%"></div>
+          </div>
+          <span class="ob-count">${p.usedInPeriod}/5日</span>
+          ${badge}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="ob-section">
+      <div class="ob-header" style="${headerStyle}">
+        <i class="fa-solid fa-scale-balanced"></i> 5日取得義務
+        <span class="ob-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span>
+      </div>
+      <div class="ob-body hidden">${periodsHtml}</div>
+    </div>`;
 }
 
 // ── 付与履歴モーダル ──
