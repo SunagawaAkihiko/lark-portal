@@ -619,12 +619,12 @@
     .settings-save-bar .save-status.err { color: #c0392b; }
 
     /* ==================== ▼ タブ5: 処遇改善加算 ==================== */
-    /* タブ全体スクロール */
+    /* タブ全体スクロール（display:flex を使わずブロックレイアウトにすることでoverflow-y:autoが正しく機能する） */
     .treatment-wrap {
       flex: 1; min-height: 0; overflow-y: auto;
       padding: 0.9rem 1rem;
-      display: flex; flex-direction: column; gap: 0.9rem;
     }
+    .treatment-wrap > * + * { margin-top: 0.9rem; }
     /* 報酬総額入力カード */
     .treatment-input-card {
       background: white;
@@ -654,15 +654,10 @@
     }
     .treatment-hint .hint-label { color: var(--muted); }
     .treatment-hint .hint-value { font-weight: 700; font-size: 0.96rem; color: var(--primary); }
-    /* スタッフ一覧テーブル */
-    .treatment-table-wrap {
-      background: white;
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-    }
+    /* スタッフ一覧テーブル（枠なし・全員表示） */
     .treatment-table {
       width: 100%; border-collapse: collapse; font-size: 0.85rem;
+      background: white;
     }
     .treatment-table th {
       background: #e8d8c4; padding: 0.5rem 0.7rem;
@@ -969,27 +964,25 @@
       </div>
     </div>
 
-    <!-- スタッフ一覧テーブル -->
-    <div class="treatment-table-wrap">
-      <table class="treatment-table">
-        <thead>
-          <tr>
-            <th class="col-name">スタッフ名</th>
-            <th class="col-type">種別</th>
-            <th class="col-ratio">割合（%）</th>
-            <th class="col-amount">金額（円）</th>
-          </tr>
-        </thead>
-        <tbody id="treatment-tbody"></tbody>
-        <tfoot>
-          <tr class="row-total">
-            <td class="col-name" colspan="2">合　計</td>
-            <td class="col-ratio" style="text-align:right" id="treatment-total-ratio">0.00</td>
-            <td class="col-amount" id="treatment-total-amount">0</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+    <!-- スタッフ一覧テーブル（枠なし・全員表示） -->
+    <table class="treatment-table">
+      <thead>
+        <tr>
+          <th class="col-name">スタッフ名</th>
+          <th class="col-type">種別</th>
+          <th class="col-ratio">割合（%）</th>
+          <th class="col-amount">金額（円）</th>
+        </tr>
+      </thead>
+      <tbody id="treatment-tbody"></tbody>
+      <tfoot>
+        <tr class="row-total">
+          <td class="col-name" colspan="2">合　計</td>
+          <td class="col-ratio" style="text-align:right" id="treatment-total-ratio">0.00</td>
+          <td class="col-amount" id="treatment-total-amount">0</td>
+        </tr>
+      </tfoot>
+    </table>
 
     <!-- 給与反映ボタン -->
     <div class="treatment-apply-bar">
