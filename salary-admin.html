@@ -2525,6 +2525,7 @@ function renderTreatmentTable(savedAllowances = {}) {
 
 /**
  * 報酬総額変化時に支給目安と全行の金額を再計算する
+ * 割合は支給目安金額に対する%として計算する
  * 処遇(扶養)は5,000円固定で割合を逆算し、処遇は割合入力欄の値から金額を計算する
  */
 function updateTreatmentRows() {
@@ -2532,6 +2533,9 @@ function updateTreatmentRows() {
 
   // 支給目安（報酬総額 × 2.4% の小数点以下切り上げ）を更新する
   updateTreatmentHint(totalVal);
+
+  // 割合計算の基準は報酬総額ではなく支給目安金額とする
+  const hintVal = totalVal > 0 ? Math.ceil(totalVal * 0.024) : 0;
 
   let sumRatio  = 0;
   let sumAmount = 0;
@@ -2544,22 +2548,22 @@ function updateTreatmentRows() {
     let amount, ratio;
 
     if (isFuyo) {
-      // 処遇(扶養)：5,000円固定。報酬総額が入力されていれば割合を逆算して表示する
+      // 処遇(扶養)：5,000円固定。支給目安が入力されていれば割合を逆算して表示する
       amount = 5000;
-      ratio  = totalVal > 0 ? (5000 / totalVal * 100) : 0;
+      ratio  = hintVal > 0 ? (5000 / hintVal * 100) : 0;
       ratioInp.value = ratio > 0 ? ratio.toFixed(4) : '';
     } else {
-      // 処遇：割合入力欄から金額を計算する（報酬総額 × 割合 / 100）
+      // 処遇：割合入力欄から金額を計算する（支給目安 × 割合 / 100）
       ratio = parseFloat(ratioInp.value) || 0;
-      // 保存済み金額が設定されており、まだ報酬総額が未入力の場合はダッシュを表示する
-      if (totalVal <= 0 && ratio === 0 && ratioInp.dataset.savedAmount !== undefined) {
+      // 支給目安が未入力かつ保存済み金額がある場合はそのまま表示する
+      if (hintVal <= 0 && ratio === 0 && ratioInp.dataset.savedAmount !== undefined) {
         amountTd.textContent = fmtNum(Number(ratioInp.dataset.savedAmount));
         return;
       }
-      amount = totalVal > 0 ? Math.round(totalVal * ratio / 100) : 0;
+      amount = hintVal > 0 ? Math.round(hintVal * ratio / 100) : 0;
     }
 
-    amountTd.textContent = amount > 0 ? fmtNum(amount) : (totalVal > 0 ? '0' : '—');
+    amountTd.textContent = amount > 0 ? fmtNum(amount) : (hintVal > 0 ? '0' : '—');
     sumRatio  += ratio;
     sumAmount += amount;
   });
