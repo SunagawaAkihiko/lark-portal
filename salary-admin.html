@@ -144,7 +144,7 @@
     .ctrl-bar input[type=month],
     .ctrl-bar select { height: 2.2rem; box-sizing: border-box; }
     /* 月入力欄はデフォルト幅が広いためデスクトップ・モバイル共通で幅を固定する */
-    #salary-month, #kintai-month { width: 118px; }
+    #salary-month, #kintai-month, #treatment-month { width: 118px; }
     .btn-primary {
       padding: 0.38rem 0.9rem;
       border-radius: 6px;
@@ -618,6 +618,103 @@
     .settings-save-bar .save-status { font-size: 0.82rem; color: #1a8c4e; margin-left: auto; }
     .settings-save-bar .save-status.err { color: #c0392b; }
 
+    /* ==================== ▼ タブ5: 処遇改善加算 ==================== */
+    /* タブ全体スクロール */
+    .treatment-wrap {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 0.9rem 1rem;
+      display: flex; flex-direction: column; gap: 0.9rem;
+    }
+    /* 報酬総額入力カード */
+    .treatment-input-card {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .treatment-input-card .card-title {
+      font-weight: 700; font-size: 0.88rem; color: var(--brown-mid);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .treatment-input-card .amount-row {
+      display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    }
+    .treatment-input-card .amount-row label { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+    .treatment-input-card .total-input {
+      padding: 0.4rem 0.6rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-size: 1rem; text-align: right; width: 160px; color: var(--text);
+    }
+    .treatment-input-card .total-input:focus { outline: none; border-color: var(--primary); }
+    .treatment-input-card .unit { font-size: 0.88rem; color: var(--muted); }
+    .treatment-hint {
+      font-size: 0.82rem; color: var(--brown-mid);
+      display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+    }
+    .treatment-hint .hint-label { color: var(--muted); }
+    .treatment-hint .hint-value { font-weight: 700; font-size: 0.96rem; color: var(--primary); }
+    /* スタッフ一覧テーブル */
+    .treatment-table-wrap {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .treatment-table {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    }
+    .treatment-table th {
+      background: #e8d8c4; padding: 0.5rem 0.7rem;
+      text-align: center; font-weight: 700; color: var(--brown-dark);
+      border-bottom: 1.5px solid var(--border);
+    }
+    .treatment-table td {
+      padding: 0.45rem 0.7rem; border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+    .treatment-table tr:last-child td { border-bottom: none; }
+    .treatment-table .col-name { text-align: left; font-weight: 500; }
+    .treatment-table .col-type { text-align: center; }
+    .treatment-table .col-ratio { text-align: center; width: 110px; }
+    .treatment-table .col-amount { text-align: right; width: 120px; }
+    /* 種別バッジ */
+    .badge-treatment     { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 99px;
+                           font-size: 0.72rem; font-weight: 700;
+                           background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .badge-treatment-dep { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 99px;
+                           font-size: 0.72rem; font-weight: 700;
+                           background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+    /* 割合入力欄 */
+    .ratio-input {
+      width: 80px; padding: 0.3rem 0.4rem; text-align: right;
+      border: 1.5px solid var(--border); border-radius: 5px;
+      font-size: 0.88rem; color: var(--text);
+    }
+    .ratio-input:focus { outline: none; border-color: var(--primary); }
+    .ratio-input:read-only { background: #f5f0eb; color: var(--muted); cursor: default; }
+    /* 合計行 */
+    .treatment-table .row-total td {
+      background: #f5ede0; font-weight: 700;
+      border-top: 1.5px solid var(--border);
+    }
+    /* 反映ボタンバー */
+    .treatment-apply-bar {
+      display: flex; align-items: center; gap: 0.8rem;
+      justify-content: center; flex-wrap: wrap;
+    }
+    .btn-apply {
+      padding: 0.6rem 1.6rem;
+      border-radius: 8px; border: none;
+      background: var(--primary); color: white;
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-apply:hover { opacity: 0.88; }
+    .btn-apply:disabled { opacity: 0.5; cursor: not-allowed; }
+    .apply-status { font-size: 0.82rem; color: #1a8c4e; }
+    .apply-status.err { color: #c0392b; }
+
     /* ==================== PDF出力スタイル ==================== */
     /* html2pdf.js でPDF化する際に印刷ヘッダーを見せるための補助スタイル */
     /* （通常時は display:none のままで、downloadXxx() 関数内で一時的に表示する） */
@@ -648,6 +745,9 @@
   </button>
   <button class="main-tab" data-tab="kintai">
     <i class="fa-solid fa-clock"></i>出勤簿
+  </button>
+  <button class="main-tab" data-tab="treatment">
+    <i class="fa-solid fa-hand-holding-heart"></i>処遇改善加算
   </button>
   <button class="main-tab" data-tab="settings">
     <i class="fa-solid fa-gear"></i>設定
@@ -835,6 +935,68 @@
     <!-- 1テーブル sticky 方式: 日付列を position:sticky で左固定する -->
     <div class="table-scroll-wrap">
       <table class="kintai-table" id="kintai-table"></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- タブ5: 処遇改善加算                                   -->
+<!-- ===================================================== -->
+<section id="tab-treatment" class="tab-content">
+  <div class="ctrl-bar">
+    <label>対象月</label>
+    <input type="month" id="treatment-month">
+    <button class="btn-primary" onclick="loadTreatment()">
+      <i class="fa-solid fa-rotate"></i> 取得
+    </button>
+  </div>
+  <div id="treatment-status" class="status-area">月を選択して「取得」を押してください。</div>
+  <div class="treatment-wrap hidden" id="treatment-wrap">
+    <!-- 報酬総額入力カード -->
+    <div class="treatment-input-card">
+      <div class="card-title">
+        <i class="fa-solid fa-yen-sign"></i> 報酬総額
+      </div>
+      <div class="amount-row">
+        <label>報酬総額</label>
+        <input type="number" id="treatment-total" class="total-input" min="0" step="1" placeholder="0">
+        <span class="unit">円</span>
+      </div>
+      <div class="treatment-hint">
+        <span class="hint-label"><i class="fa-solid fa-circle-info"></i> 支給目安（×2.4% 切り上げ）：</span>
+        <span class="hint-value" id="treatment-hint-val">—</span>
+        <span class="unit" id="treatment-hint-unit" style="display:none">円</span>
+      </div>
+    </div>
+
+    <!-- スタッフ一覧テーブル -->
+    <div class="treatment-table-wrap">
+      <table class="treatment-table">
+        <thead>
+          <tr>
+            <th class="col-name">スタッフ名</th>
+            <th class="col-type">種別</th>
+            <th class="col-ratio">割合（%）</th>
+            <th class="col-amount">金額（円）</th>
+          </tr>
+        </thead>
+        <tbody id="treatment-tbody"></tbody>
+        <tfoot>
+          <tr class="row-total">
+            <td class="col-name" colspan="2">合　計</td>
+            <td class="col-ratio" style="text-align:right" id="treatment-total-ratio">0.00</td>
+            <td class="col-amount" id="treatment-total-amount">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- 給与反映ボタン -->
+    <div class="treatment-apply-bar">
+      <button class="btn-apply" id="btn-treatment-apply" onclick="applyTreatment()">
+        <i class="fa-solid fa-file-invoice-dollar"></i> 給与に反映
+      </button>
+      <span class="apply-status hidden" id="treatment-apply-status"></span>
     </div>
   </div>
 </section>
@@ -2260,6 +2422,244 @@ function equalizeCtrlBars() {
 document.addEventListener('DOMContentLoaded', () => {
   equalizeCtrlBars();
 });
+
+// ============================================================
+// タブ5: 処遇改善加算
+// ============================================================
+
+// 処遇改善加算タブで読み込んだスタッフ一覧（{ staffId, staffName, treatmentType }[]）
+let treatmentStaffList = [];
+
+/** 月選択後に処遇対象スタッフ一覧と保存済み金額を取得してテーブルを描画する */
+async function loadTreatment() {
+  const month = document.getElementById('treatment-month').value;
+  if (!month) { alert('対象月を選択してください。'); return; }
+
+  const wrap   = document.getElementById('treatment-wrap');
+  const status = document.getElementById('treatment-status');
+  wrap.classList.add('hidden');
+  status.classList.remove('hidden', 'error');
+  status.innerHTML = '<span class="spinner"></span>データを取得中…';
+
+  try {
+    // 処遇対象スタッフ一覧と保存済み金額を並列取得する
+    const [staffRes, allowRes] = await Promise.all([
+      fetch(`${API_BASE}/api/salary/treatment-staff`).then(r => r.json()),
+      fetch(`${API_BASE}/api/salary/treatment-allowance?month=${month}`).then(r => r.json()),
+    ]);
+    if (!staffRes.ok)  throw new Error(staffRes.error  || 'スタッフ取得失敗');
+    if (!allowRes.ok)  throw new Error(allowRes.error  || '設定取得失敗');
+
+    treatmentStaffList = staffRes.list;
+    const savedAllowances = allowRes.allowances || {};
+
+    // 現在の報酬総額入力値をリセットして再計算を促す
+    document.getElementById('treatment-total').value = '';
+    updateTreatmentHint();
+
+    renderTreatmentTable(savedAllowances);
+    status.classList.add('hidden');
+    wrap.classList.remove('hidden');
+  } catch(e) {
+    status.classList.add('error');
+    status.textContent = `エラー: ${e.message}`;
+  }
+}
+
+/**
+ * スタッフテーブルを描画する
+ * savedAllowances: { staffId: amount } の保存済み金額マップ
+ */
+function renderTreatmentTable(savedAllowances = {}) {
+  const tbody = document.getElementById('treatment-tbody');
+  tbody.innerHTML = '';
+
+  treatmentStaffList.forEach(staff => {
+    const isFuyo = staff.treatmentType === '処遇(扶養)';
+    const savedAmt = savedAllowances[staff.staffId];
+
+    const tr = document.createElement('tr');
+    tr.dataset.staffId = staff.staffId;
+    tr.dataset.fuyo    = isFuyo ? '1' : '0';
+
+    // スタッフ名セル
+    const tdName = document.createElement('td');
+    tdName.className = 'col-name';
+    tdName.textContent = staff.staffName;
+
+    // 種別バッジセル
+    const tdType = document.createElement('td');
+    tdType.className = 'col-type';
+    const badge = document.createElement('span');
+    badge.className = isFuyo ? 'badge-treatment-dep' : 'badge-treatment';
+    badge.textContent = staff.treatmentType;
+    tdType.appendChild(badge);
+
+    // 割合入力セル（処遇(扶養)は読み取り専用・自動計算）
+    const tdRatio = document.createElement('td');
+    tdRatio.className = 'col-ratio';
+    const ratioInput = document.createElement('input');
+    ratioInput.type      = 'number';
+    ratioInput.className = 'ratio-input';
+    ratioInput.min       = '0';
+    ratioInput.step      = '0.01';
+    ratioInput.dataset.staffId = staff.staffId;
+    if (isFuyo) {
+      // 処遇(扶養)は5,000円固定のため入力不可・割合は報酬総額から自動計算する
+      ratioInput.readOnly = true;
+      ratioInput.value    = '';  // 報酬総額確定後に updateTreatmentRows() で埋める
+    } else {
+      // 保存済み金額から逆算して割合を復元する（報酬総額がなければ0）
+      if (savedAmt !== undefined) {
+        ratioInput.dataset.savedAmount = savedAmt;  // 後で報酬総額入力後に逆算するフラグ用
+      }
+      ratioInput.addEventListener('input', () => updateTreatmentRows());
+    }
+    tdRatio.appendChild(ratioInput);
+
+    // 金額表示セル
+    const tdAmount = document.createElement('td');
+    tdAmount.className = 'col-amount';
+    tdAmount.dataset.staffId = staff.staffId;
+    tdAmount.textContent = savedAmt !== undefined ? fmtNum(savedAmt) : '—';
+
+    tr.append(tdName, tdType, tdRatio, tdAmount);
+    tbody.appendChild(tr);
+  });
+
+  updateTreatmentRows();
+}
+
+/**
+ * 報酬総額変化時に支給目安と全行の金額を再計算する
+ * 処遇(扶養)は5,000円固定で割合を逆算し、処遇は割合入力欄の値から金額を計算する
+ */
+function updateTreatmentRows() {
+  const totalVal = parseFloat(document.getElementById('treatment-total').value) || 0;
+
+  // 支給目安（報酬総額 × 2.4% の小数点以下切り上げ）を更新する
+  updateTreatmentHint(totalVal);
+
+  let sumRatio  = 0;
+  let sumAmount = 0;
+
+  document.querySelectorAll('#treatment-tbody tr').forEach(tr => {
+    const isFuyo   = tr.dataset.fuyo === '1';
+    const ratioInp = tr.querySelector('.ratio-input');
+    const amountTd = tr.querySelector('.col-amount');
+
+    let amount, ratio;
+
+    if (isFuyo) {
+      // 処遇(扶養)：5,000円固定。報酬総額が入力されていれば割合を逆算して表示する
+      amount = 5000;
+      ratio  = totalVal > 0 ? (5000 / totalVal * 100) : 0;
+      ratioInp.value = ratio > 0 ? ratio.toFixed(4) : '';
+    } else {
+      // 処遇：割合入力欄から金額を計算する（報酬総額 × 割合 / 100）
+      ratio = parseFloat(ratioInp.value) || 0;
+      // 保存済み金額が設定されており、まだ報酬総額が未入力の場合はダッシュを表示する
+      if (totalVal <= 0 && ratio === 0 && ratioInp.dataset.savedAmount !== undefined) {
+        amountTd.textContent = fmtNum(Number(ratioInp.dataset.savedAmount));
+        return;
+      }
+      amount = totalVal > 0 ? Math.round(totalVal * ratio / 100) : 0;
+    }
+
+    amountTd.textContent = amount > 0 ? fmtNum(amount) : (totalVal > 0 ? '0' : '—');
+    sumRatio  += ratio;
+    sumAmount += amount;
+  });
+
+  // 合計行を更新する
+  document.getElementById('treatment-total-ratio').textContent  = sumRatio.toFixed(2);
+  document.getElementById('treatment-total-amount').textContent = fmtNum(sumAmount);
+}
+
+/** 支給目安ラベルを更新する（報酬総額 × 2.4% の小数点以下切り上げ） */
+function updateTreatmentHint(totalVal) {
+  const hintEl  = document.getElementById('treatment-hint-val');
+  const unitEl  = document.getElementById('treatment-hint-unit');
+  if (!totalVal || totalVal <= 0) {
+    hintEl.textContent = '—';
+    unitEl.style.display = 'none';
+    return;
+  }
+  const hint = Math.ceil(totalVal * 0.024);
+  hintEl.textContent   = fmtNum(hint);
+  unitEl.style.display = '';
+}
+
+/**
+ * 「給与に反映」ボタン処理
+ * 全スタッフの処遇改善手当金額を salary_settings.json に保存する
+ */
+async function applyTreatment() {
+  const month   = document.getElementById('treatment-month').value;
+  if (!month) { alert('対象月が選択されていません。'); return; }
+
+  const totalVal = parseFloat(document.getElementById('treatment-total').value) || 0;
+
+  // スタッフごとの金額を収集する
+  const allowances = {};
+  let hasError = false;
+
+  document.querySelectorAll('#treatment-tbody tr').forEach(tr => {
+    const staffId = tr.dataset.staffId;
+    const isFuyo  = tr.dataset.fuyo === '1';
+    const ratioInp = tr.querySelector('.ratio-input');
+
+    let amount;
+    if (isFuyo) {
+      // 処遇(扶養)は5,000円固定
+      amount = 5000;
+    } else {
+      const ratio = parseFloat(ratioInp.value) || 0;
+      amount = totalVal > 0 ? Math.round(totalVal * ratio / 100) : 0;
+    }
+    if (staffId) allowances[staffId] = amount;
+  });
+
+  if (Object.keys(allowances).length === 0) {
+    alert('反映するスタッフがいません。');
+    return;
+  }
+
+  const btn    = document.getElementById('btn-treatment-apply');
+  const status = document.getElementById('treatment-apply-status');
+  btn.disabled = true;
+  status.textContent = '保存中…';
+  status.className   = 'apply-status';
+  status.classList.remove('hidden');
+
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/treatment-allowance`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ month, allowances }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '保存失敗');
+
+    status.textContent = `✅ ${month.replace('-','年')}月分の処遇改善手当を給与に反映しました`;
+    setTimeout(() => status.classList.add('hidden'), 3500);
+  } catch(e) {
+    status.textContent = `⚠ ${e.message}`;
+    status.classList.add('err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// 報酬総額の入力変化で支給目安・金額を即時再計算する
+document.getElementById('treatment-total').addEventListener('input', () => updateTreatmentRows());
+
+// 処遇改善加算タブの対象月セレクトを初期化する（給与一覧表と同じ月を初期値にする）
+(function initTreatmentMonth() {
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('treatment-month').value = currentMonth;
+})();
 </script>
 </body>
 </html>
