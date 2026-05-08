@@ -2596,14 +2596,15 @@ async function applyTreatment() {
   if (!month) { alert('対象月が選択されていません。'); return; }
 
   const totalVal = parseFloat(document.getElementById('treatment-total').value) || 0;
+  // 金額計算の基準は支給目安（報酬総額 × 2.4% 切り上げ）とする
+  const hintVal  = totalVal > 0 ? Math.ceil(totalVal * 0.024) : 0;
 
   // スタッフごとの金額を収集する
   const allowances = {};
-  let hasError = false;
 
   document.querySelectorAll('#treatment-tbody tr').forEach(tr => {
-    const staffId = tr.dataset.staffId;
-    const isFuyo  = tr.dataset.fuyo === '1';
+    const staffId  = tr.dataset.staffId;
+    const isFuyo   = tr.dataset.fuyo === '1';
     const ratioInp = tr.querySelector('.ratio-input');
 
     let amount;
@@ -2612,7 +2613,7 @@ async function applyTreatment() {
       amount = 5000;
     } else {
       const ratio = parseFloat(ratioInp.value) || 0;
-      amount = totalVal > 0 ? Math.round(totalVal * ratio / 100) : 0;
+      amount = hintVal > 0 ? Math.round(hintVal * ratio / 100) : 0;
     }
     if (staffId) allowances[staffId] = amount;
   });
