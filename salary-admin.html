@@ -1219,11 +1219,12 @@ function renderSalaryTable(rows, month) {
     { k:'非課税計',     label:'非　課　税　計',   sec:'pay' },
     { k:'総支給額',     label:'総　支　給　額',   sec:'pay', hl:'gross' },
     // ── 控除・差引 ──
-    { k:'健康保険',   label:'健　康　保　険', sec:'ded' },
-    { k:'介護保険',   label:'介　護　保　険', sec:'ded' },
-    { k:'厚生年金',   label:'厚　生　年　金', sec:'ded' },
-    { k:null,         label:'年　金　基　金', sec:'ded' },
-    { k:'雇用保険',   label:'雇　用　保　険', sec:'ded' },
+    { k:'健康保険',           label:'健　康　保　険',       sec:'ded' },
+    { k:'介護保険',           label:'介　護　保　険',       sec:'ded' },
+    { k:'厚生年金',           label:'厚　生　年　金',       sec:'ded' },
+    { k:null,                 label:'年　金　基　金',       sec:'ded' },
+    { k:'子ども子育て支援金', label:'子育て支援金',         sec:'ded' },
+    { k:'雇用保険',           label:'雇　用　保　険',       sec:'ded' },
     { k:'社会保険計', label:'社会保険計',     sec:'ded', hl:'gross' },
     { k:'課税対象額', label:'課税対象額',     sec:'ded' },
     { k:'源泉所得税', label:'源泉所得税',     sec:'ded' },
@@ -2127,6 +2128,7 @@ function renderInsuranceSettings(settings) {
         健保 <b>${(rate.health*100).toFixed(3)}%</b>
         ／介護 <b>${(rate.nursing*100).toFixed(3)}%</b>
         ／厚年 <b>${(rate.pension*100).toFixed(3)}%</b>
+        ／子支援 <b>${((rate.childrenSupport||0)*100).toFixed(3)}%</b>
         ${rate.note ? `<small style="color:var(--muted)"> (${rate.note})</small>` : ''}
       </span>
       <button class="btn-del-hist" onclick="deleteInsRate(${i})" title="削除">
@@ -2138,9 +2140,10 @@ function renderInsuranceSettings(settings) {
   <div class="add-hist-row">
     <span style="font-size:0.82rem;font-weight:700;color:var(--muted)">新規追加：</span>
     <input type="month" id="ins-from" placeholder="有効開始月">
-    <input type="number" id="ins-health"  placeholder="健保率(%)" step="0.001" style="width:110px">
-    <input type="number" id="ins-nursing" placeholder="介護率(%)" step="0.001" style="width:110px">
-    <input type="number" id="ins-pension" placeholder="厚年率(%)" step="0.001" style="width:110px">
+    <input type="number" id="ins-health"    placeholder="健保率(%)"  step="0.001" style="width:100px">
+    <input type="number" id="ins-nursing"   placeholder="介護率(%)"  step="0.001" style="width:100px">
+    <input type="number" id="ins-pension"   placeholder="厚年率(%)"  step="0.001" style="width:100px">
+    <input type="number" id="ins-children"  placeholder="子支援率(%)" step="0.001" style="width:100px">
     <button class="btn-add-hist" onclick="addInsRate()">追加</button>
   </div>`;
   body.innerHTML = html;
@@ -2152,13 +2155,20 @@ function deleteInsRate(idx) {
   renderInsuranceSettings(currentSettings);
 }
 function addInsRate() {
-  const from    = document.getElementById('ins-from').value;
-  const health  = parseFloat(document.getElementById('ins-health').value);
-  const nursing = parseFloat(document.getElementById('ins-nursing').value);
-  const pension = parseFloat(document.getElementById('ins-pension').value);
+  const from     = document.getElementById('ins-from').value;
+  const health   = parseFloat(document.getElementById('ins-health').value);
+  const nursing  = parseFloat(document.getElementById('ins-nursing').value);
+  const pension  = parseFloat(document.getElementById('ins-pension').value);
+  const children = parseFloat(document.getElementById('ins-children').value);
   if (!from || isNaN(health) || isNaN(pension)) { alert('有効開始月・健康保険率・厚生年金率は必須です。'); return; }
   currentSettings.insuranceRates = currentSettings.insuranceRates || [];
-  currentSettings.insuranceRates.push({ effectiveFrom:from, health:health/100, nursing:(isNaN(nursing)?0:nursing)/100, pension:pension/100 });
+  currentSettings.insuranceRates.push({
+    effectiveFrom:   from,
+    health:          health / 100,
+    nursing:         isNaN(nursing)  ? 0 : nursing  / 100,
+    pension:         pension / 100,
+    childrenSupport: isNaN(children) ? 0 : children / 100,
+  });
   currentSettings.insuranceRates.sort((a,b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
   renderInsuranceSettings(currentSettings);
 }
@@ -2251,6 +2261,13 @@ function renderStaffBody(sid, sSett) {
         <option value="true"  ${ sSett.skipInsurance?'selected':''}>社保計算なし</option>
       </select>
     </div>
+    <div class="settings-row">
+      <label>厚生年金</label>
+      <select id="pensionexempt-${sid}">
+        <option value="false" ${!sSett.isPensionExempt?'selected':''}>徴収あり（70歳未満）</option>
+        <option value="true"  ${ sSett.isPensionExempt?'selected':''}>除外（70歳以上）</option>
+      </select>
+    </div>
   </div>`;
 
   // 住民税
@@ -2339,6 +2356,8 @@ async function saveSettings() {
     if (okuranEl) sSett.isOkuran = okuranEl.value === 'true';
     const skipEl = document.getElementById(`skipins-${sid}`);
     if (skipEl) sSett.skipInsurance = skipEl.value === 'true';
+    const pensionExemptEl = document.getElementById(`pensionexempt-${sid}`);
+    if (pensionExemptEl) sSett.isPensionExempt = pensionExemptEl.value === 'true';
     const yearEl = document.getElementById(`resi-year-${sid}`);
     const year = yearEl ? parseInt(yearEl.value) : new Date().getFullYear();
     const months = {};
