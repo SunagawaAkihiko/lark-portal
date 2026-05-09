@@ -2262,10 +2262,10 @@ function renderStaffBody(sid, sSett) {
       </select>
     </div>
     <div class="settings-row">
-      <label>厚生年金</label>
-      <select id="pensionexempt-${sid}">
-        <option value="false" ${!sSett.isPensionExempt?'selected':''}>徴収あり（70歳未満）</option>
-        <option value="true"  ${ sSett.isPensionExempt?'selected':''}>除外（70歳以上）</option>
+      <label>雇用保険</label>
+      <select id="skipemploy-${sid}">
+        <option value="false" ${!sSett.skipEmployment?'selected':''}>徴収あり</option>
+        <option value="true"  ${ sSett.skipEmployment?'selected':''}>除外</option>
       </select>
     </div>
   </div>`;
@@ -2356,8 +2356,8 @@ async function saveSettings() {
     if (okuranEl) sSett.isOkuran = okuranEl.value === 'true';
     const skipEl = document.getElementById(`skipins-${sid}`);
     if (skipEl) sSett.skipInsurance = skipEl.value === 'true';
-    const pensionExemptEl = document.getElementById(`pensionexempt-${sid}`);
-    if (pensionExemptEl) sSett.isPensionExempt = pensionExemptEl.value === 'true';
+    const skipEmployEl = document.getElementById(`skipemploy-${sid}`);
+    if (skipEmployEl) sSett.skipEmployment = skipEmployEl.value === 'true';
     const yearEl = document.getElementById(`resi-year-${sid}`);
     const year = yearEl ? parseInt(yearEl.value) : new Date().getFullYear();
     const months = {};
