@@ -458,38 +458,116 @@
       text-align: center;
     }
 
-    /* 日付グループ見出し */
-    .hist-date-group { margin-bottom: 0.5rem; }
-    .hist-date-header {
-      font-size: 0.78rem;
-      font-weight: 700;
+    /* 利用者検索ボックス */
+    .hist-search-wrap {
+      position: relative;
+    }
+    .hist-search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
       color: var(--text-muted);
-      padding: 0.3rem 0.5rem;
-      border-left: 3px solid var(--primary-color);
-      margin-bottom: 0.35rem;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .hist-search-input {
+      width: 100%;
+      padding: 0.6rem 0.75rem 0.6rem 2.2rem;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      background: white;
+    }
+    .hist-search-input:focus { outline: none; border-color: var(--primary-color); }
+    .hist-search-clear {
+      position: absolute;
+      right: 0.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0.2rem;
+      display: none;
     }
 
-    /* 履歴レコード行 */
-    .hist-record {
+    /* 利用者グループ */
+    .hist-person-group {
       background: white;
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 0.6rem 0.75rem;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+    }
+    .hist-person-header {
       display: flex;
       align-items: center;
       gap: 0.6rem;
-      margin-bottom: 0.35rem;
+      padding: 0.65rem 0.75rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
     }
-    .hist-record-info { flex: 1; min-width: 0; }
-    .hist-record-name {
-      font-size: 0.88rem;
+    .hist-person-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem;
+      color: var(--primary-color);
+      flex-shrink: 0;
+    }
+    .hist-person-name {
+      flex: 1;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--text-color);
     }
-    .hist-record-product {
-      font-size: 0.8rem;
+    .hist-person-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.1rem;
+    }
+    .hist-person-count {
+      font-size: 0.75rem;
       color: var(--text-muted);
-      margin-top: 0.1rem;
+    }
+    .hist-person-total {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    /* 履歴レコード行（利用者グループ内） */
+    .hist-record {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--bg-color);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .hist-record:last-child { border-bottom: none; }
+    .hist-record.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
+    /* 日付バッジ */
+    .hist-record-date {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 4.5rem;
+    }
+    .hist-record-info { flex: 1; min-width: 0; }
+    .hist-record-product {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-color);
     }
     .hist-record-subtotal {
       font-size: 0.82rem;
@@ -729,7 +807,15 @@
       <i class="fa-solid fa-chevron-right"></i>
     </button>
   </div>
-  <!-- レコード一覧（日付グループ） -->
+  <!-- 利用者名検索 -->
+  <div class="hist-search-wrap">
+    <i class="fa-solid fa-magnifying-glass hist-search-icon"></i>
+    <input type="text" class="hist-search-input" id="histSearchInput" placeholder="利用者名で絞り込み...">
+    <button class="hist-search-clear" id="histSearchClear" onclick="clearHistSearch()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <!-- レコード一覧（利用者グループ） -->
   <div id="historyList"></div>
 </div>
 
@@ -802,6 +888,7 @@
   // 履歴確認タブの状態
   let currentMode        = 'register';  // 'register' または 'history'
   let historyMonth       = '';          // 現在表示中の月 "YYYY-MM"
+  let historyAllRecords  = [];          // 取得した全レコード（検索フィルタの元データ）
   let historyRecordsById = {};          // record_id → レコードオブジェクトのマップ（編集・削除に使用）
   let selectedHistId     = null;        // 履歴で選択中のrecord_id
   let editTargetId       = '';          // 編集対象のrecord_id
@@ -1132,8 +1219,10 @@
     const [y, m] = historyMonth.split('-').map(Number);
     document.getElementById('historyMonthLabel').textContent = `${y}年${m}月`;
 
-    // 新しいデータを読み込む前に選択状態をリセットする
+    // 新しいデータを読み込む前に選択状態と検索ワードをリセットする
     clearHistSelection();
+    document.getElementById('histSearchInput').value = '';
+    document.getElementById('histSearchClear').style.display = 'none';
 
     const listEl = document.getElementById('historyList');
     listEl.innerHTML = '<div class="hist-empty"><div class="spinner" style="margin:0 auto 0.5rem"></div>読み込み中...</div>';
@@ -1143,27 +1232,49 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      renderHistoryList(data.records);
+      // 全レコードをメモリに保持して検索フィルタで使いまわす
+      historyAllRecords = data.records;
+      // IDマップも全件で構築する
+      historyRecordsById = {};
+      data.records.forEach(r => { historyRecordsById[r.id] = r; });
+      applyHistoryFilter();
     } catch (err) {
       listEl.innerHTML = `<div class="hist-empty" style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 取得失敗: ${err.message}</div>`;
     }
   }
 
   // ============================================================
-  // 履歴レコードを日付グループごとにレンダリングする
+  // 検索ワードでフィルタしてレンダリングを呼び出す
   // ============================================================
-  function renderHistoryList(records) {
+  function applyHistoryFilter() {
+    const query = (document.getElementById('histSearchInput').value || '').trim();
+    const filtered = query
+      ? historyAllRecords.filter(r => r.name.includes(query))
+      : historyAllRecords;
+    renderHistoryList(filtered, query);
+  }
+
+  // 検索クリアボタンの処理
+  function clearHistSearch() {
+    document.getElementById('histSearchInput').value = '';
+    document.getElementById('histSearchClear').style.display = 'none';
+    applyHistoryFilter();
+  }
+
+  // ============================================================
+  // 履歴レコードを利用者グループごとにレンダリングする
+  // ============================================================
+  function renderHistoryList(records, query = '') {
     const listEl = document.getElementById('historyList');
     listEl.innerHTML = '';
 
     if (!records.length) {
-      listEl.innerHTML = '<div class="hist-empty"><i class="fa-solid fa-inbox"></i><br>この月の提供記録はありません</div>';
+      const msg = query
+        ? `「${query}」に一致する記録はありません`
+        : 'この月の提供記録はありません';
+      listEl.innerHTML = `<div class="hist-empty"><i class="fa-solid fa-inbox"></i><br>${msg}</div>`;
       return;
     }
-
-    // レコードをIDキーのマップに格納する（クリックハンドラから参照するため）
-    historyRecordsById = {};
-    records.forEach(r => { historyRecordsById[r.id] = r; });
 
     // 件数バナーを追加する
     const banner = document.createElement('div');
@@ -1171,38 +1282,49 @@
     banner.textContent = `${records.length}件の提供記録`;
     listEl.appendChild(banner);
 
-    // 日付でグループ化する（降順）
-    const byDate = {};
+    // 利用者名でグループ化する（五十音順）
+    const byName = {};
     records.forEach(r => {
-      if (!byDate[r.date]) byDate[r.date] = [];
-      byDate[r.date].push(r);
+      if (!byName[r.name]) byName[r.name] = [];
+      byName[r.name].push(r);
     });
-    const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+    const sortedNames = Object.keys(byName).sort((a, b) => a.localeCompare(b, 'ja'));
 
-    sortedDates.forEach(date => {
+    sortedNames.forEach(name => {
+      const recs = byName[name];
+
+      // グループ内を日付降順でソートする
+      recs.sort((a, b) => b.date.localeCompare(a.date));
+
+      // 合計金額（小計が取れるレコードのみ集計する）
+      const totalSubtotal = recs.reduce((sum, r) => sum + (r.subtotal ?? 0), 0);
+      const hasPrice      = recs.some(r => r.subtotal != null);
+
+      // 利用者グループカードを生成する
       const group = document.createElement('div');
-      group.className = 'hist-date-group';
+      group.className = 'hist-person-group';
 
-      // 日付見出し（例: "5月10日（土）"）
-      const [y, mo, d] = date.split('-').map(Number);
-      const wdays = ['日','月','火','水','木','金','土'];
-      const dow   = new Date(y, mo - 1, d).getDay();
       const header = document.createElement('div');
-      header.className = 'hist-date-header';
-      header.textContent = `${mo}月${d}日（${wdays[dow]}）`;
+      header.className = 'hist-person-header';
+      header.innerHTML = `
+        <div class="hist-person-avatar"><i class="fa-solid fa-user"></i></div>
+        <div class="hist-person-name">${name}</div>
+        <div class="hist-person-meta">
+          <div class="hist-person-count">${recs.length}件</div>
+          ${hasPrice ? `<div class="hist-person-total">¥${totalSubtotal.toLocaleString()}</div>` : ''}
+        </div>
+      `;
       group.appendChild(header);
 
-      // レコード行を追加する
-      byDate[date].forEach(r => {
-        group.appendChild(createHistRecordRow(r));
-      });
+      // 各レコード行を追加する
+      recs.forEach(r => group.appendChild(createHistRecordRow(r)));
 
       listEl.appendChild(group);
     });
   }
 
   // ============================================================
-  // 履歴レコード行のDOM要素を生成する
+  // 履歴レコード行のDOM要素を生成する（利用者グループ内）
   // ============================================================
   function createHistRecordRow(r) {
     const row = document.createElement('div');
@@ -1212,12 +1334,18 @@
     const productLabel = r.product === '' ? (r.otherProduct || '不明') :
                          r.product === 'その他' ? (r.otherProduct || 'その他') : r.product;
 
+    // 日付を短縮形式で表示する（例: 5/10（土））
+    const [, mo, d] = r.date.split('-').map(Number);
+    const wdays      = ['日','月','火','水','木','金','土'];
+    const dow        = new Date(r.date).getDay();
+    const dateLabel  = `${mo}/${d}（${wdays[dow]}）`;
+
     // 小計表示（単価情報がない場合は「–」）
     const subtotalLabel = r.subtotal != null ? `¥${r.subtotal.toLocaleString()}` : '–';
 
     row.innerHTML = `
+      <div class="hist-record-date">${dateLabel}</div>
       <div class="hist-record-info">
-        <div class="hist-record-name">${r.name}</div>
         <div class="hist-record-product">${productLabel} × ${r.count}個</div>
       </div>
       <div class="hist-record-subtotal">${subtotalLabel}</div>
@@ -1392,6 +1520,14 @@
   // モーダルオーバーレイのクリックで閉じる
   document.getElementById('editModal').addEventListener('click', e => {
     if (e.target === document.getElementById('editModal')) closeEditModal();
+  });
+
+  // 検索ボックスの入力イベント：入力のたびにフィルタを再適用する
+  document.getElementById('histSearchInput').addEventListener('input', () => {
+    const hasValue = !!document.getElementById('histSearchInput').value;
+    // クリアボタンは文字入力があるときのみ表示する
+    document.getElementById('histSearchClear').style.display = hasValue ? 'block' : 'none';
+    applyHistoryFilter();
   });
 
 
