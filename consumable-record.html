@@ -378,34 +378,42 @@
     .toast.success { background: #2d6a4f; }
     .toast.error   { background: #c1121f; }
 
-    /* ===== モード切替タブバー（登録 / 履歴確認） ===== */
+    /* ===== モード切替タブバー（セグメントコントロール形式・スタッフマイページと同デザイン） ===== */
     .mode-tabs {
+      background: var(--bg-color);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .mode-tabs-inner {
       display: flex;
-      background: #f5ebe0;
-      border-bottom: 2px solid var(--border-color);
+      background: rgba(0,0,0,0.08);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 3px;
     }
     .mode-tab {
       flex: 1;
-      padding: 0.65rem;
+      padding: 9px 0;
+      text-align: center;
+      background: transparent;
       border: none;
-      background: none;
       font-family: inherit;
       font-size: 0.9rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.4rem;
-      transition: color 0.15s, border-bottom 0.15s;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
     }
     .mode-tab.active {
+      background: #fff;
       color: var(--primary-color);
-      border-bottom-color: var(--primary-color);
-      background: var(--bg-color);
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
     }
 
     /* ===== 履歴確認ビュー ===== */
@@ -639,14 +647,16 @@
 <!-- 事業所タブ（pill形状） -->
 <div class="office-tabs" id="tabBar"></div>
 
-<!-- モード切替タブバー（登録 / 履歴確認） -->
+<!-- モード切替タブバー（セグメントコントロール形式） -->
 <div class="mode-tabs hidden" id="modeTabs">
-  <button class="mode-tab active" id="modeRegister" onclick="switchMode('register')">
-    <i class="fa-solid fa-plus"></i> 登録
-  </button>
-  <button class="mode-tab" id="modeHistory" onclick="switchMode('history')">
-    <i class="fa-solid fa-clock-rotate-left"></i> 履歴確認
-  </button>
+  <div class="mode-tabs-inner">
+    <button class="mode-tab active" id="modeRegister" onclick="switchMode('register')">
+      <i class="fa-solid fa-plus"></i> 登録
+    </button>
+    <button class="mode-tab" id="modeHistory" onclick="switchMode('history')">
+      <i class="fa-solid fa-clock-rotate-left"></i> 履歴確認
+    </button>
+  </div>
 </div>
 
 <!-- ローディング -->
