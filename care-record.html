@@ -360,15 +360,25 @@
     /* タップ可能セルのフィードバック */
     .bowel-cell-tap { cursor: pointer; transition: background 0.12s; }
     .bowel-cell-tap:active { background: #fff3e0; }
-    /* 排便エントリ選択状態（他タブの record-group-card.selected と同等） */
-    .bowel-entry { cursor: pointer; }
-    .bowel-entry.selected { outline: 2px solid var(--primary-color); outline-offset: 1px; }
-    /* 既存記録がある日に追加登録するための小さい＋ボタン */
-    .bowel-add-btn {
-      display: block; text-align: center; font-size: 0.58rem;
-      color: #bbb; cursor: pointer; line-height: 1.8; user-select: none;
+    /* 選択中の排便セルをハイライト */
+    .bowel-cal-cell.bowel-selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; cursor: pointer; }
+    /* 追加ボタン（アクションバー用） */
+    .rab-add { background: #43a047; color: #fff; border-right: 1px solid #2e7d32; }
+    /* 排便記録選択モーダルの各アイテム */
+    .bowel-picker-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card-bg); border-radius: 10px; border: 1.5px solid var(--border-color);
+      padding: 0.6rem 0.8rem; margin-bottom: 0.5rem; gap: 0.6rem;
     }
-    .bowel-add-btn:active { color: var(--primary-color); }
+    .bowel-picker-info { flex: 1; font-size: 0.92rem; font-weight: 600; }
+    .bowel-picker-btn {
+      flex-shrink: 0; border: none; border-radius: 7px;
+      padding: 0.4rem 0.8rem; font-family: inherit; font-size: 0.88rem;
+      font-weight: 700; cursor: pointer; transition: filter 0.12s;
+    }
+    .bowel-picker-btn:active { filter: brightness(0.85); }
+    .bowel-picker-btn.edit { background: #5c6bc0; color: #fff; }
+    .bowel-picker-btn.del  { background: #e63946; color: #fff; }
 
     /* ==================== 記録選択・アクションバー ==================== */
     /* タップで選択した記録のハイライト */
@@ -805,6 +815,24 @@
     </button>
   </div>
 
+  <!-- 排便管理用アクションバー（セル選択時に表示） -->
+  <div id="bowelActionBar" class="record-action-bar hidden">
+    <button class="rab-btn rab-edit"   id="bowel-bar-edit" onclick="onBowelEdit()"><i class="fa-solid fa-pen"></i> 編集</button>
+    <button class="rab-btn rab-add"                        onclick="onBowelAdd()"><i class="fa-solid fa-plus"></i> 追加</button>
+    <button class="rab-btn rab-delete" id="bowel-bar-del"  onclick="onBowelDelete()"><i class="fa-solid fa-trash"></i> 削除</button>
+  </div>
+
+  <!-- 排便管理：複数記録がある場合の編集・削除対象選択モーダル -->
+  <div class="modal hidden" id="bowel-picker-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="bowel-picker-title">記録を選択</h2>
+        <button class="close-btn" id="close-bowel-picker"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="bowel-picker-body" style="padding:0.5rem 0 0.5rem"></div>
+    </div>
+  </div>
+
   <!-- ===== 登録モーダル（ボトムシート） ===== -->
   <div class="modal hidden" id="add-modal">
     <div class="modal-content">
@@ -1000,8 +1028,12 @@
     let bowelMonth = _today.getMonth() + 1;
     // 顧客情報APIから取得した事業所別氏名マップ（動的に更新される）
     let officeNamesMap = {};
-    // 排便管理カレンダーの生レコード（氏名→日付→記録[]）。削除セクションで使用する
+    // 排便管理カレンダーの生レコード（氏名→日付→記録[]）。セル選択時の操作に使用する
     let bowelRecordsByNameDate = {};
+    // 排便管理セル選択状態
+    let bowelSelectedName = '';
+    let bowelSelectedDate = '';
+    let bowelSelectedRecs = [];
 
     // ==================== DOM要素 ====================
     const tabBar         = document.getElementById('tab-bar');
@@ -1011,10 +1043,11 @@
     const loadingEl      = document.getElementById('loading');
     const recordList     = document.getElementById('record-list');
 
-    const addModal       = document.getElementById('add-modal');
-    const editModal      = document.getElementById('edit-modal');
-    const closeAddModal  = document.getElementById('close-add-modal');
-    const closeEditModal = document.getElementById('close-edit-modal');
+    const addModal         = document.getElementById('add-modal');
+    const editModal        = document.getElementById('edit-modal');
+    const bowelPickerModal = document.getElementById('bowel-picker-modal');
+    const closeAddModal    = document.getElementById('close-add-modal');
+    const closeEditModal   = document.getElementById('close-edit-modal');
     const modalTitle     = document.getElementById('modal-title');
     const addForm        = document.getElementById('add-form');
     const editForm       = document.getElementById('edit-form');
@@ -1041,9 +1074,7 @@
     // 選択状態を解除してアクションバーを隠す
     function clearSelection() {
       selectedRecordId = null;
-      // 通常タブの記録カードと排便エントリ両方の選択状態を解除する
-      document.querySelectorAll('.record-group-card.selected, .bowel-entry.selected')
-        .forEach(e => e.classList.remove('selected'));
+      document.querySelectorAll('.record-group-card.selected').forEach(e => e.classList.remove('selected'));
       const bar = document.getElementById('recordActionBar');
       if (bar) bar.classList.add('hidden');
     }
@@ -1057,13 +1088,106 @@
       document.getElementById('recordActionBar').classList.remove('hidden');
     }
 
-    // 排便カレンダーのエントリをタップ：他タブと同様にアクションバーを表示する
-    function selectBowelEntry(el, id) {
-      if (selectedRecordId === id) { clearSelection(); return; }
-      clearSelection();
-      selectedRecordId = id;
-      el.classList.add('selected');
-      document.getElementById('recordActionBar').classList.remove('hidden');
+    // ==================== 排便管理セル選択 ====================
+    function selectBowelCell(el, name, date) {
+      // 同じセルを再タップで選択解除
+      if (bowelSelectedName === name && bowelSelectedDate === date) {
+        clearBowelSelection(); return;
+      }
+      clearBowelSelection();
+      bowelSelectedName = name;
+      bowelSelectedDate = date;
+      bowelSelectedRecs = bowelRecordsByNameDate[name]?.[date] || [];
+      el.classList.add('bowel-selected');
+
+      // 記録がある場合のみ編集・削除ボタンを表示する
+      const hasRecs = bowelSelectedRecs.length > 0;
+      document.getElementById('bowel-bar-edit').style.display = hasRecs ? '' : 'none';
+      document.getElementById('bowel-bar-del').style.display  = hasRecs ? '' : 'none';
+      document.getElementById('bowelActionBar').classList.remove('hidden');
+    }
+
+    function clearBowelSelection() {
+      bowelSelectedName = '';
+      bowelSelectedDate = '';
+      bowelSelectedRecs = [];
+      document.querySelectorAll('.bowel-cal-cell.bowel-selected').forEach(e => e.classList.remove('bowel-selected'));
+      document.getElementById('bowelActionBar').classList.add('hidden');
+    }
+
+    // 追加：選択セルで登録モーダルを開く
+    function onBowelAdd() {
+      const name = bowelSelectedName;
+      const date = bowelSelectedDate;
+      clearBowelSelection();
+      openBowelCellModal(name, date);
+    }
+
+    // 編集：1件なら直接、複数ならピッカーを表示
+    function onBowelEdit() {
+      if (bowelSelectedRecs.length === 0) return;
+      if (bowelSelectedRecs.length === 1) {
+        bowelOpenEditOne(bowelSelectedRecs[0]);
+      } else {
+        openBowelPicker('edit');
+      }
+    }
+
+    // 削除：1件なら直接、複数ならピッカーを表示
+    function onBowelDelete() {
+      if (bowelSelectedRecs.length === 0) return;
+      if (bowelSelectedRecs.length === 1) {
+        bowelDoDelete(bowelSelectedRecs[0].id);
+      } else {
+        openBowelPicker('delete');
+      }
+    }
+
+    // 1件の排便記録を編集モーダルで開く
+    function bowelOpenEditOne(r) {
+      selectedRecordId = r.id; // getSelectedRecord() が引けるようにセットする
+      clearBowelSelection();
+      onEditRecord();
+    }
+
+    // 1件の排便記録を削除する
+    async function bowelDoDelete(recordId) {
+      if (!confirm(`「${bowelSelectedName}」${bowelSelectedDate} の記録を削除しますか？\nこの操作は元に戻せません。`)) return;
+      try {
+        const res  = await fetch(`${API_BASE}/api/care/record/${recordId}?table=bowel`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        clearBowelSelection();
+        await loadRecords(currentOffice, selName.value);
+      } catch (err) {
+        alert('削除に失敗しました: ' + err.message);
+      }
+    }
+
+    // 複数記録ピッカーを開く（'edit' または 'delete'）
+    function openBowelPicker(action) {
+      const amountShort = {
+        '付着～卵１未満': '付着', '卵１つ分': '卵1', '卵２つ分': '卵2', '卵３つ分以上': '卵3+',
+      };
+      document.getElementById('bowel-picker-title').textContent =
+        action === 'edit' ? '編集する記録を選択' : '削除する記録を選択';
+      const btnCls   = action === 'edit' ? 'bowel-picker-btn edit' : 'bowel-picker-btn del';
+      const btnLabel = action === 'edit' ? '<i class="fa-solid fa-pen"></i> 編集' : '<i class="fa-solid fa-trash"></i> 削除';
+      let html = '';
+      bowelSelectedRecs.forEach((r, i) => {
+        const type   = r.fields?.['排便タイプ'] || '—';
+        const amount = r.fields?.['排便量']     || '—';
+        const amtStr = amountShort[amount] || amount;
+        const onclick = action === 'edit'
+          ? `bowelOpenEditOne(bowelSelectedRecs[${i}]);closeModal(bowelPickerModal)`
+          : `bowelDoDelete('${r.id}');closeModal(bowelPickerModal)`;
+        html += `<div class="bowel-picker-item">
+          <span class="bowel-picker-info">${escHtml(type)} ／ ${escHtml(amtStr)}</span>
+          <button class="${btnCls}" onclick="${onclick}">${btnLabel}</button>
+        </div>`;
+      });
+      document.getElementById('bowel-picker-body').innerHTML = html;
+      openModal(bowelPickerModal);
     }
 
     // 選択中のレコードオブジェクトを返す
@@ -1076,6 +1200,7 @@
       const btn = e.target.closest('.tab-btn');
       if (!btn) return;
       clearSelection();
+      clearBowelSelection();
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTable = btn.dataset.table;
@@ -1371,22 +1496,21 @@
           const recs = byNameDate[name]?.[d] || [];
           const alertText = laxAlerts[name]?.[d] || '';
           // セルタップで登録モーダルを開く（name・dateをdata属性で渡す）
+          // セル全体をタップでセル選択→アクションバー表示（空セルも記録ありも同じ）
+          html += `<td class="bowel-cal-cell bowel-cell-tap" onclick="selectBowelCell(this,'${escHtml(name)}','${d}')">`;
           if (recs.length === 0) {
-            // 空セル：タップで登録モーダルを開く
-            html += `<td class="bowel-cal-cell bowel-cell-tap" onclick="openBowelCellModal('${escHtml(name)}','${d}')">`;
             html += `<span class="bowel-no-data">＋</span>`;
           } else {
-            // 記録ありセル：各エントリを個別タップで選択できる
-            html += `<td class="bowel-cal-cell">`;
-            for (const r of recs) {
+            // 複数記録はcombineRecsで合算表示（選択はセル単位）
+            const displayRecs = combineRecs(recs);
+            for (const r of displayRecs) {
               const type   = r.fields?.['排便タイプ'] || '';
               const amount = r.fields?.['排便量']     || '';
-              const cls    = typeClass[type] || 'other';
+              const cls    = typeClass[type.split('・')[0]] || 'other';
               const amtStr = amountShort[amount] || amount;
-              html += `<div class="bowel-entry ${cls}" onclick="selectBowelEntry(this,'${r.id}');event.stopPropagation()">${escHtml(type)}<span>${escHtml(amtStr)}</span></div>`;
+              const countBadge = r._count > 1 ? `<span style="font-size:0.55rem;opacity:.8">×${r._count}</span>` : '';
+              html += `<div class="bowel-entry ${cls}">${escHtml(type)}${countBadge}<span>${escHtml(amtStr)}</span></div>`;
             }
-            // 同日に追加登録できる小さな＋ボタン
-            html += `<span class="bowel-add-btn" onclick="openBowelCellModal('${escHtml(name)}','${d}');event.stopPropagation()">＋追加</span>`;
           }
           // 下剤アラートバッジ（条件を満たした日に赤バッジで指示内容を表示）
           if (alertText) html += `<span class="lax-alert">💊 ${escHtml(alertText)}</span>`;
@@ -1844,6 +1968,8 @@
 
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     addModal.addEventListener('click', e => { if (e.target === addModal) closeModal(addModal); });
+    document.getElementById('close-bowel-picker').addEventListener('click', () => closeModal(bowelPickerModal));
+    bowelPickerModal.addEventListener('click', e => { if (e.target === bowelPickerModal) closeModal(bowelPickerModal); });
 
     // ==================== 動的フィールド生成 ====================
     // テーブルごとに固有フィールドの入力欄をHTMLで生成する
