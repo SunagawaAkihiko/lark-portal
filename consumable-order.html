@@ -1142,10 +1142,10 @@
       ? allPendingOrders.filter(o => o.office === activeOffice)
       : allPendingOrders;
 
-    // バッジ更新（全件数を表示する）
+    // バッジ更新（選択中の事業所の件数のみ表示する）
     const badge = document.getElementById('pendingBadge');
-    badge.textContent = allPendingOrders.length;
-    badge.classList.toggle('show', allPendingOrders.length > 0);
+    badge.textContent = filtered.length;
+    badge.classList.toggle('show', filtered.length > 0);
 
     const container = document.getElementById('pendingList');
 
@@ -1227,9 +1227,13 @@
       const data = await res.json();
       if (!data.ok) return;
       allPendingOrders = data.data;
+      // 選択中の事業所でフィルタしてバッジ件数を更新する
+      const officeFiltered = activeOffice
+        ? allPendingOrders.filter(o => o.office === activeOffice)
+        : allPendingOrders;
       const badge = document.getElementById('pendingBadge');
-      badge.textContent = allPendingOrders.length;
-      badge.classList.toggle('show', allPendingOrders.length > 0);
+      badge.textContent = officeFiltered.length;
+      badge.classList.toggle('show', officeFiltered.length > 0);
     } catch (_) { /* バッジ更新失敗は無視する */ }
   }
 
