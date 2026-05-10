@@ -458,43 +458,23 @@
       text-align: center;
     }
 
-    /* 利用者検索ボックス */
-    .hist-search-wrap {
-      position: relative;
-    }
-    .hist-search-icon {
-      position: absolute;
-      left: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      pointer-events: none;
-    }
-    .hist-search-input {
+    /* 利用者絞り込みプルダウン */
+    .hist-filter-select {
       width: 100%;
-      padding: 0.6rem 0.75rem 0.6rem 2.2rem;
+      padding: 0.6rem 2.2rem 0.6rem 0.9rem;
       border: 1.5px solid var(--border-color);
       border-radius: 10px;
       font-family: inherit;
       font-size: 0.9rem;
       color: var(--text-color);
       background: white;
-    }
-    .hist-search-input:focus { outline: none; border-color: var(--primary-color); }
-    .hist-search-clear {
-      position: absolute;
-      right: 0.6rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7c6b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
       cursor: pointer;
-      padding: 0.2rem;
-      display: none;
     }
+    .hist-filter-select:focus { outline: none; border-color: var(--primary-color); }
 
     /* 利用者グループ */
     .hist-person-group {
@@ -807,14 +787,10 @@
       <i class="fa-solid fa-chevron-right"></i>
     </button>
   </div>
-  <!-- 利用者名検索 -->
-  <div class="hist-search-wrap">
-    <i class="fa-solid fa-magnifying-glass hist-search-icon"></i>
-    <input type="text" class="hist-search-input" id="histSearchInput" placeholder="利用者名で絞り込み...">
-    <button class="hist-search-clear" id="histSearchClear" onclick="clearHistSearch()">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  </div>
+  <!-- 利用者絞り込みプルダウン -->
+  <select class="hist-filter-select" id="histFilterSelect" onchange="applyHistoryFilter()">
+    <option value="">すべての利用者</option>
+  </select>
   <!-- レコード一覧（利用者グループ） -->
   <div id="historyList"></div>
 </div>
@@ -1219,10 +1195,9 @@
     const [y, m] = historyMonth.split('-').map(Number);
     document.getElementById('historyMonthLabel').textContent = `${y}年${m}月`;
 
-    // 新しいデータを読み込む前に選択状態と検索ワードをリセットする
+    // 新しいデータを読み込む前に選択状態とフィルタをリセットする
     clearHistSelection();
-    document.getElementById('histSearchInput').value = '';
-    document.getElementById('histSearchClear').style.display = 'none';
+    document.getElementById('histFilterSelect').value = '';
 
     const listEl = document.getElementById('historyList');
     listEl.innerHTML = '<div class="hist-empty"><div class="spinner" style="margin:0 auto 0.5rem"></div>読み込み中...</div>';
@@ -1232,11 +1207,13 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      // 全レコードをメモリに保持して検索フィルタで使いまわす
+      // 全レコードをメモリに保持してフィルタで使いまわす
       historyAllRecords = data.records;
       // IDマップも全件で構築する
       historyRecordsById = {};
       data.records.forEach(r => { historyRecordsById[r.id] = r; });
+      // プルダウンの選択肢を今月の利用者名で再構築する
+      buildHistFilterOptions(data.records);
       applyHistoryFilter();
     } catch (err) {
       listEl.innerHTML = `<div class="hist-empty" style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 取得失敗: ${err.message}</div>`;
@@ -1244,21 +1221,31 @@
   }
 
   // ============================================================
-  // 検索ワードでフィルタしてレンダリングを呼び出す
+  // プルダウン選択でフィルタしてレンダリングを呼び出す
   // ============================================================
   function applyHistoryFilter() {
-    const query = (document.getElementById('histSearchInput').value || '').trim();
-    const filtered = query
-      ? historyAllRecords.filter(r => r.name.includes(query))
+    const selected = document.getElementById('histFilterSelect').value;
+    const filtered = selected
+      ? historyAllRecords.filter(r => r.name === selected)
       : historyAllRecords;
-    renderHistoryList(filtered, query);
+    renderHistoryList(filtered, selected);
   }
 
-  // 検索クリアボタンの処理
-  function clearHistSearch() {
-    document.getElementById('histSearchInput').value = '';
-    document.getElementById('histSearchClear').style.display = 'none';
-    applyHistoryFilter();
+  // ============================================================
+  // 取得したレコードから利用者名一覧をプルダウンに反映する
+  // ============================================================
+  function buildHistFilterOptions(records) {
+    const sel = document.getElementById('histFilterSelect');
+    // 「すべての利用者」オプションだけ残して一旦クリアする
+    sel.innerHTML = '<option value="">すべての利用者</option>';
+    // 五十音順にユニークな氏名を追加する
+    const names = [...new Set(records.map(r => r.name))].sort((a, b) => a.localeCompare(b, 'ja'));
+    names.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
   }
 
   // ============================================================
@@ -1270,7 +1257,7 @@
 
     if (!records.length) {
       const msg = query
-        ? `「${query}」に一致する記録はありません`
+        ? `「${query}」の提供記録はありません`
         : 'この月の提供記録はありません';
       listEl.innerHTML = `<div class="hist-empty"><i class="fa-solid fa-inbox"></i><br>${msg}</div>`;
       return;
@@ -1522,13 +1509,6 @@
     if (e.target === document.getElementById('editModal')) closeEditModal();
   });
 
-  // 検索ボックスの入力イベント：入力のたびにフィルタを再適用する
-  document.getElementById('histSearchInput').addEventListener('input', () => {
-    const hasValue = !!document.getElementById('histSearchInput').value;
-    // クリアボタンは文字入力があるときのみ表示する
-    document.getElementById('histSearchClear').style.display = hasValue ? 'block' : 'none';
-    applyHistoryFilter();
-  });
 
 
   init();
