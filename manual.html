@@ -38,12 +38,31 @@
       background: none; border: none; cursor: pointer;
       padding: 0.2rem 0.4rem;
       display: flex; align-items: center;
+      flex-shrink: 0;
     }
     .header-title {
       color: white; font-size: 1.1rem; font-weight: 700;
       display: flex; align-items: center; gap: 0.5rem;
+      flex: 1; min-width: 0;
     }
-    .header-title i { color: #f4a261; }
+    .header-title i { color: #f4a261; flex-shrink: 0; }
+    .header-title-text {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ===== パンくずリスト ===== */
+    .breadcrumb {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0.2rem;
+      padding: 0.45rem 1rem;
+      background: #f5ebe0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.78rem; color: var(--text-muted);
+    }
+    .breadcrumb-item {
+      cursor: pointer; color: var(--primary-color); font-weight: 700;
+    }
+    .breadcrumb-item:hover { text-decoration: underline; }
+    .breadcrumb-sep { color: var(--border-color); }
 
     /* ===== ファイル一覧 ===== */
     .file-list {
@@ -51,7 +70,7 @@
       display: flex; flex-direction: column; gap: 0.75rem;
     }
 
-    /* ===== ファイルカード ===== */
+    /* ===== ファイル/フォルダカード共通 ===== */
     .file-card {
       background: white;
       border: 1px solid var(--border-color);
@@ -67,12 +86,19 @@
       background: var(--primary-light);
       box-shadow: 0 2px 8px rgba(231,111,81,0.15);
     }
+    /* フォルダカードは左帯でファイルと区別する */
+    .file-card--folder {
+      border-left: 4px solid #f4a261;
+    }
 
     /* ===== ファイル種別アイコン ===== */
     .file-icon {
       width: 48px; height: 48px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.4rem; flex-shrink: 0;
+    }
+    .file-icon--folder {
+      background: #fff3e0; color: #f4a261;
     }
     .file-icon--video {
       background: #e8f4fd; color: #2196f3;
@@ -114,11 +140,18 @@
 
   <!-- ヘッダー -->
   <div class="header">
-<div class="header-title">
+    <!-- フォルダ内表示中のみ戻るボタンを表示する -->
+    <button class="header-back hidden" id="backBtn" onclick="goBack()">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+    <div class="header-title">
       <i class="fa-solid fa-book"></i>
-      各種マニュアル
+      <span class="header-title-text" id="headerTitle">各種マニュアル</span>
     </div>
   </div>
+
+  <!-- パンくずリスト（ルート以外で表示） -->
+  <div class="breadcrumb hidden" id="breadcrumb"></div>
 
   <!-- ファイル一覧 -->
   <div class="file-list" id="fileList">
@@ -133,9 +166,18 @@
     const isLocal  = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
     const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
 
+    // ナビゲーション履歴スタック（フォルダを掘り下げた経路を保持する）
+    // 各要素: { token: string, name: string }
+    // 空の場合はルートフォルダを表示中
+    let navStack = [];
+
     // ファイル種別を判定してアイコン情報を返す
-    function getFileIcon(name) {
-      const ext = name.split('.').pop().toLowerCase();
+    function getFileIconInfo(f) {
+      // フォルダは専用アイコンを返す
+      if (f.type === 'folder') {
+        return { cls: 'file-icon--folder', icon: 'fa-folder' };
+      }
+      const ext = (f.name || '').split('.').pop().toLowerCase();
       if (['mp4', 'mov', 'avi', 'webm', 'mkv'].includes(ext)) {
         return { cls: 'file-icon--video', icon: 'fa-circle-play' };
       }
@@ -147,15 +189,75 @@
 
     // 更新日時をフォーマットする
     function fmtDate(ms) {
+      if (!ms) return '';
       const d = new Date(ms);
       return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} 更新`;
     }
 
+    // HTMLエスケープ
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ============================================================
+    // ヘッダー・パンくずリストを現在のナビゲーション状態に更新する
+    // ============================================================
+    function updateNav() {
+      const isRoot  = navStack.length === 0;
+      const backBtn = document.getElementById('backBtn');
+      const title   = document.getElementById('headerTitle');
+      const bc      = document.getElementById('breadcrumb');
+
+      // 戻るボタンはルート以外で表示する
+      backBtn.classList.toggle('hidden', isRoot);
+
+      // ヘッダータイトルを現在のフォルダ名に変更する
+      title.textContent = isRoot ? '各種マニュアル' : navStack[navStack.length - 1].name;
+
+      // パンくずリスト（ルート以外で表示する）
+      if (isRoot) {
+        bc.classList.add('hidden');
+        bc.innerHTML = '';
+      } else {
+        bc.classList.remove('hidden');
+        // 「マニュアル > フォルダA > フォルダB」の形式で構築する
+        const crumbs = [
+          { token: null, name: 'マニュアル' },
+          ...navStack,
+        ];
+        bc.innerHTML = crumbs.map((c, i) => {
+          const isLast = i === crumbs.length - 1;
+          if (isLast) {
+            // 現在地は非クリッカブルで表示する
+            return `<span>${escHtml(c.name)}</span>`;
+          }
+          return `<span class="breadcrumb-item" onclick="jumpTo(${i})">${escHtml(c.name)}</span>
+                  <span class="breadcrumb-sep"><i class="fa-solid fa-chevron-right" style="font-size:0.65rem"></i></span>`;
+        }).join('');
+      }
+    }
+
+    // ============================================================
     // ファイル一覧を取得して描画する
-    async function loadFiles() {
+    // folderToken: 取得対象フォルダのトークン（null/未指定はルートフォルダ）
+    // ============================================================
+    async function loadFiles(folderToken) {
       const list = document.getElementById('fileList');
+      list.innerHTML = `
+        <div class="status-msg">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          読み込み中...
+        </div>`;
+
+      updateNav();
+
       try {
-        const res  = await fetch(`${API_BASE}/api/manual/files`);
+        const url  = folderToken
+          ? `${API_BASE}/api/manual/files?folder_token=${encodeURIComponent(folderToken)}`
+          : `${API_BASE}/api/manual/files`;
+        const res  = await fetch(url);
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
@@ -168,19 +270,14 @@
           return;
         }
 
-        list.innerHTML = data.files.map(f => {
-          const { cls, icon } = getFileIcon(f.name);
-          return `
-            <a class="file-card" href="${f.url}" target="_blank" rel="noopener noreferrer">
-              <div class="file-icon ${cls}">
-                <i class="fa-solid ${icon}"></i>
-              </div>
-              <div class="file-info">
-                <div class="file-name">${escHtml(f.name)}</div>
-                <div class="file-meta">${fmtDate(f.modifiedTime)}</div>
-              </div>
-            </a>`;
-        }).join('');
+        // フォルダを先頭に、ファイルを後に並べる（同種内は更新日時の降順を維持）
+        const folders = data.files.filter(f => f.type === 'folder');
+        const files   = data.files.filter(f => f.type !== 'folder');
+
+        list.innerHTML = '';
+        [...folders, ...files].forEach(f => {
+          list.appendChild(createCard(f));
+        });
 
       } catch (err) {
         list.innerHTML = `
@@ -191,14 +288,84 @@
       }
     }
 
-    // HTMLエスケープ
-    function escHtml(str) {
-      return String(str || '')
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    // ============================================================
+    // ファイル/フォルダカードのDOM要素を生成する
+    // ============================================================
+    function createCard(f) {
+      const isFolder      = f.type === 'folder';
+      const { cls, icon } = getFileIconInfo(f);
+
+      const card = document.createElement(isFolder ? 'div' : 'a');
+      card.className = `file-card${isFolder ? ' file-card--folder' : ''}`;
+
+      if (!isFolder) {
+        // ファイルは直接リンクを開く
+        card.href   = f.url;
+        card.target = '_blank';
+        card.rel    = 'noopener noreferrer';
+      }
+
+      card.innerHTML = `
+        <div class="file-icon ${cls}">
+          <i class="fa-solid ${icon}"></i>
+        </div>
+        <div class="file-info">
+          <div class="file-name">${escHtml(f.name)}</div>
+          <div class="file-meta">${isFolder ? 'フォルダ' : fmtDate(f.modifiedTime)}</div>
+        </div>
+        <div class="file-arrow">
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+      `;
+
+      // フォルダタップ時にフォルダ内へ遷移する
+      if (isFolder) {
+        card.addEventListener('click', () => enterFolder(f.token, f.name));
+      }
+
+      return card;
     }
 
-    loadFiles();
+    // ============================================================
+    // フォルダに入る（navStackに追加してファイル一覧を再取得）
+    // ============================================================
+    function enterFolder(token, name) {
+      navStack.push({ token, name });
+      loadFiles(token);
+      // 画面トップにスクロールしてフォルダ内容を見やすくする
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================================
+    // 1階層上に戻る
+    // ============================================================
+    function goBack() {
+      if (navStack.length === 0) return;
+      navStack.pop();
+      const parent = navStack.length > 0 ? navStack[navStack.length - 1].token : null;
+      loadFiles(parent);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================================
+    // パンくずの特定階層にジャンプする
+    // index 0 = ルート（マニュアル）
+    // ============================================================
+    function jumpTo(index) {
+      if (index === 0) {
+        // ルートに戻る
+        navStack = [];
+        loadFiles(null);
+      } else {
+        // 指定階層まで navStack を切り詰める
+        navStack = navStack.slice(0, index);
+        loadFiles(navStack[navStack.length - 1].token);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 初期読み込み
+    loadFiles(null);
   </script>
 </body>
 </html>
