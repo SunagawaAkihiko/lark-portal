@@ -33,13 +33,6 @@
       display: flex; align-items: center; gap: 0.75rem;
       box-shadow: 0 2px 6px rgba(0,0,0,0.18);
     }
-    .header-back {
-      color: white; font-size: 1.2rem;
-      background: none; border: none; cursor: pointer;
-      padding: 0.2rem 0.4rem;
-      display: flex; align-items: center;
-      flex-shrink: 0;
-    }
     .header-title {
       color: white; font-size: 1.1rem; font-weight: 700;
       display: flex; align-items: center; gap: 0.5rem;
@@ -140,10 +133,6 @@
 
   <!-- ヘッダー -->
   <div class="header">
-    <!-- フォルダ内表示中のみ戻るボタンを表示する -->
-    <button class="header-back hidden" id="backBtn" onclick="goBack()">
-      <i class="fa-solid fa-chevron-left"></i>
-    </button>
     <div class="header-title">
       <i class="fa-solid fa-book"></i>
       <span class="header-title-text" id="headerTitle">各種マニュアル</span>
@@ -205,13 +194,9 @@
     // ヘッダー・パンくずリストを現在のナビゲーション状態に更新する
     // ============================================================
     function updateNav() {
-      const isRoot  = navStack.length === 0;
-      const backBtn = document.getElementById('backBtn');
-      const title   = document.getElementById('headerTitle');
-      const bc      = document.getElementById('breadcrumb');
-
-      // 戻るボタンはルート以外で表示する
-      backBtn.classList.toggle('hidden', isRoot);
+      const isRoot = navStack.length === 0;
+      const title  = document.getElementById('headerTitle');
+      const bc     = document.getElementById('breadcrumb');
 
       // ヘッダータイトルを現在のフォルダ名に変更する
       title.textContent = isRoot ? '各種マニュアル' : navStack[navStack.length - 1].name;
