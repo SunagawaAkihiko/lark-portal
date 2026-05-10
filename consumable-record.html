@@ -489,21 +489,26 @@
       color: var(--primary-color);
       white-space: nowrap;
     }
-    .hist-action-btn {
-      width: 30px; height: 30px;
-      border-radius: 8px;
-      border: 1.5px solid var(--border-color);
-      background: white;
-      font-size: 0.8rem;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.12s, border-color 0.12s;
+    /* 行タップで選択状態をオレンジアウトラインで表示（各種データページと同デザイン） */
+    .hist-record { cursor: pointer; transition: background 0.12s; }
+    .hist-record.selected { background: #fff3e0; outline: 2px solid var(--primary-color); outline-offset: -2px; }
+
+    /* 下部アクションバー（各種データページの.record-action-barと同デザイン） */
+    .hist-action-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      display: flex; z-index: 30;
+      border-top: 2px solid var(--border-color);
+      box-shadow: 0 -3px 14px rgba(0,0,0,0.15);
     }
-    .hist-action-btn.edit { color: var(--primary-color); }
-    .hist-action-btn.edit:hover { background: var(--primary-light); border-color: var(--primary-color); }
-    .hist-action-btn.del  { color: #e63946; }
-    .hist-action-btn.del:hover  { background: #fee2e2; border-color: #e63946; }
+    .hist-action-bar .rab-btn {
+      flex: 1; padding: 1rem 0.4rem; border: none;
+      font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      transition: filter 0.12s;
+    }
+    .hist-action-bar .rab-btn:active { filter: brightness(0.88); }
+    .hist-action-bar .rab-edit   { background: #5c6bc0; color: #fff; border-right: 1px solid #3949ab; }
+    .hist-action-bar .rab-delete { background: #c62828; color: #fff; }
 
     /* 履歴件数バナー */
     .hist-banner {
@@ -729,6 +734,16 @@
   </button>
 </div>
 
+<!-- 履歴確認用アクションバー（レコード行タップ時に表示） -->
+<div class="hist-action-bar hidden" id="histActionBar">
+  <button class="rab-btn rab-edit" onclick="onHistEdit()">
+    <i class="fa-solid fa-pen"></i> 編集
+  </button>
+  <button class="rab-btn rab-delete" onclick="onHistDelete()">
+    <i class="fa-solid fa-trash"></i> 削除
+  </button>
+</div>
+
 <!-- 編集モーダル -->
 <div class="modal-overlay hidden" id="editModal">
   <div class="modal-sheet">
@@ -778,6 +793,7 @@
   let currentMode        = 'register';  // 'register' または 'history'
   let historyMonth       = '';          // 現在表示中の月 "YYYY-MM"
   let historyRecordsById = {};          // record_id → レコードオブジェクトのマップ（編集・削除に使用）
+  let selectedHistId     = null;        // 履歴で選択中のrecord_id
   let editTargetId       = '';          // 編集対象のrecord_id
   let editCount          = 1;           // 編集中の個数
 
@@ -1080,6 +1096,9 @@
     document.getElementById('footerBar').classList.toggle('hidden', isHistory);
     document.getElementById('historyContent').classList.toggle('hidden', !isHistory);
 
+    // モード切替時は選択状態をリセットする
+    clearHistSelection();
+
     // 履歴モードに切り替えたときに一覧を読み込む
     if (isHistory) loadHistory();
   }
@@ -1102,6 +1121,9 @@
     // 月ラベルを更新する（例: "2025年5月"）
     const [y, m] = historyMonth.split('-').map(Number);
     document.getElementById('historyMonthLabel').textContent = `${y}年${m}月`;
+
+    // 新しいデータを読み込む前に選択状態をリセットする
+    clearHistSelection();
 
     const listEl = document.getElementById('historyList');
     listEl.innerHTML = '<div class="hist-empty"><div class="spinner" style="margin:0 auto 0.5rem"></div>読み込み中...</div>';
@@ -1180,7 +1202,7 @@
     const productLabel = r.product === '' ? (r.otherProduct || '不明') :
                          r.product === 'その他' ? (r.otherProduct || 'その他') : r.product;
 
-    // 小計表示（単価情報がない場合は「-」）
+    // 小計表示（単価情報がない場合は「–」）
     const subtotalLabel = r.subtotal != null ? `¥${r.subtotal.toLocaleString()}` : '–';
 
     row.innerHTML = `
@@ -1189,24 +1211,48 @@
         <div class="hist-record-product">${productLabel} × ${r.count}個</div>
       </div>
       <div class="hist-record-subtotal">${subtotalLabel}</div>
-      <button class="hist-action-btn edit" title="編集" data-id="${r.id}">
-        <i class="fa-solid fa-pen"></i>
-      </button>
-      <button class="hist-action-btn del" title="削除" data-id="${r.id}">
-        <i class="fa-solid fa-trash"></i>
-      </button>
     `;
 
-    // ボタンのイベントをdata属性経由で安全にバインドする（インライン文字列エスケープを避けるため）
-    row.querySelector('.hist-action-btn.edit').addEventListener('click', () => {
-      openEditModal(historyRecordsById[r.id]);
-    });
-    row.querySelector('.hist-action-btn.del').addEventListener('click', () => {
-      const rec = historyRecordsById[r.id];
-      confirmDeleteRecord(rec.id, rec.name, productLabel);
-    });
+    // 行タップで選択状態を切り替え、アクションバーを表示する（各種データページと同じ操作感）
+    row.addEventListener('click', () => selectHistRecord(row, r.id));
 
     return row;
+  }
+
+  // ============================================================
+  // 履歴レコード行の選択・選択解除
+  // ============================================================
+  function selectHistRecord(el, id) {
+    // 同じ行を再タップしたら選択解除する
+    if (selectedHistId === id) { clearHistSelection(); return; }
+
+    // 既存の選択を解除してから新しい行を選択する
+    document.querySelectorAll('.hist-record.selected').forEach(e => e.classList.remove('selected'));
+    selectedHistId = id;
+    el.classList.add('selected');
+    document.getElementById('histActionBar').classList.remove('hidden');
+  }
+
+  // 選択状態を解除してアクションバーを隠す
+  function clearHistSelection() {
+    selectedHistId = null;
+    document.querySelectorAll('.hist-record.selected').forEach(e => e.classList.remove('selected'));
+    document.getElementById('histActionBar').classList.add('hidden');
+  }
+
+  // アクションバーの「編集」ボタン
+  function onHistEdit() {
+    if (!selectedHistId) return;
+    openEditModal(historyRecordsById[selectedHistId]);
+  }
+
+  // アクションバーの「削除」ボタン
+  function onHistDelete() {
+    if (!selectedHistId) return;
+    const r = historyRecordsById[selectedHistId];
+    const productLabel = r.product === '' ? (r.otherProduct || '不明') :
+                         r.product === 'その他' ? (r.otherProduct || 'その他') : r.product;
+    confirmDeleteRecord(r.id, r.name, productLabel);
   }
 
   // ============================================================
