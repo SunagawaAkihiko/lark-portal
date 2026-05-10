@@ -360,6 +360,15 @@
     /* タップ可能セルのフィードバック */
     .bowel-cell-tap { cursor: pointer; transition: background 0.12s; }
     .bowel-cell-tap:active { background: #fff3e0; }
+    /* 排便エントリ選択状態（他タブの record-group-card.selected と同等） */
+    .bowel-entry { cursor: pointer; }
+    .bowel-entry.selected { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+    /* 既存記録がある日に追加登録するための小さい＋ボタン */
+    .bowel-add-btn {
+      display: block; text-align: center; font-size: 0.58rem;
+      color: #bbb; cursor: pointer; line-height: 1.8; user-select: none;
+    }
+    .bowel-add-btn:active { color: var(--primary-color); }
 
     /* ==================== 記録選択・アクションバー ==================== */
     /* タップで選択した記録のハイライト */
@@ -711,53 +720,6 @@
     }
     .delete-item-btn:active { background: #c02030; }
 
-    /* ==================== 排便管理：登録済み記録削除セクション ==================== */
-    #bowel-delete-section {
-      padding: 0.75rem 1rem 0;
-    }
-    .bowel-del-label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin-bottom: 0.45rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .bowel-del-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #fff5f5;
-      border: 1.5px solid #f5c6cb;
-      border-radius: 10px;
-      padding: 0.5rem 0.75rem;
-      margin-bottom: 0.4rem;
-      gap: 0.6rem;
-    }
-    .bowel-del-info {
-      flex: 1;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-    .bowel-del-btn {
-      flex-shrink: 0;
-      background: #e63946;
-      color: #fff;
-      border: none;
-      border-radius: 7px;
-      padding: 0.35rem 0.7rem;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .bowel-del-btn:active { background: #c02030; }
-    .bowel-del-divider {
-      border: none;
-      border-top: 1.5px dashed var(--card-border);
-      margin: 0.75rem 0;
-    }
   </style>
 </head>
 <body>
@@ -850,8 +812,6 @@
         <h2 id="modal-title">ケア記録を登録</h2>
         <button class="close-btn" id="close-add-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <!-- 排便管理：登録済み記録の削除セクション（他タブでは非表示） -->
-      <div id="bowel-delete-section" class="hidden"></div>
       <form id="add-form">
         <div class="form-group">
           <label>日付 <span style="color:#e63946">*</span></label>
@@ -1081,7 +1041,9 @@
     // 選択状態を解除してアクションバーを隠す
     function clearSelection() {
       selectedRecordId = null;
-      document.querySelectorAll('.record-group-card.selected').forEach(e => e.classList.remove('selected'));
+      // 通常タブの記録カードと排便エントリ両方の選択状態を解除する
+      document.querySelectorAll('.record-group-card.selected, .bowel-entry.selected')
+        .forEach(e => e.classList.remove('selected'));
       const bar = document.getElementById('recordActionBar');
       if (bar) bar.classList.add('hidden');
     }
@@ -1090,6 +1052,15 @@
     function selectRecord(el, id) {
       if (selectedRecordId === id) { clearSelection(); return; }
       document.querySelectorAll('.record-group-card.selected').forEach(e => e.classList.remove('selected'));
+      selectedRecordId = id;
+      el.classList.add('selected');
+      document.getElementById('recordActionBar').classList.remove('hidden');
+    }
+
+    // 排便カレンダーのエントリをタップ：他タブと同様にアクションバーを表示する
+    function selectBowelEntry(el, id) {
+      if (selectedRecordId === id) { clearSelection(); return; }
+      clearSelection();
       selectedRecordId = id;
       el.classList.add('selected');
       document.getElementById('recordActionBar').classList.remove('hidden');
@@ -1400,22 +1371,22 @@
           const recs = byNameDate[name]?.[d] || [];
           const alertText = laxAlerts[name]?.[d] || '';
           // セルタップで登録モーダルを開く（name・dateをdata属性で渡す）
-          const cellAttr = `onclick="openBowelCellModal('${escHtml(name)}','${d}')"`;
-          // 同日複数記録は量を合算して1件に統合する
-          const displayRecs = combineRecs(recs);
-          html += `<td class="bowel-cal-cell bowel-cell-tap" ${cellAttr}>`;
-          if (displayRecs.length === 0) {
+          if (recs.length === 0) {
+            // 空セル：タップで登録モーダルを開く
+            html += `<td class="bowel-cal-cell bowel-cell-tap" onclick="openBowelCellModal('${escHtml(name)}','${d}')">`;
             html += `<span class="bowel-no-data">＋</span>`;
           } else {
-            for (const r of displayRecs) {
+            // 記録ありセル：各エントリを個別タップで選択できる
+            html += `<td class="bowel-cal-cell">`;
+            for (const r of recs) {
               const type   = r.fields?.['排便タイプ'] || '';
               const amount = r.fields?.['排便量']     || '';
-              // 複数タイプ結合時は最初のタイプのクラスを使う
-              const cls    = typeClass[type.split('・')[0]] || 'other';
+              const cls    = typeClass[type] || 'other';
               const amtStr = amountShort[amount] || amount;
-              const countBadge = r._count > 1 ? `<span style="font-size:0.55rem;opacity:.8">×${r._count}</span>` : '';
-              html += `<div class="bowel-entry ${cls}">${escHtml(type)}${countBadge}<span>${escHtml(amtStr)}</span></div>`;
+              html += `<div class="bowel-entry ${cls}" onclick="selectBowelEntry(this,'${r.id}');event.stopPropagation()">${escHtml(type)}<span>${escHtml(amtStr)}</span></div>`;
             }
+            // 同日に追加登録できる小さな＋ボタン
+            html += `<span class="bowel-add-btn" onclick="openBowelCellModal('${escHtml(name)}','${d}');event.stopPropagation()">＋追加</span>`;
           }
           // 下剤アラートバッジ（条件を満たした日に赤バッジで指示内容を表示）
           if (alertText) html += `<span class="lax-alert">💊 ${escHtml(alertText)}</span>`;
@@ -1438,48 +1409,7 @@
       buildDynamicFields('bowel');
       formMsg.textContent = '';
       formMsg.className   = 'form-msg';
-
-      // 登録済み記録があれば削除セクションを描画する
-      const delSection = document.getElementById('bowel-delete-section');
-      const existing   = bowelRecordsByNameDate[name]?.[date] || [];
-      if (existing.length > 0) {
-        const [y, m, d] = date.split('-');
-        let html = `<div class="bowel-del-label"><i class="fa-solid fa-trash-can"></i> 登録済みの記録（削除する場合はボタンをタップ）</div>`;
-        existing.forEach(r => {
-          const type   = r.fields?.['排便タイプ'] || '—';
-          const amount = r.fields?.['排便量']     || '—';
-          html += `
-            <div class="bowel-del-item">
-              <span class="bowel-del-info">${escHtml(type)} ／ ${escHtml(amount)}</span>
-              <button type="button" class="bowel-del-btn" onclick="deleteBowelRecord('${r.id}','${escHtml(name)}','${date}')">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>`;
-        });
-        html += '<hr class="bowel-del-divider">';
-        delSection.innerHTML = html;
-        delSection.classList.remove('hidden');
-      } else {
-        delSection.innerHTML = '';
-        delSection.classList.add('hidden');
-      }
-
       openModal(addModal);
-    }
-
-    // ==================== 排便管理：個別レコード削除 ====================
-    async function deleteBowelRecord(recordId, name, date) {
-      if (!confirm(`${name} ${date} の記録を削除しますか？\nこの操作は元に戻せません。`)) return;
-      try {
-        const res  = await fetch(`${API_BASE}/api/care/record/${recordId}?table=bowel`, { method: 'DELETE' });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || '削除に失敗しました');
-        // モーダルを閉じてカレンダーを再読み込みする
-        closeModal(addModal);
-        await loadRecords(currentOffice, selName.value);
-      } catch (err) {
-        alert('削除に失敗しました: ' + err.message);
-      }
     }
 
     // ==================== 下剤設定管理 ====================
@@ -1918,11 +1848,6 @@
     // ==================== 動的フィールド生成 ====================
     // テーブルごとに固有フィールドの入力欄をHTMLで生成する
     function buildDynamicFields(tableKey) {
-      // 排便管理以外のタブでは削除セクションを非表示にする
-      if (tableKey !== 'bowel') {
-        const ds = document.getElementById('bowel-delete-section');
-        if (ds) { ds.innerHTML = ''; ds.classList.add('hidden'); }
-      }
       const fields = TABLE_DEFS[tableKey]?.fields || [];
       dynamicFields.innerHTML = fields.map(f => {
         const id = `dynfield-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
