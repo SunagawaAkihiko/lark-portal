@@ -378,6 +378,209 @@
     .toast.success { background: #2d6a4f; }
     .toast.error   { background: #c1121f; }
 
+    /* ===== モード切替タブバー（登録 / 履歴確認） ===== */
+    .mode-tabs {
+      display: flex;
+      background: #f5ebe0;
+      border-bottom: 2px solid var(--border-color);
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 0.65rem;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: color 0.15s, border-bottom 0.15s;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    .mode-tab.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+      background: var(--bg-color);
+    }
+
+    /* ===== 履歴確認ビュー ===== */
+    .history-content {
+      padding: 0.75rem 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* 月ナビゲーションバー */
+    .month-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.6rem 1rem;
+    }
+    .month-nav-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      background: white;
+      color: var(--primary-color);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .month-nav-btn:hover { background: var(--primary-light); }
+    .month-nav-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+      min-width: 8rem;
+      text-align: center;
+    }
+
+    /* 日付グループ見出し */
+    .hist-date-group { margin-bottom: 0.5rem; }
+    .hist-date-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 0.3rem 0.5rem;
+      border-left: 3px solid var(--primary-color);
+      margin-bottom: 0.35rem;
+    }
+
+    /* 履歴レコード行 */
+    .hist-record {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.6rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.35rem;
+    }
+    .hist-record-info { flex: 1; min-width: 0; }
+    .hist-record-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    .hist-record-product {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+    .hist-record-subtotal {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      white-space: nowrap;
+    }
+    .hist-action-btn {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .hist-action-btn.edit { color: var(--primary-color); }
+    .hist-action-btn.edit:hover { background: var(--primary-light); border-color: var(--primary-color); }
+    .hist-action-btn.del  { color: #e63946; }
+    .hist-action-btn.del:hover  { background: #fee2e2; border-color: #e63946; }
+
+    /* 履歴件数バナー */
+    .hist-banner {
+      background: var(--primary-light);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .hist-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 3rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    /* ===== 編集モーダル ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-sheet {
+      background: white;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 600px;
+      padding: 1.25rem 1.25rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .modal-close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.2rem;
+    }
+    .modal-field-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .modal-save-btn {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem;
+    }
+    .modal-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     /* ===== 横画面レイアウト（スマートフォン横向き） ===== */
     @media (orientation: landscape) {
       /* 事業所タブをコンパクトにする */
@@ -430,6 +633,16 @@
 
 <!-- 事業所タブ（pill形状） -->
 <div class="office-tabs" id="tabBar"></div>
+
+<!-- モード切替タブバー（登録 / 履歴確認） -->
+<div class="mode-tabs hidden" id="modeTabs">
+  <button class="mode-tab active" id="modeRegister" onclick="switchMode('register')">
+    <i class="fa-solid fa-plus"></i> 登録
+  </button>
+  <button class="mode-tab" id="modeHistory" onclick="switchMode('history')">
+    <i class="fa-solid fa-clock-rotate-left"></i> 履歴確認
+  </button>
+</div>
 
 <!-- ローディング -->
 <div class="loading-screen" id="loadingScreen">
@@ -489,6 +702,22 @@
 
 </div>
 
+<!-- 履歴確認ビュー -->
+<div class="history-content hidden" id="historyContent">
+  <!-- 月ナビゲーション -->
+  <div class="month-nav">
+    <button class="month-nav-btn" onclick="changeHistoryMonth(-1)">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+    <div class="month-nav-label" id="historyMonthLabel"></div>
+    <button class="month-nav-btn" onclick="changeHistoryMonth(1)">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+  <!-- レコード一覧（日付グループ） -->
+  <div id="historyList"></div>
+</div>
+
 <!-- 固定フッター -->
 <div class="footer-bar hidden" id="footerBar">
   <div class="record-count-chip">
@@ -498,6 +727,37 @@
   <button class="submit-btn" id="submitBtn" disabled>
     <i class="fa-solid fa-paper-plane"></i> まとめて登録する
   </button>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal-sheet">
+    <div class="modal-title">
+      <i class="fa-solid fa-pen-to-square" style="color:var(--primary-color)"></i>
+      提供記録を編集
+      <button class="modal-close-btn" onclick="closeEditModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div>
+      <div class="modal-field-label">商品名</div>
+      <select class="supply-select" id="editProductSelect" onchange="onEditProductChange()">
+        <option value="">-- 商品を選択 --</option>
+      </select>
+      <input type="text" class="supply-other-input hidden" id="editOtherInput" placeholder="商品名を入力...">
+    </div>
+    <div>
+      <div class="modal-field-label">個数</div>
+      <div class="supply-count-row">
+        <button class="count-btn" onclick="changeEditCount(-1)">−</button>
+        <span class="count-value" id="editCountValue">1</span>
+        <button class="count-btn" onclick="changeEditCount(1)">＋</button>
+      </div>
+    </div>
+    <button class="modal-save-btn" id="editSaveBtn" onclick="saveEditRecord()">
+      <i class="fa-solid fa-check"></i> 保存する
+    </button>
+  </div>
 </div>
 
 <!-- トースト通知 -->
@@ -513,6 +773,13 @@
   let allProducts  = [];   // 全商品名リスト
   let offices      = [];   // 事業所リスト
   let activeOffice = '';   // 選択中の事業所
+
+  // 履歴確認タブの状態
+  let currentMode        = 'register';  // 'register' または 'history'
+  let historyMonth       = '';          // 現在表示中の月 "YYYY-MM"
+  let historyRecordsById = {};          // record_id → レコードオブジェクトのマップ（編集・削除に使用）
+  let editTargetId       = '';          // 編集対象のrecord_id
+  let editCount          = 1;           // 編集中の個数
 
   // ===== 初期化 =====
   async function init() {
@@ -539,9 +806,17 @@
       // 商品リストの初期アイテムを1件追加する
       addSupplyItem();
 
+      // 履歴モーダルの商品セレクトにオプションを追加する
+      buildEditProductOptions();
+
+      // 表示中月を当月に初期化する
+      const now = new Date();
+      historyMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
       document.getElementById('loadingScreen').classList.add('hidden');
       document.getElementById('mainContent').classList.remove('hidden');
       document.getElementById('footerBar').classList.remove('hidden');
+      document.getElementById('modeTabs').classList.remove('hidden');
 
     } catch (err) {
       document.getElementById('loadingScreen').innerHTML =
@@ -570,6 +845,8 @@
       btn.classList.toggle('active', btn.textContent === office);
     });
     renderCustomerList();
+    // 履歴モード中は切り替え後に履歴を再取得する
+    if (currentMode === 'history') loadHistory();
   }
 
   // ===== 利用者リスト描画 =====
@@ -785,6 +1062,282 @@
 
   // 提供日変更でボタン有効性を再評価する
   document.getElementById('dateInput').onchange = updateBadgesAndSummary;
+
+  // ============================================================
+  // モード切替（登録 / 履歴確認）
+  // ============================================================
+  function switchMode(mode) {
+    currentMode = mode;
+
+    const isHistory = mode === 'history';
+
+    // モードタブのアクティブ状態を更新する
+    document.getElementById('modeRegister').classList.toggle('active', !isHistory);
+    document.getElementById('modeHistory').classList.toggle('active',  isHistory);
+
+    // 登録フォームと履歴ビューの表示を切り替える
+    document.getElementById('mainContent').classList.toggle('hidden', isHistory);
+    document.getElementById('footerBar').classList.toggle('hidden', isHistory);
+    document.getElementById('historyContent').classList.toggle('hidden', !isHistory);
+
+    // 履歴モードに切り替えたときに一覧を読み込む
+    if (isHistory) loadHistory();
+  }
+
+  // ============================================================
+  // 月ナビゲーション（前月・翌月ボタン）
+  // ============================================================
+  function changeHistoryMonth(delta) {
+    // historyMonth "YYYY-MM" を Date に変換して1ヶ月ずらす
+    const [y, m] = historyMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    historyMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    loadHistory();
+  }
+
+  // ============================================================
+  // 履歴一覧を取得してレンダリングする
+  // ============================================================
+  async function loadHistory() {
+    // 月ラベルを更新する（例: "2025年5月"）
+    const [y, m] = historyMonth.split('-').map(Number);
+    document.getElementById('historyMonthLabel').textContent = `${y}年${m}月`;
+
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = '<div class="hist-empty"><div class="spinner" style="margin:0 auto 0.5rem"></div>読み込み中...</div>';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/history?office=${encodeURIComponent(activeOffice)}&month=${historyMonth}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      renderHistoryList(data.records);
+    } catch (err) {
+      listEl.innerHTML = `<div class="hist-empty" style="color:#c1121f"><i class="fa-solid fa-circle-exclamation"></i> 取得失敗: ${err.message}</div>`;
+    }
+  }
+
+  // ============================================================
+  // 履歴レコードを日付グループごとにレンダリングする
+  // ============================================================
+  function renderHistoryList(records) {
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = '';
+
+    if (!records.length) {
+      listEl.innerHTML = '<div class="hist-empty"><i class="fa-solid fa-inbox"></i><br>この月の提供記録はありません</div>';
+      return;
+    }
+
+    // レコードをIDキーのマップに格納する（クリックハンドラから参照するため）
+    historyRecordsById = {};
+    records.forEach(r => { historyRecordsById[r.id] = r; });
+
+    // 件数バナーを追加する
+    const banner = document.createElement('div');
+    banner.className = 'hist-banner';
+    banner.textContent = `${records.length}件の提供記録`;
+    listEl.appendChild(banner);
+
+    // 日付でグループ化する（降順）
+    const byDate = {};
+    records.forEach(r => {
+      if (!byDate[r.date]) byDate[r.date] = [];
+      byDate[r.date].push(r);
+    });
+    const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+    sortedDates.forEach(date => {
+      const group = document.createElement('div');
+      group.className = 'hist-date-group';
+
+      // 日付見出し（例: "5月10日（土）"）
+      const [y, mo, d] = date.split('-').map(Number);
+      const wdays = ['日','月','火','水','木','金','土'];
+      const dow   = new Date(y, mo - 1, d).getDay();
+      const header = document.createElement('div');
+      header.className = 'hist-date-header';
+      header.textContent = `${mo}月${d}日（${wdays[dow]}）`;
+      group.appendChild(header);
+
+      // レコード行を追加する
+      byDate[date].forEach(r => {
+        group.appendChild(createHistRecordRow(r));
+      });
+
+      listEl.appendChild(group);
+    });
+  }
+
+  // ============================================================
+  // 履歴レコード行のDOM要素を生成する
+  // ============================================================
+  function createHistRecordRow(r) {
+    const row = document.createElement('div');
+    row.className = 'hist-record';
+
+    // 商品表示名（「その他」の場合はotherProductを使う）
+    const productLabel = r.product === '' ? (r.otherProduct || '不明') :
+                         r.product === 'その他' ? (r.otherProduct || 'その他') : r.product;
+
+    // 小計表示（単価情報がない場合は「-」）
+    const subtotalLabel = r.subtotal != null ? `¥${r.subtotal.toLocaleString()}` : '–';
+
+    row.innerHTML = `
+      <div class="hist-record-info">
+        <div class="hist-record-name">${r.name}</div>
+        <div class="hist-record-product">${productLabel} × ${r.count}個</div>
+      </div>
+      <div class="hist-record-subtotal">${subtotalLabel}</div>
+      <button class="hist-action-btn edit" title="編集" data-id="${r.id}">
+        <i class="fa-solid fa-pen"></i>
+      </button>
+      <button class="hist-action-btn del" title="削除" data-id="${r.id}">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+
+    // ボタンのイベントをdata属性経由で安全にバインドする（インライン文字列エスケープを避けるため）
+    row.querySelector('.hist-action-btn.edit').addEventListener('click', () => {
+      openEditModal(historyRecordsById[r.id]);
+    });
+    row.querySelector('.hist-action-btn.del').addEventListener('click', () => {
+      const rec = historyRecordsById[r.id];
+      confirmDeleteRecord(rec.id, rec.name, productLabel);
+    });
+
+    return row;
+  }
+
+  // ============================================================
+  // 編集モーダルを開く
+  // ============================================================
+  function openEditModal(r) {
+    editTargetId = r.id;
+    editCount    = r.count;
+
+    // 商品セレクトの値をセットする
+    const sel = document.getElementById('editProductSelect');
+    // 「その他」フラグを判定する（productが空またはその他）
+    const isOther = r.product === '' || r.product === 'その他';
+    sel.value = isOther ? 'その他' : r.product;
+    onEditProductChange();
+
+    // その他テキスト欄に値をセットする
+    if (isOther) {
+      document.getElementById('editOtherInput').value = r.otherProduct || '';
+    }
+
+    // 個数をセットする
+    document.getElementById('editCountValue').textContent = editCount;
+
+    document.getElementById('editModal').classList.remove('hidden');
+  }
+
+  // 編集モーダルを閉じる
+  function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+    editTargetId = '';
+  }
+
+  // 商品セレクト変更時のその他テキスト欄の表示制御
+  function onEditProductChange() {
+    const sel   = document.getElementById('editProductSelect');
+    const other = document.getElementById('editOtherInput');
+    other.classList.toggle('hidden', sel.value !== 'その他');
+  }
+
+  // 編集モーダルの個数増減
+  function changeEditCount(delta) {
+    editCount = Math.max(1, editCount + delta);
+    document.getElementById('editCountValue').textContent = editCount;
+  }
+
+  // ============================================================
+  // 編集内容を保存する（PUT API呼び出し）
+  // ============================================================
+  async function saveEditRecord() {
+    const product = document.getElementById('editProductSelect').value;
+    if (!product) { showToast('商品を選択してください'); return; }
+
+    const otherProduct = product === 'その他'
+      ? document.getElementById('editOtherInput').value.trim()
+      : '';
+    if (product === 'その他' && !otherProduct) {
+      showToast('商品名を入力してください');
+      return;
+    }
+
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> 保存中...';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/records/${editTargetId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ product, otherProduct, count: editCount }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      showToast('更新しました', 'success');
+      closeEditModal();
+      // 一覧を再読み込みして最新の状態を反映する
+      loadHistory();
+    } catch (err) {
+      showToast(`更新失敗: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存する';
+    }
+  }
+
+  // ============================================================
+  // 削除確認ダイアログを表示してから削除APIを呼び出す
+  // ============================================================
+  async function confirmDeleteRecord(recordId, name, productLabel) {
+    if (!confirm(`「${name}」への「${productLabel}」の提供記録を削除しますか？`)) return;
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/consumables/records/${recordId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+
+      showToast('削除しました', 'success');
+      // 一覧を再読み込みして削除結果を反映する
+      loadHistory();
+    } catch (err) {
+      showToast(`削除失敗: ${err.message}`, 'error');
+    }
+  }
+
+  // ============================================================
+  // 編集モーダルの商品セレクトにマスタのオプションを追加する
+  // ============================================================
+  function buildEditProductOptions() {
+    const sel = document.getElementById('editProductSelect');
+    const filteredProducts = allProducts.filter(p => p !== 'その他');
+    filteredProducts.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
+    // 末尾に「その他」を追加する
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'その他';
+    otherOpt.textContent = 'その他';
+    sel.appendChild(otherOpt);
+  }
+
+  // モーダルオーバーレイのクリックで閉じる
+  document.getElementById('editModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('editModal')) closeEditModal();
+  });
+
 
   init();
 </script>
