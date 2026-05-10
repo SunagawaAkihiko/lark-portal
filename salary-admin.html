@@ -2129,6 +2129,7 @@ function renderInsuranceSettings(settings) {
         ／介護 <b>${(rate.nursing*100).toFixed(3)}%</b>
         ／厚年 <b>${(rate.pension*100).toFixed(3)}%</b>
         ／子支援 <b>${((rate.childrenSupport||0)*100).toFixed(3)}%</b>
+        ／雇用 <b>${((rate.employment||0.005)*100).toFixed(3)}%</b>
         ${rate.note ? `<small style="color:var(--muted)"> (${rate.note})</small>` : ''}
       </span>
       <button class="btn-del-hist" onclick="deleteInsRate(${i})" title="削除">
@@ -2143,7 +2144,8 @@ function renderInsuranceSettings(settings) {
     <input type="number" id="ins-health"    placeholder="健保率(%)"  step="0.001" style="width:100px">
     <input type="number" id="ins-nursing"   placeholder="介護率(%)"  step="0.001" style="width:100px">
     <input type="number" id="ins-pension"   placeholder="厚年率(%)"  step="0.001" style="width:100px">
-    <input type="number" id="ins-children"  placeholder="子支援率(%)" step="0.001" style="width:100px">
+    <input type="number" id="ins-children"   placeholder="子支援率(%)"  step="0.001" style="width:100px">
+    <input type="number" id="ins-employment" placeholder="雇用保険率(%)" step="0.001" style="width:110px">
     <button class="btn-add-hist" onclick="addInsRate()">追加</button>
   </div>`;
   body.innerHTML = html;
@@ -2159,15 +2161,17 @@ function addInsRate() {
   const health   = parseFloat(document.getElementById('ins-health').value);
   const nursing  = parseFloat(document.getElementById('ins-nursing').value);
   const pension  = parseFloat(document.getElementById('ins-pension').value);
-  const children = parseFloat(document.getElementById('ins-children').value);
+  const children   = parseFloat(document.getElementById('ins-children').value);
+  const employment = parseFloat(document.getElementById('ins-employment').value);
   if (!from || isNaN(health) || isNaN(pension)) { alert('有効開始月・健康保険率・厚生年金率は必須です。'); return; }
   currentSettings.insuranceRates = currentSettings.insuranceRates || [];
   currentSettings.insuranceRates.push({
     effectiveFrom:   from,
     health:          health / 100,
-    nursing:         isNaN(nursing)  ? 0 : nursing  / 100,
+    nursing:         isNaN(nursing)     ? 0     : nursing     / 100,
     pension:         pension / 100,
-    childrenSupport: isNaN(children) ? 0 : children / 100,
+    childrenSupport: isNaN(children)   ? 0     : children   / 100,
+    employment:      isNaN(employment) ? 0.005 : employment / 100,
   });
   currentSettings.insuranceRates.sort((a,b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
   renderInsuranceSettings(currentSettings);
