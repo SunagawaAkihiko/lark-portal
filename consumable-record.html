@@ -826,7 +826,7 @@
     <div>一括登録</div>
   </div>
   <button class="submit-btn" id="submitBtn" disabled>
-    <i class="fa-solid fa-paper-plane"></i> まとめて登録する
+    <i class="fa-solid fa-paper-plane"></i> 登録する
   </button>
 </div>
 
@@ -1159,7 +1159,7 @@
     } catch (err) {
       showToast(`登録失敗: ${err.message}`, 'error');
     } finally {
-      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> まとめて登録する';
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 登録する';
       updateBadgesAndSummary();
     }
   };
