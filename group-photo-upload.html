@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>グループ写真アップロード</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ===== カラー変数（lark-portal 統一デザイン） ===== */
+    :root {
+      --bg-color:      #fdf6ec;
+      --text-color:    #4a3f35;
+      --text-muted:    #8c7c6b;
+      --primary-color: #e76f51;
+      --primary-light: #fcece8;
+      --card-bg:       #fff0e3;
+      --border-color:  #dcbfa6;
+      --success-color: #52b788;
+      --error-color:   #e63946;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding-bottom: 4rem;
+    }
+
+    /* ===== 背景装飾（lark-portal 統一） ===== */
+    .bg-shapes {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1; overflow: hidden; pointer-events: none;
+    }
+    .shape {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6;
+    }
+    .shape-1 {
+      top: -10%; left: -10%; width: 50vw; height: 50vw;
+      background: radial-gradient(circle, #ffe3e0 0%, transparent 70%);
+    }
+    .shape-2 {
+      bottom: -20%; right: -10%; width: 60vw; height: 60vw;
+      background: radial-gradient(circle, #fde4cf 0%, transparent 70%);
+    }
+    .shape-3 {
+      top: 40%; left: 30%; width: 40vw; height: 40vw;
+      background: radial-gradient(circle, #fff1e6 0%, transparent 70%);
+    }
+
+    /* ===== ヘッダー ===== */
+    header {
+      background: var(--text-color);
+      color: white;
+      padding: 1rem 1.25rem 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header i { font-size: 1.3rem; color: var(--primary-color); }
+    header h1 { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+    header p  { font-size: 0.8rem; color: rgba(255,255,255,0.65); margin-top: 0.1rem; }
+
+    /* ===== メインコンテナ ===== */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ===== セクションカード ===== */
+    .card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .card-head {
+      background: var(--primary-light);
+      padding: 0.65rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-head i    { color: var(--primary-color); font-size: 0.95rem; }
+    .card-head span { font-size: 0.85rem; font-weight: 700; color: var(--primary-color); }
+    .card-body      { padding: 1rem; }
+
+    /* ===== ファイル選択エリア ===== */
+    .drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--bg-color);
+    }
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--primary-color);
+      background: var(--primary-light);
+    }
+    .drop-zone i {
+      font-size: 2.5rem;
+      color: var(--border-color);
+      display: block;
+      margin-bottom: 0.75rem;
+      transition: color 0.2s;
+    }
+    .drop-zone:hover i,
+    .drop-zone.dragover i { color: var(--primary-color); }
+    .drop-zone .label-main {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+    .drop-zone .label-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+
+    /* 隠しファイルinput */
+    #file-input { display: none; }
+
+    /* ===== 選択枚数バッジ ===== */
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 20px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-top: 0.75rem;
+    }
+    .count-badge.hidden { display: none; }
+
+    /* ===== サムネイルプレビューグリッド ===== */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+    }
+    .preview-grid .thumb {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--border-color);
+    }
+    .preview-grid .thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* サムネイルが多い場合の「他 +N 枚」表示 */
+    .preview-grid .thumb-more {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* ===== 圧縮設定メモ ===== */
+    .compress-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* ===== アップロードボタン ===== */
+    .btn-upload {
+      width: 100%;
+      padding: 0.95rem;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-upload:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-upload:not(:disabled):active { transform: scale(0.98); }
+
+    /* ===== 進捗エリア ===== */
+    .progress-area { display: none; }
+    .progress-area.active { display: block; }
+
+    .progress-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-color);
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .progress-bar-wrap {
+      background: var(--border-color);
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .progress-step {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    /* ===== 完了画面 ===== */
+    .result-screen { display: none; }
+    .result-screen.active { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; text-align: center; padding: 1.5rem 1rem; }
+    .result-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+    }
+    .result-icon.success { background: #d8f3dc; color: var(--success-color); }
+    .result-icon.error   { background: #fde8ea; color: var(--error-color);   }
+    .result-title   { font-size: 1.05rem; font-weight: 700; }
+    .result-message { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .btn-retry {
+      margin-top: 0.5rem;
+      padding: 0.7rem 2rem;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-color);
+      cursor: pointer;
+    }
+
+    /* ===== エラーバナー ===== */
+    .error-banner {
+      background: #fde8ea;
+      border: 1px solid #f5a5ae;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--error-color);
+      font-size: 0.85rem;
+      display: none;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .error-banner.active { display: flex; }
+
+    /* ===== chat_id 未指定エラー画面 ===== */
+    .no-chatid {
+      max-width: 400px;
+      margin: 4rem auto;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+    }
+    .no-chatid i  { font-size: 2rem; color: var(--border-color); margin-bottom: 0.75rem; }
+    .no-chatid h2 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .no-chatid p  { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ===== 背景装飾 ===== -->
+<div class="bg-shapes">
+  <div class="shape shape-1"></div>
+  <div class="shape shape-2"></div>
+  <div class="shape shape-3"></div>
+</div>
+
+<!-- ===== chat_id 未指定エラー画面 ===== -->
+<div class="no-chatid hidden" id="no-chatid-screen">
+  <div class="container">
+    <i class="fa-solid fa-link-slash"></i>
+    <h2>URLが正しくありません</h2>
+    <p>このページは <code>?chat_id=xxxx</code> 付きのURLで開いてください。</p>
+  </div>
+</div>
+
+<!-- ===== メイン画面 ===== -->
+<div id="main-screen">
+  <!-- ヘッダー -->
+  <header>
+    <i class="fa-solid fa-images"></i>
+    <div>
+      <h1>グループ写真アルバム</h1>
+      <p>写真を選んでグループに一括送信できます</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- エラーバナー -->
+    <div class="error-banner" id="error-banner">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span id="error-banner-text"></span>
+    </div>
+
+    <!-- ===== 写真選択カード ===== -->
+    <div class="card" id="select-card">
+      <div class="card-head">
+        <i class="fa-solid fa-photo-film"></i>
+        <span>写真を選択</span>
+      </div>
+      <div class="card-body">
+        <!-- ドロップゾーン（スマホではタップでファイル選択） -->
+        <div class="drop-zone" id="drop-zone">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <div class="label-main">写真をタップして選択</div>
+          <div class="label-sub">最大200枚 • JPG・PNG・HEIC 対応</div>
+        </div>
+        <!-- 隠しファイルinput -->
+        <input type="file" id="file-input" accept="image/*" multiple>
+
+        <!-- 選択枚数バッジ -->
+        <div class="count-badge hidden" id="count-badge">
+          <i class="fa-solid fa-check"></i>
+          <span id="count-text">0 枚選択済み</span>
+        </div>
+
+        <!-- 圧縮設定メモ -->
+        <div class="compress-note">
+          <i class="fa-solid fa-compress"></i>
+          送信前に自動で圧縮します（長辺1920px・JPEG）
+        </div>
+
+        <!-- サムネイルプレビュー（最大16枚表示） -->
+        <div class="preview-grid hidden" id="preview-grid"></div>
+      </div>
+    </div>
+
+    <!-- ===== アップロードボタン ===== -->
+    <button class="btn-upload" id="btn-upload" disabled>
+      <i class="fa-solid fa-paper-plane"></i>
+      グループに送信する
+    </button>
+
+    <!-- ===== 進捗カード ===== -->
+    <div class="card hidden" id="progress-card">
+      <div class="card-head">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>アップロード中...</span>
+      </div>
+      <div class="card-body">
+        <div class="progress-area active">
+          <div class="progress-label">
+            <span id="progress-text">準備中...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progress-bar"></div>
+          </div>
+          <div class="progress-step" id="progress-step"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 完了/エラー結果カード ===== -->
+    <div class="card hidden" id="result-card">
+      <div class="card-body">
+        <div class="result-screen active" id="result-screen">
+          <div class="result-icon" id="result-icon">
+            <i id="result-icon-i" class="fa-solid fa-check"></i>
+          </div>
+          <div class="result-title" id="result-title"></div>
+          <div class="result-message" id="result-message"></div>
+          <button class="btn-retry" id="btn-retry">別の写真を送る</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /container -->
+</div><!-- /main-screen -->
+
+<script>
+  // ============================================================
+  // 設定定数
+  // ============================================================
+  /** クライアントサイド圧縮：長辺の最大ピクセル数 */
+  const MAX_LONG_SIDE = 1920;
+  /** クライアントサイド圧縮：WebP 画質（0〜1）。JPEGより約30%小さく転送が速い */
+  const WEBP_QUALITY  = 0.8;
+  /** サムネイル最大表示枚数（超過分は「他 +N 枚」で折りたたむ） */
+  const THUMB_MAX     = 15;
+  /** バックエンドAPIのベースURL（同一サーバー想定） */
+  const API_BASE      = '/api/chat';
+  /** 同時並列アップロード数（10並列で最速化。LarkのAPI制限を超える場合は減らす） */
+  const PARALLEL      = 10;
+
+  // ============================================================
+  // 初期化：URL から chat_id を取得する
+  // ============================================================
+  const params = new URLSearchParams(location.search);
+  const chatId = params.get('chat_id') || '';
+
+  if (!chatId) {
+    // chat_id が未指定の場合はエラー画面を表示してメイン画面を隠す
+    document.getElementById('no-chatid-screen').classList.remove('hidden');
+    document.getElementById('main-screen').classList.add('hidden');
+  }
+
+  // ============================================================
+  // DOM 参照
+  // ============================================================
+  const dropZone      = document.getElementById('drop-zone');
+  const fileInput     = document.getElementById('file-input');
+  const countBadge    = document.getElementById('count-badge');
+  const countText     = document.getElementById('count-text');
+  const previewGrid   = document.getElementById('preview-grid');
+  const btnUpload     = document.getElementById('btn-upload');
+  const selectCard    = document.getElementById('select-card');
+  const progressCard  = document.getElementById('progress-card');
+  const progressBar   = document.getElementById('progress-bar');
+  const progressText  = document.getElementById('progress-text');
+  const progressPct   = document.getElementById('progress-pct');
+  const progressStep  = document.getElementById('progress-step');
+  const resultCard    = document.getElementById('result-card');
+  const resultIcon    = document.getElementById('result-icon');
+  const resultIconI   = document.getElementById('result-icon-i');
+  const resultTitle   = document.getElementById('result-title');
+  const resultMessage = document.getElementById('result-message');
+  const btnRetry      = document.getElementById('btn-retry');
+  const errorBanner   = document.getElementById('error-banner');
+  const errorBannerTx = document.getElementById('error-banner-text');
+
+  /** 選択された File オブジェクト配列 */
+  let selectedFiles = [];
+
+  // ============================================================
+  // ドロップゾーン：クリック／タップでファイル選択ダイアログを開く
+  // ============================================================
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  // PC 向けドラッグオーバー演出
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    handleFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/')));
+  });
+
+  // ファイル input の change イベント
+  fileInput.addEventListener('change', () => {
+    handleFiles([...fileInput.files]);
+    // 同じファイルを再選択できるようにリセットする
+    fileInput.value = '';
+  });
+
+  // ============================================================
+  // ファイル選択後の処理：枚数表示・サムネイル生成
+  // ============================================================
+  function handleFiles(files) {
+    if (!files.length) return;
+    // 200枚上限チェック
+    if (files.length > 200) {
+      showError(`選択できる写真は最大200枚です。（選択枚数: ${files.length} 枚）`);
+      return;
+    }
+    hideError();
+    selectedFiles = files;
+    renderPreview(files);
+    countText.textContent = `${files.length} 枚選択済み`;
+    countBadge.classList.remove('hidden');
+    btnUpload.disabled = false;
+  }
+
+  /**
+   * サムネイルプレビューグリッドを描画する。
+   * 16枚を超える場合は15枚 + 「他 +N 枚」セルで表示する。
+   */
+  function renderPreview(files) {
+    previewGrid.innerHTML = '';
+    const showCount  = Math.min(files.length, THUMB_MAX);
+    const extraCount = files.length - THUMB_MAX;
+
+    for (let i = 0; i < showCount; i++) {
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(files[i]);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      div.appendChild(img);
+      previewGrid.appendChild(div);
+    }
+    if (extraCount > 0) {
+      const more = document.createElement('div');
+      more.className = 'thumb-more';
+      more.textContent = `+${extraCount}`;
+      previewGrid.appendChild(more);
+    }
+    previewGrid.classList.remove('hidden');
+  }
+
+  // ============================================================
+  // エラーバナー表示・非表示ヘルパー
+  // ============================================================
+  function showError(msg) {
+    errorBannerTx.textContent = msg;
+    errorBanner.classList.add('active');
+  }
+  function hideError() {
+    errorBanner.classList.remove('active');
+  }
+
+  // ============================================================
+  // アップロードボタン押下時の処理
+  // ============================================================
+  btnUpload.addEventListener('click', startUpload);
+
+  async function startUpload() {
+    if (!selectedFiles.length || !chatId) return;
+    hideError();
+
+    // UI を進捗モードに切り替える
+    btnUpload.disabled = true;
+    selectCard.classList.add('hidden');
+    progressCard.classList.remove('hidden');
+    resultCard.classList.add('hidden');
+
+    const total     = selectedFiles.length;
+    // 順序を保持するため配列をインデックスで管理する
+    const imageKeys = new Array(total).fill(null);
+    let   doneCount = 0;
+
+    try {
+      // ── ステップ1: PARALLEL枚ずつ並列に圧縮→アップロードして image_key を収集 ──
+      // バッチ内は Promise.all で並列実行、次バッチは前バッチ完了後に開始する
+      for (let start = 0; start < total; start += PARALLEL) {
+        const end   = Math.min(start + PARALLEL, total);
+        const batch = Array.from({ length: end - start }, (_, i) => start + i);
+
+        await Promise.all(batch.map(async idx => {
+          // 圧縮
+          updateProgress(
+            `${total} 枚中 ${doneCount} 枚完了`,
+            Math.round(doneCount / (total + 1) * 100),
+            `圧縮中... (${idx + 1}/${total})`
+          );
+          const blob = await compressImage(selectedFiles[idx]);
+
+          // バイナリとして直接送信（Base64エンコード不要で約33%高速化）
+          const buf = await blob.arrayBuffer();
+          const res = await fetch(`${API_BASE}/upload-image`, {
+            method:  'POST',
+            headers: { 'Content-Type': blob.type || 'image/webp' },
+            body:    buf
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `画像アップロードに失敗しました (${idx + 1}枚目)`);
+          }
+          const data = await res.json();
+          imageKeys[idx] = data.image_key;
+          doneCount++;
+          updateProgress(
+            `${total} 枚中 ${doneCount} 枚完了`,
+            Math.round(doneCount / (total + 1) * 100),
+            `送信完了: ${doneCount} / ${total}`
+          );
+        }));
+      }
+
+      // ── ステップ2: アルバム作成リクエスト ──
+      updateProgress('アルバムを作成中...', 98, 'グループチャットにメッセージを送信しています...');
+
+      const albumRes = await fetch(`${API_BASE}/create-album`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, image_keys: imageKeys })
+      });
+      if (!albumRes.ok) {
+        const err = await albumRes.json().catch(() => ({}));
+        throw new Error(err.error || 'アルバムの作成に失敗しました');
+      }
+
+      // ── 成功 ──
+      updateProgress('完了！', 100, '');
+      showResult('success',
+        `${total} 枚の写真を送信しました！`,
+        'グループチャットに写真アルバムが作成されました。\n2日後に自動削除されます。');
+
+    } catch (e) {
+      console.error('[upload] エラー:', e);
+      showResult('error', '送信に失敗しました', e.message || '不明なエラーが発生しました。');
+    }
+  }
+
+  // ============================================================
+  // 進捗バー更新ヘルパー
+  // ============================================================
+  function updateProgress(text, pct, step) {
+    progressText.textContent = text;
+    progressPct.textContent  = `${pct}%`;
+    progressBar.style.width  = `${pct}%`;
+    progressStep.textContent = step;
+  }
+
+  // ============================================================
+  // 結果画面表示ヘルパー
+  // ============================================================
+  function showResult(type, title, message) {
+    progressCard.classList.add('hidden');
+    resultCard.classList.remove('hidden');
+    resultIcon.className  = `result-icon ${type}`;
+    resultIconI.className = type === 'success'
+      ? 'fa-solid fa-check'
+      : 'fa-solid fa-triangle-exclamation';
+    resultTitle.textContent   = title;
+    resultMessage.textContent = message;
+  }
+
+  // ============================================================
+  // 「別の写真を送る」ボタン：画面をリセットする
+  // ============================================================
+  btnRetry.addEventListener('click', () => {
+    selectedFiles = [];
+    previewGrid.innerHTML = '';
+    previewGrid.classList.add('hidden');
+    countBadge.classList.add('hidden');
+    resultCard.classList.add('hidden');
+    progressCard.classList.add('hidden');
+    selectCard.classList.remove('hidden');
+    btnUpload.disabled = true;
+    hideError();
+  });
+
+  // ============================================================
+  // クライアントサイド画像圧縮：Canvas API を使用して
+  // 長辺を MAX_LONG_SIDE 以内にリサイズし WebP に変換する。
+  // WebP は JPEG より約30%ファイルサイズが小さく転送が速い。
+  // WebP 非対応ブラウザ（Safari 旧版など）は JPEG にフォールバックする。
+  // @param {File} file - 入力ファイル
+  // @returns {Promise<Blob>} 圧縮済み画像の Blob（image/webp または image/jpeg）
+  // ============================================================
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          // リサイズ後のサイズを計算する
+          let { width, height } = img;
+          const longSide = Math.max(width, height);
+          if (longSide > MAX_LONG_SIDE) {
+            const ratio = MAX_LONG_SIDE / longSide;
+            width  = Math.round(width  * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          // Canvas に描画する
+          const canvas = document.createElement('canvas');
+          canvas.width  = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // まず WebP で変換を試みる。失敗時（非対応ブラウザ）は JPEG にフォールバックする
+          canvas.toBlob(blob => {
+            if (blob && blob.type === 'image/webp') {
+              resolve(blob);
+            } else {
+              // WebP 非対応ブラウザ：JPEG にフォールバック
+              canvas.toBlob(fallback => {
+                if (fallback) resolve(fallback);
+                else reject(new Error(`画像の変換に失敗しました: ${file.name}`));
+              }, 'image/jpeg', WEBP_QUALITY);
+            }
+          }, 'image/webp', WEBP_QUALITY);
+        };
+        img.onerror = () => reject(new Error(`画像の読み込みに失敗しました: ${file.name}`));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error(`ファイルの読み込みに失敗しました: ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+  }
+</script>
+</body>
+</html>
