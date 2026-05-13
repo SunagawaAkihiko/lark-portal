@@ -1183,6 +1183,7 @@ function renderSalaryTable(rows, month) {
   const rowDefs = [
     // ── 勤怠区分 ──
     { k:'kintai.出勤日数',   label:'出　勤　日　数', sec:'kintai', fmt:'int' },
+    { k:'kintai.内夜勤',     label:'夜　勤　回　数', sec:'kintai', fmt:'int' },
     { k:'kintai.有休日数',   label:'有　給　日　数', sec:'kintai', fmt:'int' },
     { k:'kintai.欠勤',       label:'欠　勤　日　数', sec:'kintai', fmt:'int' },
     { k:null,                label:'特　別　休　暇', sec:'kintai', fmt:'int' },
@@ -1194,7 +1195,6 @@ function renderSalaryTable(rows, month) {
     { k:'kintai.遅刻回数',   label:'遅　早　回　数', sec:'kintai', fmt:'int' },
     { k:null,                label:'遅　早　時　間', sec:'kintai', fmt:'str' },
     { k:null,                label:'60ｈ超残業',    sec:'kintai', fmt:'str' },
-    { k:'kintai.内夜勤',     label:'夜　勤　回　数', sec:'kintai', fmt:'int' },
     // ── 支給 ──
     { k:'基本給',       label:'基　　本　　給',   sec:'pay' },
     { k:'役職手当',     label:'役　職　手　当',   sec:'pay' },
