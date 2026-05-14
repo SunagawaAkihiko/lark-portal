@@ -87,7 +87,7 @@ const portalLinks = [
         selfEntry: true  // ご本人入力フォーム（スタッフ本人が使用）
     },
     {
-        title: "スタッフ勤務情報設定",
+        title: "スタッフ給与設定",
         description: "入職スタッフの雇用形態・手当・シフト・給与情報を設定します",
         icon: "fa-user-gear",
         url: "staff-admin-edit.html",
