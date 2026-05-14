@@ -556,7 +556,25 @@
     // セレクト値から recordId・雇用形態・事業所を取り出し、
     // UI の表示切替・デフォルト値・シフトON/OFFを適用する
     // ============================================================
-    function onStaffChange() {
+    // フィールド名を指定してあり/なしボタンを設定するヘルパー（排他連動も適用）
+    function setToggleValue(field, val) {
+      const item = document.querySelector(`[data-field="${field}"]`);
+      if (!item) return;
+      const btns = item.querySelectorAll('.an button');
+      if (btns.length < 2) return;
+      btns.forEach(b => b.classList.remove('sel-ari', 'sel-nashi'));
+      if (val === 'あり') {
+        btns[0].classList.add('sel-ari');
+        if (field === '処遇')      forceNashi('処遇(扶養)');
+        if (field === '処遇(扶養)') forceNashi('処遇');
+        if (field === '通勤手当')   forceNashi('通勤手当2');
+        if (field === '通勤手当2')  forceNashi('通勤手当');
+      } else if (val === 'なし') {
+        btns[1].classList.add('sel-nashi');
+      }
+    }
+
+    async function onStaffChange() {
       const sel = document.getElementById('staffSelect');
       const val = sel.value;
 
@@ -581,13 +599,63 @@
         `<i class="fa-solid fa-building"></i> ${mainOffice || '未設定'}`;
       document.getElementById('infoBadges').style.display = 'flex';
 
-      // メイン事業所セレクトを自動セットする
-      document.getElementById('mainOffice').value = mainOffice;
-
-      // フォームに雇用形態・事業所の組み合わせを反映する
+      // まず表示条件・デフォルトを適用してからLarkの実値で上書きする
       applyVisibility(employmentType, mainOffice);
       applyDefaults(employmentType, mainOffice);
       applyShiftDefault(employmentType, mainOffice);
+
+      // Larkから実際の設定値を取得してフォームに反映する
+      try {
+        const r = await fetch(`${API_BASE}/api/staff/record/${recordId}`);
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        const f = d.fields;
+
+        // メイン事業所
+        if (f['メイン事業所']) document.getElementById('mainOffice').value = f['メイン事業所'];
+
+        // 基本給・時給
+        if (f['基本給・時給'] != null) document.getElementById('baseSalary').value = f['基本給・時給'];
+
+        // 有休換算時間（パートのみ表示だが値があればセット）
+        if (f['有休換算時間'] != null) document.getElementById('paidLeaveHours').value = f['有休換算時間'];
+
+        // 週の所定労働日数（パートのみ）
+        if (f['週の所定労働日数'] != null) {
+          const dayNum = parseInt(f['週の所定労働日数']);
+          document.querySelectorAll('.days-btns button').forEach(b => {
+            b.classList.toggle('active', parseInt(b.textContent) === dayNum);
+          });
+        }
+
+        // 日勤シフト
+        if (f['日勤_予定出社'] || f['日勤_予定退社'] || f['日勤_休憩分数'] != null) {
+          document.getElementById('nikkinSw').checked = true;
+          toggleShift('nikkin', true);
+          if (f['日勤_予定出社']) document.getElementById('nikkinStart').value = f['日勤_予定出社'];
+          if (f['日勤_予定退社']) document.getElementById('nikkinEnd').value   = f['日勤_予定退社'];
+          if (f['日勤_休憩分数'] != null) document.getElementById('nikkinRest').value = f['日勤_休憩分数'];
+        }
+
+        // 夜勤シフト
+        if (f['夜勤_予定出社'] || f['夜勤_予定退社'] || f['夜勤_休憩分数'] != null) {
+          document.getElementById('yakkinSw').checked = true;
+          toggleShift('yakkin', true);
+          if (f['夜勤_予定出社']) document.getElementById('yakkinStart').value = f['夜勤_予定出社'];
+          if (f['夜勤_予定退社']) document.getElementById('yakkinEnd').value   = f['夜勤_予定退社'];
+          if (f['夜勤_休憩分数'] != null) document.getElementById('yakkinRest').value = f['夜勤_休憩分数'];
+        }
+
+        // 手当・食事トグル（あり/なしを実値でセット）
+        ['役職','資格','年末年始','処遇','処遇(扶養)','業績手当','調整手当',
+         '通勤手当','通勤手当2','割増','深夜','夜勤(大浦)','夜勤(上津役)',
+         '朝食','昼食','夕食'].forEach(field => {
+          if (f[field]) setToggleValue(field, f[field]);
+        });
+
+      } catch(e) {
+        console.warn('スタッフ情報の取得に失敗しました:', e.message);
+      }
     }
 
 
