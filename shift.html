@@ -25,9 +25,6 @@
       background: var(--bg);
       color: var(--text);
       height: 100dvh;
-      /* overflow:clip はhiddenと同様に描画クリップするが、スクロールコンテナを作らないため */
-      /* position:sticky の基準スクロールコンテナが正しく .shift-wrapper になるよう設定 */
-      overflow: clip;
       display: flex;
       flex-direction: column;
     }
@@ -133,7 +130,6 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
-      overflow: clip;
     }
     /* 内側スクロールコンテナ（JSで動的に生成して追加） */
     .shift-scroll {
