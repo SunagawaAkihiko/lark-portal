@@ -285,16 +285,29 @@
     #warning-panel ul { padding-left: 1.2rem; }
 
     /* ==================== 右端集計カラム ==================== */
+    /* 3列を右端に sticky 固定する。right 値は列幅(3.5rem)の積み上げで計算する */
     .col-total, .col-kyukyu, .col-yukyu {
-      min-width: 3rem;
+      width: 3.5rem;
       font-weight: 700;
+      position: sticky;
+      z-index: 2;
     }
-    /* 勤務日数: 黄色系 */
-    .col-total  { background: #fffbe6; }
-    /* 公休日数: 青灰色系 */
-    .col-kyukyu { background: #eef2f7; }
-    /* 有休日数: 緑系 */
-    .col-yukyu  { background: #eef9f3; }
+    /* 勤務日数: 右から3列目 */
+    .col-total  { right: 7rem;    background: #fffbe6; }
+    /* 休み日数: 右から2列目 */
+    .col-kyukyu { right: 3.5rem;  background: #eef2f7; }
+    /* 有休日数: 右端 */
+    .col-yukyu  { right: 0;       background: #eef9f3; }
+
+    /* ヘッダー行の右端集計列は top + right 両方 sticky になるため z-index を上げる */
+    .shift-table thead .col-total,
+    .shift-table thead .col-kyukyu,
+    .shift-table thead .col-yukyu  { z-index: 4; background: var(--brown-dark); }
+
+    /* 集計行の右端集計列は背景をはっきり指定してセルが透けないようにする */
+    .shift-table .summary-row .col-total  { background: #f5f0c8 !important; }
+    .shift-table .summary-row .col-kyukyu { background: #dde4ee !important; }
+    .shift-table .summary-row .col-yukyu  { background: #d8f0e3 !important; }
   </style>
 </head>
 <body>
