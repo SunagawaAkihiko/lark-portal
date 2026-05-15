@@ -502,8 +502,8 @@ function renderTable() {
     headRow.appendChild(th);
   }
 
-  // 右端の集計列ヘッダー（勤務・公休・有休）
-  [['勤務', 'col-total'], ['公休', 'col-kyukyu'], ['有休', 'col-yukyu']].forEach(([label, cls]) => {
+  // 右端の集計列ヘッダー（勤務・休み・有休）
+  [['勤務', 'col-total'], ['休み', 'col-kyukyu'], ['有休', 'col-yukyu']].forEach(([label, cls]) => {
     const th = document.createElement('th');
     th.textContent = label;
     th.className = cls;
