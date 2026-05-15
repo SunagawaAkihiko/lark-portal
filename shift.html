@@ -358,7 +358,7 @@
 // 定数
 // ============================================================
 const API = 'https://attendance-app-irf1.onrender.com';
-const SHIFT_TYPES = ['日勤', '日勤(16)', '日勤(18)', '夜勤', '明け', '公休', '定休', '有休'];
+const SHIFT_TYPES = ['日勤', '日勤(16)', '日勤(18)', '夜勤', '明け', '公休', '公休(希)', '定休', '有休'];
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土'];
 
 // シフト種別カラーマップ
@@ -369,6 +369,7 @@ const BADGE_COLOR = {
   '夜勤':      '#6a0572',
   '明け':      '#c77dff',
   '公休':      '#adb5bd',
+  '公休(希)':  '#82a0b0',
   '定休':      '#8d99ae',
   '有休':      '#52b788',
 };
@@ -574,7 +575,7 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (dow === 6) td.className = 'sat';
 
       if (['日勤', '日勤(16)', '日勤(18)', '夜勤'].includes(typ)) workDays++;
-      else if (['公休', '定休'].includes(typ)) kyukuDays++;
+      else if (['公休', '公休(希)', '定休'].includes(typ)) kyukuDays++;
       else if (typ === '有休') yukuDays++;
 
       const badge = document.createElement('span');
