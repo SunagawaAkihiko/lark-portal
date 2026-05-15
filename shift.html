@@ -134,17 +134,26 @@
     }
 
     /* ==================== シフトマトリクステーブル ==================== */
+    /* border-collapse:collapse は position:sticky と組み合わせると Safari 等で
+       固定が全く機能しないため、separate + border-spacing:0 方式を使用する。
+       salary-admin.html の salary-table と同じ方式。                          */
     .shift-table {
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       min-width: max-content;
       font-size: 0.78rem;
     }
     .shift-table th, .shift-table td {
-      border: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
       padding: 0.25rem 0.3rem;
       white-space: nowrap;
       text-align: center;
     }
+    /* 各行の先頭セルに左ボーダーを付与（separate方式では自動付与されないため） */
+    .shift-table tr > :first-child { border-left: 1px solid var(--border); }
+    /* ヘッダー先頭行のみ上ボーダーを付与 */
+    .shift-table thead tr:first-child th { border-top: 1px solid var(--border); }
 
     /* 固定列（スタッフ名）: z-indexとbackgroundを確実に設定して横スクロール時のすり抜けを防ぐ */
     .shift-table .col-name {
