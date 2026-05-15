@@ -6,8 +6,6 @@
   <title>シフト管理</title>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* ==================== 変数・リセット ==================== */
     :root {
@@ -20,15 +18,6 @@
       --border:     #dcbfa6;
       --brown-dark: #4a3f35;
     }
-    /* シフト種別カラー */
-    --c-day:     #3a86ff;
-    --c-dayext:  #0353a4;
-    --c-night:   #6a0572;
-    --c-ake:     #c77dff;
-    --c-kyukyu:  #adb5bd;
-    --c-yukyu:   #52b788;
-    --c-teikyu:  #adb5bd;
-    --c-kekkin:  #e63946;
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -36,7 +25,9 @@
       background: var(--bg);
       color: var(--text);
       height: 100dvh;
-      overflow: hidden;
+      /* overflow:clip はhiddenと同様に描画クリップするが、スクロールコンテナを作らないため */
+      /* position:sticky の基準スクロールコンテナが正しく .shift-wrapper になるよう設定 */
+      overflow: clip;
       display: flex;
       flex-direction: column;
     }
@@ -51,8 +42,6 @@
       display: flex;
       align-items: center;
       gap: 0.6rem;
-      position: sticky; top: 0;
-      z-index: 100;
       flex-shrink: 0;
     }
     .page-header .back-btn {
@@ -135,8 +124,11 @@
     }
 
     /* ==================== シフトテーブルラッパー ==================== */
+    /* flex: 1 + min-height: 0 でこのdivが縦方向のスクロールコンテナになる */
+    /* overflow: auto でposition:sticky の基準スクロールコンテナとして機能する */
     .shift-wrapper {
       flex: 1;
+      min-height: 0;
       overflow: auto;
       padding: 0.5rem;
     }
@@ -153,35 +145,44 @@
       white-space: nowrap;
       text-align: center;
     }
-    /* 固定列（スタッフ名） */
+
+    /* 固定列（スタッフ名）: z-indexとbackgroundを確実に設定して横スクロール時のすり抜けを防ぐ */
     .shift-table .col-name {
-      position: sticky; left: 0;
-      background: var(--card-bg);
-      z-index: 10;
+      position: sticky;
+      left: 0;
+      /* !important でsat/sun行の背景色より優先させる */
+      background: #fff0e3 !important;
+      z-index: 2;
       text-align: left;
       min-width: 6rem;
       font-weight: 700;
+      /* 右側に影を付けてスクロール時の視覚的な区切りを作る */
+      box-shadow: 2px 0 4px rgba(0,0,0,0.08);
     }
-    .shift-table thead .col-name {
-      background: var(--brown-dark);
-      color: #fff;
-    }
-    /* ヘッダー行 */
+
+    /* ヘッダー行：縦方向sticky */
     .shift-table thead th {
       background: var(--brown-dark);
       color: #fff;
       font-weight: 700;
-      position: sticky; top: 0;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+
+    /* ヘッダー左上の角セル：縦横両方のstickyを兼ねるため最高z-indexにする */
+    .shift-table thead .col-name {
+      background: #4a3f35 !important;
+      color: #fff;
       z-index: 5;
     }
-    .shift-table thead .col-name {
-      z-index: 20;
-    }
+
     /* 土・日の列色 */
     .shift-table td.sat { background: #e8f4ff; }
     .shift-table td.sun { background: #fff0f0; }
     .shift-table th.sat { background: #4472c4 !important; }
     .shift-table th.sun { background: #c0392b !important; }
+
     /* 集計行 */
     .shift-table .summary-row td {
       background: #f0f0f0;
@@ -189,7 +190,17 @@
       font-size: 0.72rem;
     }
     .shift-table .summary-row .col-name {
-      background: #e0e0e0;
+      background: #e0e0e0 !important;
+    }
+
+    /* 事業所セクション区切り行（全事業所ビュー用） */
+    .shift-table .shop-section-row td {
+      background: var(--brown-dark) !important;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 0.35rem 0.6rem;
+      text-align: left;
     }
 
     /* ==================== シフトバッジ ==================== */
@@ -205,15 +216,6 @@
       user-select: none;
     }
     .shift-badge:hover { opacity: 0.85; }
-    .badge-日勤      { background: #3a86ff; }
-    .badge-日勤\(延長\) { background: #0353a4; }
-    .badge-夜勤      { background: #6a0572; }
-    .badge-明け      { background: #c77dff; color: #fff; }
-    .badge-公休      { background: #adb5bd; }
-    .badge-定休      { background: #8d99ae; }
-    .badge-有休      { background: #52b788; }
-    .badge-欠勤      { background: #e63946; }
-    .badge-empty     { background: #eee; color: #999; border: 1px dashed #ccc; }
 
     /* ==================== ドロップダウン ==================== */
     .cell-dropdown {
@@ -238,11 +240,6 @@
       cursor: pointer;
     }
     .cell-dropdown .dd-item:hover { background: var(--primary-lt); }
-    .cell-dropdown .dd-sep {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 0.3rem 0;
-    }
 
     /* ==================== トースト・ローディング ==================== */
     #toast {
@@ -329,9 +326,10 @@
   <ul id="warning-list"></ul>
 </div>
 
-<!-- タブ -->
+<!-- タブ：全事業所を既定として両事業所の兼務スタッフも一覧で確認できるようにする -->
 <div class="tabs">
-  <button class="tab active" id="tab-oura"   onclick="switchTab('大浦家')">大浦家</button>
+  <button class="tab active" id="tab-all"    onclick="switchTab('all')">全事業所</button>
+  <button class="tab"        id="tab-oura"   onclick="switchTab('大浦家')">大浦家</button>
   <button class="tab"        id="tab-kozuya" onclick="switchTab('上津役家')">上津役家</button>
 </div>
 
@@ -371,12 +369,16 @@ const BADGE_COLOR = {
   '欠勤':      '#e63946',
 };
 
+// 事業所の表示順（全事業所ビューでのセクション順序）
+const SHOPS = ['大浦家', '上津役家'];
+
 // ============================================================
 // 状態管理
 // ============================================================
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1;
-let currentShop  = '大浦家';
+// 既定を「全事業所」にして兼務スタッフも含め全体を俯瞰できるようにする
+let currentShop  = 'all';
 let staffList    = [];   // スタッフマスタ
 let shifts       = [];   // 現在表示中のシフトデータ（全事業所）
 let dirty        = false; // 未保存変更あり
@@ -385,9 +387,7 @@ let dirty        = false; // 未保存変更あり
 // 初期化
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  // スタッフマスタ読み込み
   await loadStaff();
-  // シフト読み込み
   await loadShiftResult();
 });
 
@@ -441,9 +441,23 @@ function updateMonthLabel() {
 // ============================================================
 function switchTab(shop) {
   currentShop = shop;
+  document.getElementById('tab-all').classList.toggle('active',    shop === 'all');
   document.getElementById('tab-oura').classList.toggle('active',   shop === '大浦家');
   document.getElementById('tab-kozuya').classList.toggle('active', shop === '上津役家');
   renderTable();
+}
+
+// ============================================================
+// シフトマップ構築（事業所でフィルタ）
+// staffName + date をキーにして素早く参照できる形にする
+// ============================================================
+function buildShiftMap(shop) {
+  const map = {};
+  for (const s of shifts) {
+    if (s.shop !== shop) continue;
+    map[`${s.staffName}__${s.date}`] = s;
+  }
+  return map;
 }
 
 // ============================================================
@@ -463,35 +477,18 @@ function renderTable() {
     };
   });
 
-  // 現在の事業所のスタッフを表示順でフィルタ
-  const shopStaff = staffList.filter(s => s.shops.includes(currentShop));
-  if (shopStaff.length === 0) {
-    wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
-    return;
-  }
-
-  // シフトをマップ化: staffName+date → shift
-  const shiftMap = {};
-  for (const s of shifts) {
-    if (s.shop !== currentShop) continue;
-    shiftMap[`${s.staffName}__${s.date}`] = s;
-  }
-
-  // テーブル構築
   const table = document.createElement('table');
   table.className = 'shift-table';
 
-  // ---- ヘッダー ----
+  // ---- ヘッダー行（全ビュー共通） ----
   const thead = table.createTHead();
   const headRow = thead.insertRow();
 
-  // スタッフ名列
   const thName = document.createElement('th');
   thName.className = 'col-name';
   thName.textContent = 'スタッフ';
   headRow.appendChild(thName);
 
-  // 日付列
   for (const { day, dow } of dates) {
     const th = document.createElement('th');
     th.innerHTML = `${day}<br><small>${DOW_JA[dow]}</small>`;
@@ -500,25 +497,66 @@ function renderTable() {
     headRow.appendChild(th);
   }
 
-  // 勤務日数列
   const thTotal = document.createElement('th');
   thTotal.textContent = '勤務';
   thTotal.className = 'col-total';
   headRow.appendChild(thTotal);
 
-  // ---- スタッフ行 ----
   const tbody = table.createTBody();
+
+  if (currentShop === 'all') {
+    // 全事業所ビュー：各事業所をセクションに分けて連続表示する
+    // 兼務スタッフは両方のセクションに現れ、その事業所のシフトを表示する
+    let hasAny = false;
+    for (const shop of SHOPS) {
+      const shopStaff = staffList.filter(s => s.shops.includes(shop));
+      if (shopStaff.length === 0) continue;
+      hasAny = true;
+
+      // 事業所名セクション区切り行
+      const sectionRow = tbody.insertRow();
+      sectionRow.className = 'shop-section-row';
+      const tdSection = sectionRow.insertCell();
+      tdSection.colSpan = dates.length + 2;
+      tdSection.textContent = `  ${shop}`;
+
+      const shiftMap = buildShiftMap(shop);
+      appendStaffRows(tbody, shopStaff, dates, shiftMap, shop);
+      appendSummaryRows(tbody, shopStaff, dates, shiftMap);
+    }
+    if (!hasAny) {
+      wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
+      return;
+    }
+  } else {
+    // 単一事業所ビュー
+    const shopStaff = staffList.filter(s => s.shops.includes(currentShop));
+    if (shopStaff.length === 0) {
+      wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
+      return;
+    }
+    const shiftMap = buildShiftMap(currentShop);
+    appendStaffRows(tbody, shopStaff, dates, shiftMap, currentShop);
+    appendSummaryRows(tbody, shopStaff, dates, shiftMap);
+  }
+
+  wrapper.innerHTML = '';
+  wrapper.appendChild(table);
+}
+
+// ============================================================
+// スタッフ行をtbodyに追加するヘルパー
+// ============================================================
+function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
   for (const staff of shopStaff) {
     const row = tbody.insertRow();
 
-    // スタッフ名セル
     const tdName = row.insertCell();
     tdName.className = 'col-name';
     tdName.textContent = staff.name;
 
     let workDays = 0;
 
-    // 各日付のシフトセル
     for (const { str, dow } of dates) {
       const td  = row.insertCell();
       const s   = shiftMap[`${staff.name}__${str}`];
@@ -529,7 +567,6 @@ function renderTable() {
 
       if (['日勤', '日勤(延長)', '夜勤'].includes(typ)) workDays++;
 
-      // シフトバッジ
       const badge = document.createElement('span');
       badge.className = 'shift-badge';
       badge.textContent = typ || '－';
@@ -537,22 +574,25 @@ function renderTable() {
       badge.style.color = BADGE_COLOR[typ] ? '#fff' : '#999';
       if (!BADGE_COLOR[typ]) badge.style.border = '1px dashed #ccc';
 
-      // クリックで編集ドロップダウン
+      // クリック編集：事業所名をクロージャで保持してドロップダウンに渡す
       badge.addEventListener('click', (e) => {
         e.stopPropagation();
-        openDropdown(e, staff.name, str, s, badge);
+        openDropdown(e, staff.name, str, s, badge, shop);
       });
 
       td.appendChild(badge);
     }
 
-    // 勤務日数セル
     const tdTotal = row.insertCell();
     tdTotal.className = 'col-total';
     tdTotal.textContent = workDays;
   }
+}
 
-  // ---- 集計行（日勤・夜勤の人数） ----
+// ============================================================
+// 集計行（日勤計・夜勤計）をtbodyに追加するヘルパー
+// ============================================================
+function appendSummaryRows(tbody, shopStaff, dates, shiftMap) {
   const summaryTypes = [
     { label: '日勤計', types: ['日勤', '日勤(延長)'] },
     { label: '夜勤計', types: ['夜勤'] },
@@ -567,47 +607,42 @@ function renderTable() {
 
     for (const { str } of dates) {
       const td  = row.insertCell();
-      const cnt = shopStaff.filter(staff =>
-        types.includes(shiftMap[`${staff.name}__${str}`]?.shiftType)
+      const cnt = shopStaff.filter(s =>
+        types.includes(shiftMap[`${s.name}__${str}`]?.shiftType)
       ).length;
       td.textContent = cnt || '－';
       if (cnt === 0) td.style.color = '#e63946';
     }
 
-    // 合計列（空欄）
     const tdTotal = row.insertCell();
     tdTotal.className = 'col-total';
   }
-
-  wrapper.innerHTML = '';
-  wrapper.appendChild(table);
 }
 
 // ============================================================
 // ドロップダウン（シフト編集）
+// shopName：全事業所ビューでの編集対象事業所を特定するために必要
 // ============================================================
-function openDropdown(e, staffName, dateStr, currentShift, badgeEl) {
+function openDropdown(e, staffName, dateStr, currentShift, badgeEl, shopName) {
   const dd = document.getElementById('dropdown');
   dd.innerHTML = '';
 
-  // シフト種別ボタンを生成
   for (const typ of SHIFT_TYPES) {
     const btn = document.createElement('button');
     btn.className = 'dd-item';
     btn.innerHTML = `<span style="display:inline-block;width:0.7rem;height:0.7rem;border-radius:2px;background:${BADGE_COLOR[typ]||'#eee'};margin-right:0.4rem;"></span>${typ}`;
     if (currentShift?.shiftType === typ) btn.style.fontWeight = '800';
     btn.addEventListener('click', () => {
-      applyShiftChange(staffName, dateStr, typ, currentShift, badgeEl);
+      applyShiftChange(staffName, dateStr, typ, currentShift, badgeEl, shopName);
       closeDropdown();
     });
     dd.appendChild(btn);
   }
 
-  // 位置調整（画面外にはみ出ないように）
   dd.classList.remove('hidden');
-  const rect   = e.target.getBoundingClientRect();
-  const ddH    = dd.offsetHeight || 300;
-  const top    = rect.bottom + 4 + ddH > window.innerHeight
+  const rect = e.target.getBoundingClientRect();
+  const ddH  = dd.offsetHeight || 300;
+  const top  = rect.bottom + 4 + ddH > window.innerHeight
     ? rect.top - ddH - 4
     : rect.bottom + 4;
   dd.style.top  = `${top}px`;
@@ -621,35 +656,32 @@ document.addEventListener('click', closeDropdown);
 
 // ============================================================
 // シフト変更をメモリに反映
+// shopName：全事業所ビューでの新規シフト作成時に事業所を正しく設定するために受け取る
 // ============================================================
-function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl) {
+function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, shopName) {
   if (currentShift) {
-    // 既存レコードを更新
-    currentShift.shiftType    = newType;
-    currentShift._dirty       = true;
+    currentShift.shiftType = newType;
+    currentShift._dirty    = true;
   } else {
-    // 新規レコード
     const staff = staffList.find(s => s.name === staffName);
     shifts.push({
-      date:      dateStr,
-      shop:      currentShop,
+      date:        dateStr,
+      shop:        shopName,
       staffName,
-      openId:    staff?.openId || '',
-      shiftType: newType,
-      isManual:  true,
+      openId:      staff?.openId || '',
+      shiftType:   newType,
+      isManual:    true,
       isConfirmed: false,
-      _dirty: true,
-      _isNew: true,
+      _dirty:      true,
+      _isNew:      true,
     });
   }
 
-  // バッジ表示を即時更新
-  badgeEl.textContent       = newType;
-  badgeEl.style.background  = BADGE_COLOR[newType] || '#eee';
-  badgeEl.style.color       = BADGE_COLOR[newType] ? '#fff' : '#999';
-  badgeEl.style.border      = BADGE_COLOR[newType] ? 'none' : '1px dashed #ccc';
+  badgeEl.textContent      = newType;
+  badgeEl.style.background = BADGE_COLOR[newType] || '#eee';
+  badgeEl.style.color      = BADGE_COLOR[newType] ? '#fff' : '#999';
+  badgeEl.style.border     = BADGE_COLOR[newType] ? 'none' : '1px dashed #ccc';
 
-  // 保存ボタンを有効化
   dirty = true;
   document.getElementById('btn-save').disabled = false;
 
@@ -658,7 +690,7 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl) {
 }
 
 // ============================================================
-// 自動作成
+// 自動作成：サーバー側で全事業所・全スタッフのシフトを一括生成する
 // ============================================================
 async function onGenerate() {
   if (shifts.length > 0 &&
@@ -680,7 +712,6 @@ async function onGenerate() {
     dirty  = true;
     document.getElementById('btn-save').disabled = false;
 
-    // 警告を表示
     if (d.warnings?.length > 0) {
       const panel = document.getElementById('warning-panel');
       const list  = document.getElementById('warning-list');
@@ -726,7 +757,7 @@ async function onSave() {
     dirty = false;
     document.getElementById('btn-save').disabled = true;
     showToast(`${d.count}件のシフトを保存しました`);
-    await loadShiftResult(); // IDをサーバーから再取得
+    await loadShiftResult();
   } catch (e) {
     showToast(`保存エラー: ${e.message}`, 'error');
   } finally {
