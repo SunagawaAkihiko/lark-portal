@@ -124,9 +124,19 @@
     }
 
     /* ==================== シフトテーブルラッパー ==================== */
-    /* flex: 1 + min-height: 0 でこのdivが縦方向のスクロールコンテナになる */
-    /* overflow: auto でposition:sticky の基準スクロールコンテナとして機能する */
+    /* salary-admin.html の kintai-scroll と同じ2段構造にする。
+       外側（shift-wrapper）は flex コンテナとして高さを確保するだけ。
+       内側（shift-scroll）が overflow:auto のスクロールコンテナになり
+       position:sticky の基準コンテナとして正しく機能する。           */
     .shift-wrapper {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: clip;
+    }
+    /* 内側スクロールコンテナ（JSで動的に生成して追加） */
+    .shift-scroll {
       flex: 1;
       min-height: 0;
       overflow: auto;
@@ -570,11 +580,17 @@ function renderTable() {
     appendSummaryRows(tbody, shopStaff, dates, shiftMap);
   }
 
-  wrapper.innerHTML = '';
-  wrapper.appendChild(table);
+  // salary-admin.html と同じ2段構造：
+  // 外側 shift-wrapper（flex コンテナ）→ 内側 shift-scroll（overflow:auto のスクロールコンテナ）
+  // position:sticky の基準は shift-scroll になる
+  const scrollDiv = document.createElement('div');
+  scrollDiv.className = 'shift-scroll';
+  scrollDiv.appendChild(table);
 
-  // CSSキャッシュに依存せず、JS でインラインスタイルとして sticky を強制適用する。
-  // テーブルを DOM に追加した後でないと offsetWidth が取れないため appendChild の後に実行する。
+  wrapper.innerHTML = '';
+  wrapper.appendChild(scrollDiv);
+
+  // テーブルを DOM に追加した後で sticky を適用（offsetWidth 計測のため追加後に実行）
   applyStickyStyles(table);
 }
 
