@@ -284,12 +284,17 @@
     #warning-panel .warn-title { font-weight: 700; margin-bottom: 0.3rem; }
     #warning-panel ul { padding-left: 1.2rem; }
 
-    /* ==================== 勤務日数カラム ==================== */
-    .col-total {
+    /* ==================== 右端集計カラム ==================== */
+    .col-total, .col-kyukyu, .col-yukyu {
       min-width: 3rem;
-      background: #fffbe6;
       font-weight: 700;
     }
+    /* 勤務日数: 黄色系 */
+    .col-total  { background: #fffbe6; }
+    /* 公休日数: 青灰色系 */
+    .col-kyukyu { background: #eef2f7; }
+    /* 有休日数: 緑系 */
+    .col-yukyu  { background: #eef9f3; }
   </style>
 </head>
 <body>
@@ -497,10 +502,13 @@ function renderTable() {
     headRow.appendChild(th);
   }
 
-  const thTotal = document.createElement('th');
-  thTotal.textContent = '勤務';
-  thTotal.className = 'col-total';
-  headRow.appendChild(thTotal);
+  // 右端の集計列ヘッダー（勤務・公休・有休）
+  [['勤務', 'col-total'], ['公休', 'col-kyukyu'], ['有休', 'col-yukyu']].forEach(([label, cls]) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    th.className = cls;
+    headRow.appendChild(th);
+  });
 
   const tbody = table.createTBody();
 
@@ -517,7 +525,7 @@ function renderTable() {
       const sectionRow = tbody.insertRow();
       sectionRow.className = 'shop-section-row';
       const tdSection = sectionRow.insertCell();
-      tdSection.colSpan = dates.length + 2;
+      tdSection.colSpan = dates.length + 4;
       tdSection.textContent = `  ${shop}`;
 
       const shiftMap = buildShiftMap(shop);
@@ -555,7 +563,8 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
     tdName.className = 'col-name';
     tdName.textContent = staff.name;
 
-    let workDays = 0;
+    // 右端集計カウンター（勤務・公休系・有休）
+    let workDays = 0, kyukuDays = 0, yukuDays = 0;
 
     for (const { str, dow } of dates) {
       const td  = row.insertCell();
@@ -566,6 +575,8 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (dow === 6) td.className = 'sat';
 
       if (['日勤', '日勤(延長)', '夜勤'].includes(typ)) workDays++;
+      else if (['公休', '定休'].includes(typ)) kyukuDays++;
+      else if (typ === '有休') yukuDays++;
 
       const badge = document.createElement('span');
       badge.className = 'shift-badge';
@@ -583,9 +594,18 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       td.appendChild(badge);
     }
 
-    const tdTotal = row.insertCell();
-    tdTotal.className = 'col-total';
-    tdTotal.textContent = workDays;
+    // 右端に勤務・公休・有休の合計セルを追加
+    const tdWork = row.insertCell();
+    tdWork.className = 'col-total';
+    tdWork.textContent = workDays;
+
+    const tdKyuku = row.insertCell();
+    tdKyuku.className = 'col-kyukyu';
+    tdKyuku.textContent = kyukuDays || '－';
+
+    const tdYukyu = row.insertCell();
+    tdYukyu.className = 'col-yukyu';
+    tdYukyu.textContent = yukuDays || '－';
   }
 }
 
@@ -614,8 +634,13 @@ function appendSummaryRows(tbody, shopStaff, dates, shiftMap) {
       if (cnt === 0) td.style.color = '#e63946';
     }
 
+    // 右端集計列（集計行には per-staff の公休・有休数は非該当のため空欄）
     const tdTotal = row.insertCell();
     tdTotal.className = 'col-total';
+    const tdKS = row.insertCell();
+    tdKS.className = 'col-kyukyu';
+    const tdYS = row.insertCell();
+    tdYS.className = 'col-yukyu';
   }
 }
 
