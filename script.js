@@ -115,6 +115,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "シフト管理",
+        description: "月次シフトの自動作成・手動調整・PDF出力",
+        icon: "fa-calendar-alt",
+        url: "shift.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "入居者情報",
         description: "入居者情報の閲覧・薬手帳の登録ができます",
         icon: "fa-address-card",
