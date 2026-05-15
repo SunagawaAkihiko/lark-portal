@@ -572,6 +572,55 @@ function renderTable() {
 
   wrapper.innerHTML = '';
   wrapper.appendChild(table);
+
+  // CSSキャッシュに依存せず、JS でインラインスタイルとして sticky を強制適用する。
+  // テーブルを DOM に追加した後でないと offsetWidth が取れないため appendChild の後に実行する。
+  applyStickyStyles(table);
+}
+
+// ============================================================
+// sticky 固定をインラインスタイルで強制適用
+// ============================================================
+function applyStickyStyles(table) {
+  // ── 左端: スタッフ名列（col-name） ──
+  table.querySelectorAll('.col-name').forEach(el => {
+    el.style.position = 'sticky';
+    el.style.left     = '0';
+    el.style.zIndex   = el.closest('thead') ? '5' : '2';
+  });
+
+  // ── 上端: ヘッダー行（thead th） ──
+  table.querySelectorAll('thead th').forEach(el => {
+    el.style.position = 'sticky';
+    el.style.top      = '0';
+    // col-name は上記で zIndex:5 を設定済みなので上書きしない
+    if (!el.classList.contains('col-name')) el.style.zIndex = '3';
+  });
+
+  // ── 右端: 集計列（col-yukyu / col-kyukyu / col-total）──
+  // offsetWidth で実際の列幅を計測して right 値を積み上げる
+  const headRow = table.querySelector('thead tr');
+  if (!headRow) return;
+
+  const yukyuTh  = headRow.querySelector('.col-yukyu');
+  const kyukyuTh = headRow.querySelector('.col-kyukyu');
+  const totalTh  = headRow.querySelector('.col-total');
+  if (!yukyuTh) return;
+
+  const wYukyu  = yukyuTh.offsetWidth;
+  const wKyukyu = kyukyuTh ? kyukyuTh.offsetWidth : 0;
+
+  const applyRight = (cls, rightPx, isHead) => {
+    table.querySelectorAll(cls).forEach(el => {
+      el.style.position = 'sticky';
+      el.style.right    = rightPx + 'px';
+      el.style.zIndex   = el.closest('thead') ? '4' : '2';
+    });
+  };
+
+  applyRight('.col-yukyu',  0,                    false);
+  applyRight('.col-kyukyu', wYukyu,               false);
+  applyRight('.col-total',  wYukyu + wKyukyu,     false);
 }
 
 // ============================================================
