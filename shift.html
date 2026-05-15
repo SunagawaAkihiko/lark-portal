@@ -358,12 +358,14 @@
 // 定数
 // ============================================================
 const API = 'https://attendance-app-irf1.onrender.com';
-const SHIFT_TYPES = ['日勤', '夜勤', '明け', '公休', '定休', '有休'];
+const SHIFT_TYPES = ['日勤', '日勤(16)', '日勤(18)', '夜勤', '明け', '公休', '定休', '有休'];
 const DOW_JA = ['日', '月', '火', '水', '木', '金', '土'];
 
 // シフト種別カラーマップ
 const BADGE_COLOR = {
   '日勤':      '#3a86ff',
+  '日勤(16)':  '#1d7fc4',
+  '日勤(18)':  '#0a4f8f',
   '夜勤':      '#6a0572',
   '明け':      '#c77dff',
   '公休':      '#adb5bd',
@@ -571,7 +573,7 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (dow === 0) td.className = 'sun';
       if (dow === 6) td.className = 'sat';
 
-      if (['日勤', '夜勤'].includes(typ)) workDays++;
+      if (['日勤', '日勤(16)', '日勤(18)', '夜勤'].includes(typ)) workDays++;
       else if (['公休', '定休'].includes(typ)) kyukuDays++;
       else if (typ === '有休') yukuDays++;
 
@@ -611,7 +613,7 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
 // ============================================================
 function appendSummaryRows(tbody, shopStaff, dates, shiftMap) {
   const summaryTypes = [
-    { label: '日勤計', types: ['日勤'] },
+    { label: '日勤計', types: ['日勤', '日勤(16)', '日勤(18)'] },
     { label: '夜勤計', types: ['夜勤'] },
   ];
   for (const { label, types } of summaryTypes) {
