@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シフト管理</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    /* ==================== 変数・リセット ==================== */
+    :root {
+      --bg:         #fdf6ec;
+      --text:       #4a3f35;
+      --muted:      #8c7c6b;
+      --primary:    #e76f51;
+      --primary-lt: #fcece8;
+      --card-bg:    #fff0e3;
+      --border:     #dcbfa6;
+      --brown-dark: #4a3f35;
+    }
+    /* シフト種別カラー */
+    --c-day:     #3a86ff;
+    --c-dayext:  #0353a4;
+    --c-night:   #6a0572;
+    --c-ake:     #c77dff;
+    --c-kyukyu:  #adb5bd;
+    --c-yukyu:   #52b788;
+    --c-teikyu:  #adb5bd;
+    --c-kekkin:  #e63946;
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    button { cursor: pointer; font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* ==================== ヘッダー ==================== */
+    .page-header {
+      background: var(--brown-dark);
+      color: #fff;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      position: sticky; top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .page-header .back-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .page-header .title { font-size: 1rem; font-weight: 700; flex: 1; }
+
+    /* ==================== ツールバー ==================== */
+    .toolbar {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .month-nav { display: flex; align-items: center; gap: 0.4rem; }
+    .month-nav button {
+      background: var(--primary-lt);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      width: 2rem; height: 2rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .month-label {
+      font-weight: 700;
+      font-size: 1rem;
+      min-width: 7rem;
+      text-align: center;
+    }
+    .toolbar-right { margin-left: auto; display: flex; gap: 0.5rem; }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+    .btn-green  { background: #52b788; color: #fff; }
+    .btn-purple { background: #6a0572; color: #fff; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ==================== タブ ==================== */
+    .tabs {
+      display: flex;
+      background: var(--card-bg);
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 0.6rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* ==================== シフトテーブルラッパー ==================== */
+    .shift-wrapper {
+      flex: 1;
+      overflow: auto;
+      padding: 0.5rem;
+    }
+
+    /* ==================== シフトマトリクステーブル ==================== */
+    .shift-table {
+      border-collapse: collapse;
+      min-width: max-content;
+      font-size: 0.78rem;
+    }
+    .shift-table th, .shift-table td {
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.3rem;
+      white-space: nowrap;
+      text-align: center;
+    }
+    /* 固定列（スタッフ名） */
+    .shift-table .col-name {
+      position: sticky; left: 0;
+      background: var(--card-bg);
+      z-index: 10;
+      text-align: left;
+      min-width: 6rem;
+      font-weight: 700;
+    }
+    .shift-table thead .col-name {
+      background: var(--brown-dark);
+      color: #fff;
+    }
+    /* ヘッダー行 */
+    .shift-table thead th {
+      background: var(--brown-dark);
+      color: #fff;
+      font-weight: 700;
+      position: sticky; top: 0;
+      z-index: 5;
+    }
+    .shift-table thead .col-name {
+      z-index: 20;
+    }
+    /* 土・日の列色 */
+    .shift-table td.sat { background: #e8f4ff; }
+    .shift-table td.sun { background: #fff0f0; }
+    .shift-table th.sat { background: #4472c4 !important; }
+    .shift-table th.sun { background: #c0392b !important; }
+    /* 集計行 */
+    .shift-table .summary-row td {
+      background: #f0f0f0;
+      font-weight: 700;
+      font-size: 0.72rem;
+    }
+    .shift-table .summary-row .col-name {
+      background: #e0e0e0;
+    }
+
+    /* ==================== シフトバッジ ==================== */
+    .shift-badge {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      min-width: 2.8rem;
+      user-select: none;
+    }
+    .shift-badge:hover { opacity: 0.85; }
+    .badge-日勤      { background: #3a86ff; }
+    .badge-日勤\(延長\) { background: #0353a4; }
+    .badge-夜勤      { background: #6a0572; }
+    .badge-明け      { background: #c77dff; color: #fff; }
+    .badge-公休      { background: #adb5bd; }
+    .badge-定休      { background: #8d99ae; }
+    .badge-有休      { background: #52b788; }
+    .badge-欠勤      { background: #e63946; }
+    .badge-empty     { background: #eee; color: #999; border: 1px dashed #ccc; }
+
+    /* ==================== ドロップダウン ==================== */
+    .cell-dropdown {
+      position: fixed;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      z-index: 200;
+      padding: 0.4rem;
+      min-width: 9rem;
+    }
+    .cell-dropdown .dd-item {
+      display: block;
+      width: 100%;
+      padding: 0.4rem 0.6rem;
+      border: none;
+      background: transparent;
+      text-align: left;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .cell-dropdown .dd-item:hover { background: var(--primary-lt); }
+    .cell-dropdown .dd-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0.3rem 0;
+    }
+
+    /* ==================== トースト・ローディング ==================== */
+    #toast {
+      position: fixed; bottom: 5rem; left: 50%;
+      transform: translateX(-50%);
+      background: #333; color: #fff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500;
+    }
+    .spinner {
+      width: 2.5rem; height: 2.5rem;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ==================== 警告パネル ==================== */
+    #warning-panel {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      max-height: 6rem;
+      overflow-y: auto;
+    }
+    #warning-panel .warn-title { font-weight: 700; margin-bottom: 0.3rem; }
+    #warning-panel ul { padding-left: 1.2rem; }
+
+    /* ==================== 勤務日数カラム ==================== */
+    .col-total {
+      min-width: 3rem;
+      background: #fffbe6;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header class="page-header">
+  <button class="back-btn" onclick="history.back()"><i class="fa fa-arrow-left"></i> 戻る</button>
+  <span class="title"><i class="fa fa-calendar-alt"></i> シフト管理</span>
+</header>
+
+<!-- ツールバー -->
+<div class="toolbar">
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)"><i class="fa fa-chevron-left"></i></button>
+    <span class="month-label" id="month-label">読み込み中...</span>
+    <button onclick="changeMonth(1)"><i class="fa fa-chevron-right"></i></button>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn btn-purple" id="btn-generate" onclick="onGenerate()">
+      <i class="fa fa-magic"></i> 自動作成
+    </button>
+    <button class="btn btn-green" id="btn-save" onclick="onSave()" disabled>
+      <i class="fa fa-save"></i> 保存
+    </button>
+    <button class="btn btn-outline" onclick="onPrint()">
+      <i class="fa fa-print"></i> PDF
+    </button>
+  </div>
+</div>
+
+<!-- 警告パネル（自動作成の警告を表示） -->
+<div id="warning-panel" class="hidden">
+  <div class="warn-title">⚠ 自動作成の警告</div>
+  <ul id="warning-list"></ul>
+</div>
+
+<!-- タブ -->
+<div class="tabs">
+  <button class="tab active" id="tab-oura"   onclick="switchTab('大浦家')">大浦家</button>
+  <button class="tab"        id="tab-kozuya" onclick="switchTab('上津役家')">上津役家</button>
+</div>
+
+<!-- シフトテーブル本体 -->
+<div class="shift-wrapper" id="shift-wrapper">
+  <div style="text-align:center;padding:3rem;color:var(--muted);">
+    <i class="fa fa-circle-notch fa-spin fa-2x"></i><br><br>データを読み込み中...
+  </div>
+</div>
+
+<!-- ローディングオーバーレイ -->
+<div id="overlay" class="hidden"><div class="spinner"></div></div>
+
+<!-- ドロップダウンメニュー（クリック編集用） -->
+<div class="cell-dropdown hidden" id="dropdown"></div>
+
+<!-- トースト通知 -->
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// 定数
+// ============================================================
+const API = 'https://attendance-app-irf1.onrender.com';
+const SHIFT_TYPES = ['日勤', '日勤(延長)', '夜勤', '明け', '公休', '定休', '有休', '欠勤'];
+const DOW_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+// シフト種別カラーマップ
+const BADGE_COLOR = {
+  '日勤':      '#3a86ff',
+  '日勤(延長)': '#0353a4',
+  '夜勤':      '#6a0572',
+  '明け':      '#c77dff',
+  '公休':      '#adb5bd',
+  '定休':      '#8d99ae',
+  '有休':      '#52b788',
+  '欠勤':      '#e63946',
+};
+
+// ============================================================
+// 状態管理
+// ============================================================
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+let currentShop  = '大浦家';
+let staffList    = [];   // スタッフマスタ
+let shifts       = [];   // 現在表示中のシフトデータ（全事業所）
+let dirty        = false; // 未保存変更あり
+
+// ============================================================
+// 初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  // スタッフマスタ読み込み
+  await loadStaff();
+  // シフト読み込み
+  await loadShiftResult();
+});
+
+async function loadStaff() {
+  try {
+    const res = await fetch(`${API}/api/shift/staff`);
+    const d   = await res.json();
+    if (d.ok) staffList = d.staff;
+  } catch (e) {
+    console.error('スタッフ読み込みエラー:', e);
+  }
+}
+
+async function loadShiftResult() {
+  showOverlay(true);
+  try {
+    const res = await fetch(`${API}/api/shift/result?year=${currentYear}&month=${currentMonth}`);
+    const d   = await res.json();
+    if (d.ok) {
+      shifts = d.shifts;
+      dirty  = false;
+      document.getElementById('btn-save').disabled = true;
+    }
+    updateMonthLabel();
+    renderTable();
+  } catch (e) {
+    showToast('データの読み込みに失敗しました', 'error');
+  } finally {
+    showOverlay(false);
+  }
+}
+
+// ============================================================
+// 月切り替え
+// ============================================================
+function changeMonth(delta) {
+  if (dirty && !confirm('未保存の変更があります。移動しますか？')) return;
+  currentMonth += delta;
+  if (currentMonth > 12) { currentMonth = 1;  currentYear++; }
+  if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
+  loadShiftResult();
+}
+
+function updateMonthLabel() {
+  document.getElementById('month-label').textContent =
+    `${currentYear}年 ${currentMonth}月`;
+}
+
+// ============================================================
+// タブ切り替え
+// ============================================================
+function switchTab(shop) {
+  currentShop = shop;
+  document.getElementById('tab-oura').classList.toggle('active',   shop === '大浦家');
+  document.getElementById('tab-kozuya').classList.toggle('active', shop === '上津役家');
+  renderTable();
+}
+
+// ============================================================
+// テーブル描画
+// ============================================================
+function renderTable() {
+  const wrapper = document.getElementById('shift-wrapper');
+
+  // 対象月の日付リストを生成
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const dates = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = i + 1;
+    return {
+      str: `${currentYear}/${String(currentMonth).padStart(2,'0')}/${String(d).padStart(2,'0')}`,
+      day: d,
+      dow: new Date(currentYear, currentMonth - 1, d).getDay(),
+    };
+  });
+
+  // 現在の事業所のスタッフを表示順でフィルタ
+  const shopStaff = staffList.filter(s => s.shops.includes(currentShop));
+  if (shopStaff.length === 0) {
+    wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
+    return;
+  }
+
+  // シフトをマップ化: staffName+date → shift
+  const shiftMap = {};
+  for (const s of shifts) {
+    if (s.shop !== currentShop) continue;
+    shiftMap[`${s.staffName}__${s.date}`] = s;
+  }
+
+  // テーブル構築
+  const table = document.createElement('table');
+  table.className = 'shift-table';
+
+  // ---- ヘッダー ----
+  const thead = table.createTHead();
+  const headRow = thead.insertRow();
+
+  // スタッフ名列
+  const thName = document.createElement('th');
+  thName.className = 'col-name';
+  thName.textContent = 'スタッフ';
+  headRow.appendChild(thName);
+
+  // 日付列
+  for (const { day, dow } of dates) {
+    const th = document.createElement('th');
+    th.innerHTML = `${day}<br><small>${DOW_JA[dow]}</small>`;
+    if (dow === 0) th.className = 'sun';
+    if (dow === 6) th.className = 'sat';
+    headRow.appendChild(th);
+  }
+
+  // 勤務日数列
+  const thTotal = document.createElement('th');
+  thTotal.textContent = '勤務';
+  thTotal.className = 'col-total';
+  headRow.appendChild(thTotal);
+
+  // ---- スタッフ行 ----
+  const tbody = table.createTBody();
+  for (const staff of shopStaff) {
+    const row = tbody.insertRow();
+
+    // スタッフ名セル
+    const tdName = row.insertCell();
+    tdName.className = 'col-name';
+    tdName.textContent = staff.name;
+
+    let workDays = 0;
+
+    // 各日付のシフトセル
+    for (const { str, dow } of dates) {
+      const td  = row.insertCell();
+      const s   = shiftMap[`${staff.name}__${str}`];
+      const typ = s?.shiftType || '';
+
+      if (dow === 0) td.className = 'sun';
+      if (dow === 6) td.className = 'sat';
+
+      if (['日勤', '日勤(延長)', '夜勤'].includes(typ)) workDays++;
+
+      // シフトバッジ
+      const badge = document.createElement('span');
+      badge.className = 'shift-badge';
+      badge.textContent = typ || '－';
+      badge.style.background = BADGE_COLOR[typ] || '#eee';
+      badge.style.color = BADGE_COLOR[typ] ? '#fff' : '#999';
+      if (!BADGE_COLOR[typ]) badge.style.border = '1px dashed #ccc';
+
+      // クリックで編集ドロップダウン
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDropdown(e, staff.name, str, s, badge);
+      });
+
+      td.appendChild(badge);
+    }
+
+    // 勤務日数セル
+    const tdTotal = row.insertCell();
+    tdTotal.className = 'col-total';
+    tdTotal.textContent = workDays;
+  }
+
+  // ---- 集計行（日勤・夜勤の人数） ----
+  const summaryTypes = [
+    { label: '日勤計', types: ['日勤', '日勤(延長)'] },
+    { label: '夜勤計', types: ['夜勤'] },
+  ];
+  for (const { label, types } of summaryTypes) {
+    const row = tbody.insertRow();
+    row.className = 'summary-row';
+
+    const tdName = row.insertCell();
+    tdName.className = 'col-name';
+    tdName.textContent = label;
+
+    for (const { str } of dates) {
+      const td  = row.insertCell();
+      const cnt = shopStaff.filter(staff =>
+        types.includes(shiftMap[`${staff.name}__${str}`]?.shiftType)
+      ).length;
+      td.textContent = cnt || '－';
+      if (cnt === 0) td.style.color = '#e63946';
+    }
+
+    // 合計列（空欄）
+    const tdTotal = row.insertCell();
+    tdTotal.className = 'col-total';
+  }
+
+  wrapper.innerHTML = '';
+  wrapper.appendChild(table);
+}
+
+// ============================================================
+// ドロップダウン（シフト編集）
+// ============================================================
+function openDropdown(e, staffName, dateStr, currentShift, badgeEl) {
+  const dd = document.getElementById('dropdown');
+  dd.innerHTML = '';
+
+  // シフト種別ボタンを生成
+  for (const typ of SHIFT_TYPES) {
+    const btn = document.createElement('button');
+    btn.className = 'dd-item';
+    btn.innerHTML = `<span style="display:inline-block;width:0.7rem;height:0.7rem;border-radius:2px;background:${BADGE_COLOR[typ]||'#eee'};margin-right:0.4rem;"></span>${typ}`;
+    if (currentShift?.shiftType === typ) btn.style.fontWeight = '800';
+    btn.addEventListener('click', () => {
+      applyShiftChange(staffName, dateStr, typ, currentShift, badgeEl);
+      closeDropdown();
+    });
+    dd.appendChild(btn);
+  }
+
+  // 位置調整（画面外にはみ出ないように）
+  dd.classList.remove('hidden');
+  const rect   = e.target.getBoundingClientRect();
+  const ddH    = dd.offsetHeight || 300;
+  const top    = rect.bottom + 4 + ddH > window.innerHeight
+    ? rect.top - ddH - 4
+    : rect.bottom + 4;
+  dd.style.top  = `${top}px`;
+  dd.style.left = `${Math.min(rect.left, window.innerWidth - 160)}px`;
+}
+
+function closeDropdown() {
+  document.getElementById('dropdown').classList.add('hidden');
+}
+document.addEventListener('click', closeDropdown);
+
+// ============================================================
+// シフト変更をメモリに反映
+// ============================================================
+function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl) {
+  if (currentShift) {
+    // 既存レコードを更新
+    currentShift.shiftType    = newType;
+    currentShift._dirty       = true;
+  } else {
+    // 新規レコード
+    const staff = staffList.find(s => s.name === staffName);
+    shifts.push({
+      date:      dateStr,
+      shop:      currentShop,
+      staffName,
+      openId:    staff?.openId || '',
+      shiftType: newType,
+      isManual:  true,
+      isConfirmed: false,
+      _dirty: true,
+      _isNew: true,
+    });
+  }
+
+  // バッジ表示を即時更新
+  badgeEl.textContent       = newType;
+  badgeEl.style.background  = BADGE_COLOR[newType] || '#eee';
+  badgeEl.style.color       = BADGE_COLOR[newType] ? '#fff' : '#999';
+  badgeEl.style.border      = BADGE_COLOR[newType] ? 'none' : '1px dashed #ccc';
+
+  // 保存ボタンを有効化
+  dirty = true;
+  document.getElementById('btn-save').disabled = false;
+
+  // 集計行を再描画
+  renderTable();
+}
+
+// ============================================================
+// 自動作成
+// ============================================================
+async function onGenerate() {
+  if (shifts.length > 0 &&
+      !confirm(`${currentYear}年${currentMonth}月のシフトが既にあります。上書きしますか？`)) return;
+
+  showOverlay(true);
+  document.getElementById('warning-panel').classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API}/api/shift/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: currentYear, month: currentMonth }),
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+
+    shifts = d.shifts;
+    dirty  = true;
+    document.getElementById('btn-save').disabled = false;
+
+    // 警告を表示
+    if (d.warnings?.length > 0) {
+      const panel = document.getElementById('warning-panel');
+      const list  = document.getElementById('warning-list');
+      list.innerHTML = d.warnings.map(w => `<li>${w}</li>`).join('');
+      panel.classList.remove('hidden');
+    }
+
+    renderTable();
+    showToast('自動作成が完了しました');
+  } catch (e) {
+    showToast(`エラー: ${e.message}`, 'error');
+  } finally {
+    showOverlay(false);
+  }
+}
+
+// ============================================================
+// 保存
+// ============================================================
+async function onSave() {
+  showOverlay(true);
+  try {
+    const res = await fetch(`${API}/api/shift/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year:   currentYear,
+        month:  currentMonth,
+        shifts: shifts.map(s => ({
+          date:        s.date,
+          shop:        s.shop,
+          staffName:   s.staffName,
+          openId:      s.openId,
+          shiftType:   s.shiftType,
+          isManual:    s.isManual    || false,
+          isConfirmed: s.isConfirmed || false,
+        })),
+      }),
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+
+    dirty = false;
+    document.getElementById('btn-save').disabled = true;
+    showToast(`${d.count}件のシフトを保存しました`);
+    await loadShiftResult(); // IDをサーバーから再取得
+  } catch (e) {
+    showToast(`保存エラー: ${e.message}`, 'error');
+  } finally {
+    showOverlay(false);
+  }
+}
+
+// ============================================================
+// PDF出力（印刷CSS）
+// ============================================================
+function onPrint() {
+  window.print();
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function showOverlay(show) {
+  document.getElementById('overlay').classList.toggle('hidden', !show);
+}
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type === 'error' ? '#e63946' : '#333';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+
+<!-- 印刷用スタイル -->
+<style>
+@media print {
+  .page-header, .toolbar, .tabs, #warning-panel, #overlay, #toast, #dropdown { display: none !important; }
+  body { overflow: visible; height: auto; }
+  .shift-wrapper { overflow: visible; padding: 0; }
+  .shift-table { font-size: 0.65rem; }
+  .shift-badge { padding: 0.05rem 0.2rem; font-size: 0.6rem; }
+}
+</style>
+
+</body>
+</html>
