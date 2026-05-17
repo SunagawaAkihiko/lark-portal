@@ -628,12 +628,19 @@ async function handleAddEvent(e) {
         
         alert("予定を登録しました！");
         addModal.classList.add('hidden');
-        
+
         // リセット
         inputNameSelect.value = '';
         document.getElementById('input-type').value = '';
         document.getElementById('input-memo').value = '';
-        
+
+        // 登録日を選択日・表示月に反映し、再読み込み後にその日の予定が見えるようにする
+        const ry = parseInt(y);
+        const rm = parseInt(m) - 1; // Date月は0始まり
+        const rd = parseInt(d);
+        selectedDate = new Date(ry, rm, rd);
+        currentDate  = new Date(ry, rm, 1);
+
         // 再読み込み
         loading.classList.remove('hidden');
         mainContent.classList.add('hidden');
