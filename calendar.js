@@ -50,9 +50,18 @@ document.addEventListener('DOMContentLoaded', () => {
     addEventFab.addEventListener('click', async () => {
         if (!currentOfficeFilter) return; // データ読み込み前はモーダルを開かない
 
+        // カレンダーで選択中の日付をフォームの年月日セレクタに反映する
+        const sy = selectedDate.getFullYear();
+        const sm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const sd = String(selectedDate.getDate()).padStart(2, '0');
+        document.getElementById('input-year').value  = sy;
+        document.getElementById('input-month').value = sm;
+        // 月が変わったとき日セレクタの選択肢が再生成されるため、月変更イベントを発火してから日をセットする
+        document.getElementById('input-month').dispatchEvent(new Event('change'));
+        document.getElementById('input-day').value   = sd;
+
         // 氏名フィールドがテキスト型のため選択肢はフィールドAPIから返らない
         // fieldOptionsに氏名が無くても続行し、updateNameSelectOptionsがcustomersDataから氏名リストを生成する
-
         updateNameSelectOptions(currentOfficeFilter);
         addModal.classList.remove('hidden');
     });
