@@ -2021,10 +2021,11 @@ async function deleteKintaiDay() {
   const statusEl = document.getElementById('kintai-edit-status');
   statusEl.textContent = '削除中...';
   try {
+    // overtime:'0' を明示的に送ることで残業申請（承認済み含む）も削除対象とする
     const r = await fetch(`${API_BASE}/api/attendance/admin-edit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ openId, date, attendTime: '', leaveTime: '', leaveType: '' })
+      body: JSON.stringify({ openId, date, attendTime: '', leaveTime: '', leaveType: '', overtime: '0' })
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '削除失敗');
