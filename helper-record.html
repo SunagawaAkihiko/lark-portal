@@ -1876,12 +1876,9 @@
         const res  = await fetch(`${API_BASE}/api/helper/records/${recordId}`, { method: 'DELETE' });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        // 画面上から削除して再描画する
-        currentRecords = currentRecords.filter(r => r.recordId !== recordId);
-        document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
-        renderRecords(currentRecords);
-        // 削除後に選択状態とアクションバーをリセットする
         clearSelection();
+        // 削除後に同じ検索条件でLarkから再取得して変更を確認できるようにする
+        await loadRecords();
       } catch (err) {
         alert('削除に失敗しました: ' + err.message);
       }
@@ -2364,11 +2361,10 @@
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        // ローカルの記録も更新する
-        const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) { local.記録分類 = type; local.記録内容 = kirokuNaiyou; }
         document.getElementById('ijoModal').classList.add('hidden');
         clearSelection();
+        // 保存後に同じ検索条件でLarkから再取得して変更を確認できるようにする
+        await loadRecords();
       } catch (err) {
         alert('保存に失敗しました: ' + err.message);
       } finally {
@@ -2510,11 +2506,10 @@
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
-        // ローカルの記録も更新する
-        const local = currentRecords.find(rec => rec.recordId === r.recordId);
-        if (local) { local.記録分類 = 'サービス中止'; local.記録内容 = kirokuNaiyou; }
         document.getElementById('chushiModal').classList.add('hidden');
         clearSelection();
+        // 保存後に同じ検索条件でLarkから再取得して変更を確認できるようにする
+        await loadRecords();
       } catch (err) {
         alert('保存に失敗しました: ' + err.message);
       } finally {
@@ -2582,21 +2577,9 @@
         const data = await res.json();
         if (!data.ok) throw new Error(data.error);
 
-        // ローカルの currentRecords も更新して再描画する
-        const idx = currentRecords.findIndex(r => r.recordId === recordId);
-        if (idx !== -1) {
-          currentRecords[idx] = {
-            ...currentRecords[idx],
-            実施日:       body.実施日 ? new Date(body.実施日).getTime() + 9*60*60*1000 : currentRecords[idx].実施日,
-            勤務区分:     body.勤務区分,
-            スタッフ:     body.スタッフ,
-            作業項目:     body.作業項目,
-            サービス略称: body.サービス略称,
-            記録内容:     body.記録内容,
-          };
-          renderRecords(currentRecords);
-        }
         document.getElementById('editModal').classList.add('hidden');
+        // 保存後に同じ検索条件でLarkから再取得して変更を確認できるようにする
+        await loadRecords();
       } catch (err) {
         alert('保存に失敗しました: ' + err.message);
       } finally {
