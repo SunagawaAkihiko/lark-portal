@@ -179,9 +179,17 @@
       font-size: 0.7rem; font-weight: 700;
       padding: 0.05rem 0.45rem; border-radius: 4px;
       white-space: nowrap; flex-shrink: 0;
-      background: var(--primary-light); color: var(--text-color);
+      background: #f0f0f0; color: var(--text-color);
       margin-left: auto;
     }
+    /* 記録分類ごとのバッジカラー */
+    .bunrui-normal  { background: #f0f0f0; color: #424242; }
+    .bunrui-taicho  { background: #fff3e0; color: #e65100; }
+    .bunrui-tento   { background: #ffebee; color: #c62828; }
+    .bunrui-chushi  { background: #fce4ec; color: #880e4f; }
+    .bunrui-furikae { background: #e3f2fd; color: #1565c0; }
+    .bunrui-jikan   { background: #e8eaf6; color: #283593; }
+    .bunrui-sonota  { background: #f3e5f5; color: #6a1b9a; }
     /* 2行目：記録内容（全文表示） */
     .record-item-content {
       font-size: 0.72rem; color: var(--text-muted);
@@ -1559,6 +1567,17 @@
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
+    // 記録分類の値に対応するCSSクラスを返す
+    function bunruiColorClass(val) {
+      if (val === '通常記録')    return 'bunrui-normal';
+      if (val === '体調不良')    return 'bunrui-taicho';
+      if (val === '転倒・怪我')  return 'bunrui-tento';
+      if (val === 'サービス中止') return 'bunrui-chushi';
+      if (val === '振替記録')    return 'bunrui-furikae';
+      if (val === '時間変更記録') return 'bunrui-jikan';
+      return 'bunrui-sonota'; // その他など
+    }
+
     // ============================================================
     // 状態管理
     // ============================================================
@@ -1851,7 +1870,7 @@
             const timeHtml   = r.提供時間 ? `<span class="record-item-time">${escHtml(r.提供時間)}</span>` : '';
             const sagyouHtml = r.作業項目 ? `<span class="record-item-sagyou">${escHtml(r.作業項目)}</span>` : '';
             const staffHtml  = r.スタッフ  ? `<span class="record-item-staff">${escHtml(r.スタッフ)}</span>`  : '';
-            const bunruiHtml = r.記録分類 ? `<span class="record-item-bunrui">${escHtml(r.記録分類)}</span>` : '';
+            const bunruiHtml = r.記録分類 ? `<span class="record-item-bunrui ${bunruiColorClass(r.記録分類)}">${escHtml(r.記録分類)}</span>` : '';
             html += `
               <div class="record-item" onclick="selectRecord(this, '${r.recordId}')">
                 <div class="record-item-main">
