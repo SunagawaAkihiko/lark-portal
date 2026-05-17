@@ -50,21 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
     addEventFab.addEventListener('click', async () => {
         if (!currentOfficeFilter) return; // データ読み込み前はモーダルを開かない
 
-        // 氏名の選択肢が未取得の場合、再取得を試みる
-        if (!fieldOptions['氏名'] || fieldOptions['氏名'].length === 0) {
-            const origHTML = addEventFab.innerHTML;
-            addEventFab.disabled = true;
-            addEventFab.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            await fetchFieldOptions();
-            addEventFab.disabled = false;
-            addEventFab.innerHTML = origHTML;
-
-            // 再取得後も取得できていない場合はエラーを表示して中断する
-            if (!fieldOptions['氏名'] || fieldOptions['氏名'].length === 0) {
-                alert('データの読み込みに失敗しました。\nページを更新してから再度お試しください。');
-                return;
-            }
-        }
+        // 氏名フィールドがテキスト型のため選択肢はフィールドAPIから返らない
+        // fieldOptionsに氏名が無くても続行し、updateNameSelectOptionsがcustomersDataから氏名リストを生成する
 
         updateNameSelectOptions(currentOfficeFilter);
         addModal.classList.remove('hidden');
