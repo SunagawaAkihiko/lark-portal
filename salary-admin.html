@@ -782,7 +782,7 @@
     }
     .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
-    .slip-cell.highlight .cell-val { font-weight: 700; }
+    /* highlight セルは太字なし（完成形準拠） */
     /* セル内の項目名エリア：全セルに薄緑背景・中央揃え（完成形スクショ準拠） */
     .cell-hdr {
       display: flex;
@@ -805,7 +805,7 @@
     /* セル内の数値エリア：項目名エリアと同じ高さ・背景は白 */
     .cell-val {
       display: block; text-align: right;
-      font-size: 9px; padding: 1px 3px;
+      font-size: 11px; padding: 1px 3px;
       height: 22px; line-height: 20px;
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
@@ -2951,7 +2951,7 @@ function buildSlipHTML(row, month) {
         ${c('残業手当',    f(row['残業手当']))}
         ${c('休日出勤',    f(row['休日出勤']))}
         ${c('深夜残業',    f(row['深夜残業']))}
-        ${cb(2)}
+        ${cb()}${cb()}
       </tr>
       <tr>
         ${c('60h超残業',  f(row['60h超残業']))}
@@ -2984,7 +2984,7 @@ function buildSlipHTML(row, month) {
       <tr>
         ${c('その他控除', f(row['その他控除']))}
         ${c('食費',       f(row['食費']))}
-        ${cb(5)}
+        ${cb()}${cb()}${cb()}${cb()}${cb()}
         ${c('控除計',     f(row['控除計']))}
         ${ch('控除合計',  f(row['控除合計']))}
       </tr>
@@ -3012,7 +3012,7 @@ function buildSlipHTML(row, month) {
         ${c('深夜残業',  '')}
         ${c('遅早回数',  f(k['遅刻回数']))}
         ${c('遅早時間',  '')}
-        ${cb(2)}
+        ${cb()}${cb()}
       </tr>
     </table>
   </div>
