@@ -754,7 +754,7 @@
     .slip-period-name  { font-size: 16px; font-weight: 400; line-height: 1.4; }
     .slip-greeting     { font-size: 14px; font-weight: 700; align-self: center; }
     /* お知らせ */
-    .slip-notice { font-size: 11px; margin-bottom: 4px; line-height: 1.5; }
+    .slip-notice { font-size: 13px; margin-bottom: 4px; line-height: 1.5; }
     /* セクション（ラベル列 + テーブル列） */
     .slip-section {
       display: flex;
@@ -809,9 +809,9 @@
     }
     /* セル内の数値エリア：項目名エリアと同じ高さ・背景は白 */
     .cell-val {
-      display: flex; align-items: center; justify-content: center;
+      display: block; text-align: center;
       font-size: 13px; padding: 0 3px;
-      height: 22px;
+      height: 22px; line-height: 22px; /* line-height=heightで上下中央揃え */
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
       box-sizing: border-box;
