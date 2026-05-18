@@ -782,14 +782,18 @@
     .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
     .slip-cell.highlight .cell-val { font-weight: 700; }
-    /* セル内の項目名：参考PDFに合わせて横書き・中央揃え */
+    /* セル内の項目名：参考PDFに合わせて縦書き・中央揃え */
     .cell-hdr {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
       display: flex;
-      align-items: center; justify-content: center;
-      font-size: 8px; line-height: 1.35;
-      height: 66px; width: 100%;
-      box-sizing: border-box; padding: 3px 2px;
-      text-align: center;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      line-height: 1.2;
+      height: 66px;
+      width: 100%;
+      box-sizing: border-box;
       overflow: hidden;
     }
     /* セル内の値（右揃え）：区切り線を参考PDFに合わせて黒にする */
