@@ -775,22 +775,15 @@
     .sec-table tr { border-bottom: 1px solid #000; }
     .sec-table tr:last-child { border-bottom: none; }
     /* データセル */
+    /* データセル */
     .slip-cell {
       border-right: 1px solid #000;
-      padding: 0; vertical-align: top; min-width: 0;
+      padding: 0; vertical-align: bottom; min-width: 0;
     }
     .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
     .slip-cell.highlight .cell-val { font-weight: 700; }
-    /* セル高さを84pxに固定してはみ出しを非表示にするクリップ用ラッパー。
-       tdは内包要素の高さに従うため、全セルを同じ高さにするためにこのラッパーで統一する */
-    .cell-inner {
-      height: 84px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    /* セル内の項目名：縦書き・中央揃え。flex:0 0 66px で高さを固定してはみ出し防止 */
+    /* セル内の項目名：参考PDFに合わせて縦書き・中央揃え */
     .cell-hdr {
       writing-mode: vertical-rl;
       text-orientation: mixed;
@@ -799,7 +792,7 @@
       justify-content: center;
       font-size: 8px;
       line-height: 1.2;
-      flex: 0 0 66px;
+      height: 66px;
       width: 100%;
       box-sizing: border-box;
       overflow: hidden;
@@ -808,8 +801,7 @@
     .cell-val {
       display: block; text-align: right;
       font-size: 9px; padding: 1px 3px;
-      flex: 0 0 18px;
-      line-height: 16px;
+      height: 18px; line-height: 16px;
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
       box-sizing: border-box;
@@ -2911,13 +2903,13 @@ function buildSlipHTML(row, month) {
     ? `<div class="slip-notice">おしらせ：「健康保険」の内、子ども・子育て支援金：${Number(kosodate).toLocaleString('ja-JP')}円</div>`
     : '';
 
-  // セル生成ヘルパー（cell-innerで高さ84pxに統一してセル高さのばらつきを防ぐ）
+  // セル生成ヘルパー（参考PDFに合わせて項目名は縦書き）
   const c  = (lbl, val) =>
-    `<td class="slip-cell"><div class="cell-inner"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></div></td>`;
+    `<td class="slip-cell"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
   const ch = (lbl, val) =>
-    `<td class="slip-cell highlight"><div class="cell-inner"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></div></td>`;
+    `<td class="slip-cell highlight"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
   const cb = (span = 1) =>
-    `<td class="slip-cell blank" colspan="${span}"><div class="cell-inner"><div class="cell-hdr"></div><div class="cell-val"></div></div></td>`;
+    `<td class="slip-cell blank" colspan="${span}"><div class="cell-hdr"></div><div class="cell-val"></div></td>`;
 
   return `
 <div class="slip-wrapper">
