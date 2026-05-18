@@ -716,6 +716,90 @@
     .salary-print-header, .kintai-print-header { display: none; text-align: center; margin-bottom: 0.8rem; }
     .salary-print-header h2, .kintai-print-header h2 { font-size: 1.1rem; font-weight: 700; }
     .salary-print-header p,  .kintai-print-header p  { font-size: 0.85rem; }
+
+    /* ==================== ▼ 給与明細スリップ ==================== */
+    /* 印刷用エリア：画面外に配置してhtml2canvasで取得する */
+    #slip-print-area {
+      position: fixed; left: -9999px; top: 0;
+      width: 794px; /* A4幅（96dpi）*/
+      background: white;
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      color: #000;
+    }
+    .slip-wrapper {
+      width: 754px; margin: 20px auto; padding: 0;
+      font-size: 10px; color: #000;
+    }
+    /* ヘッダーブロック */
+    .slip-header-block {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .slip-company-name { font-size: 13px; font-weight: 700; }
+    .slip-title-text   { font-size: 16px; font-weight: 700; margin: 2px 0; }
+    .slip-period-name  { font-size: 12px; }
+    .slip-greeting     { font-size: 14px; font-weight: 700; align-self: center; }
+    /* お知らせ */
+    .slip-notice { font-size: 10px; margin-bottom: 4px; }
+    /* セクション（ラベル列 + テーブル列） */
+    .slip-section {
+      display: flex; border-top: 1.5px solid #000;
+      border-left: 1.5px solid #000;
+    }
+    .slip-section + .slip-section { margin-top: 0; }
+    /* 縦書きセクションラベル */
+    .sec-label {
+      writing-mode: vertical-rl; text-orientation: upright;
+      font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      padding: 4px 3px;
+      border-right: 1.5px solid #000;
+      min-width: 20px;
+      letter-spacing: 4px;
+    }
+    /* セクション内テーブル */
+    .sec-table {
+      border-collapse: collapse; width: 100%; table-layout: fixed;
+    }
+    .sec-table tr { border-bottom: 1.5px solid #000; }
+    .sec-table tr:last-child { border-bottom: none; }
+    /* データセル：縦書きヘッダー + 横書き値 */
+    .slip-cell {
+      border-right: 1px solid #000;
+      padding: 0; vertical-align: bottom;
+      min-width: 0;
+    }
+    .slip-cell:last-child { border-right: 1.5px solid #000; }
+    .slip-cell.blank { background: #fff; }
+    .slip-cell.highlight .cell-val { background: #fffde7; font-weight: 700; }
+    /* セル内の縦書き項目名 */
+    .cell-hdr {
+      writing-mode: vertical-rl; text-orientation: mixed;
+      font-size: 7.5px; line-height: 1.1;
+      display: block; text-align: center;
+      padding: 3px 0; min-height: 52px;
+      width: 100%; box-sizing: border-box;
+    }
+    /* セル内の値（横書き・右揃え） */
+    .cell-val {
+      display: block; text-align: right;
+      font-size: 9px; padding: 1px 3px;
+      min-height: 14px; border-top: 1px solid #ccc;
+      white-space: nowrap; overflow: hidden;
+    }
+
+    /* 給与明細スタッフ選択モーダル */
+    #slip-modal .modal-box { max-width: 480px; }
+    .slip-staff-list {
+      max-height: 300px; overflow-y: auto;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.5rem; margin: 0.6rem 0;
+    }
+    .slip-staff-list label {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.3rem 0.2rem; cursor: pointer; font-size: 0.9rem;
+    }
+    .slip-staff-list label:hover { background: var(--primary-lt); border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -763,7 +847,10 @@
   <div class="print-toolbar hidden" id="salary-print-bar">
     <span class="month-label" id="salary-print-label"></span>
     <button class="btn-secondary" id="salary-pdf-btn" onclick="downloadSalary()">
-      <i class="fa-solid fa-file-pdf"></i> PDFをDL
+      <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
+    </button>
+    <button class="btn-secondary" onclick="openSlipModal()" style="margin-left:0.4rem">
+      <i class="fa-solid fa-receipt"></i> 給与明細PDF
     </button>
   </div>
   <div id="salary-status" class="status-area">月を選択して「取得」を押してください。</div>
@@ -1139,6 +1226,9 @@ async function loadSalary() {
     const r = await fetch(`${API_BASE}/api/salary/monthly?month=${month}`);
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '取得失敗');
+    // 給与明細PDF生成用にデータをグローバルに保持する
+    salaryRows         = j.data;
+    salaryCurrentMonth = month;
     renderSalaryTable(j.data, month);
     setStatus('salary', '');
     document.getElementById('salary-scroll').classList.remove('hidden');
@@ -2676,6 +2766,245 @@ async function applyTreatment() {
 // 報酬総額の入力変化で支給目安・金額を即時再計算する
 document.getElementById('treatment-total').addEventListener('input', () => updateTreatmentRows());
 
+// ============================================================
+// 給与明細PDF
+// ============================================================
+
+/** 給与一覧表データを保持するグローバル変数 */
+let salaryRows        = [];
+let salaryCurrentMonth = '';
+
+/**
+ * 給与明細モーダルを開く
+ * salaryRowsが空の場合はアラートを出して中断する
+ */
+function openSlipModal() {
+  if (!salaryRows.length) {
+    alert('先に給与データを取得してください。');
+    return;
+  }
+  // スタッフ選択チェックボックスを生成する
+  const list = document.getElementById('slip-staff-list');
+  list.innerHTML = '';
+  salaryRows.forEach(row => {
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<input type="checkbox" class="slip-staff-cb" value="${row.staffName}" checked> ${row.staffName}`;
+    list.appendChild(lbl);
+  });
+  document.getElementById('slip-check-all').checked = true;
+  document.getElementById('slip-progress').textContent = '';
+  document.getElementById('slip-modal').classList.remove('hidden');
+}
+
+function closeSlipModal() {
+  document.getElementById('slip-modal').classList.add('hidden');
+}
+
+/** 全員選択チェックボックスの変更に連動してスタッフ全員をON/OFFする */
+function toggleAllSlipStaff(checked) {
+  document.querySelectorAll('.slip-staff-cb').forEach(cb => cb.checked = checked);
+}
+
+/** ダウンロードボタン押下時にチェック済みスタッフのPDFを生成する */
+async function startSlipPDF() {
+  const selected = [...document.querySelectorAll('.slip-staff-cb:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+
+  const btn      = document.getElementById('slip-dl-btn');
+  const progress = document.getElementById('slip-progress');
+  btn.disabled   = true;
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf        = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const printArea  = document.getElementById('slip-print-area');
+
+    for (let i = 0; i < selected.length; i++) {
+      const name = selected[i];
+      const row  = salaryRows.find(r => r.staffName === name);
+      if (!row) continue;
+
+      progress.textContent = `生成中… ${i + 1} / ${selected.length}  ${name}`;
+
+      // 明細HTMLを描画エリアに挿入してhtml2canvasでキャプチャする
+      printArea.innerHTML = buildSlipHTML(row, salaryCurrentMonth);
+      // DOMの描画完了を1フレーム待つ
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+
+      const canvas  = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      // A4: 210 × 297mm に収める
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    }
+
+    // ファイル名: YYYYMM_給与明細.pdf
+    const fileName = `${salaryCurrentMonth.replace('-', '')}_給与明細.pdf`;
+    pdf.save(fileName);
+    progress.textContent = `✅ ${fileName} をダウンロードしました`;
+    setTimeout(closeSlipModal, 1500);
+  } catch(e) {
+    progress.textContent = `⚠ エラー: ${e.message}`;
+    console.error('[slip-pdf]', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
+ * 西暦をJST基準で令和表記に変換する
+ * 例: 2026 → "令和8"、2019 → "令和元"
+ */
+function toReiwa(year) {
+  const n = year - 2018;
+  return n === 1 ? '令和元' : `令和${n}`;
+}
+
+/**
+ * 1人分の給与明細HTML文字列を生成する
+ * PDFサンプルのレイアウト（支給3行・控除2行・勤怠2行・記事1行）を再現する
+ */
+function buildSlipHTML(row, month) {
+  const [y, m] = month.split('-').map(Number);
+  const monthLabel = `${toReiwa(y)}年${m}月分`;
+  const k          = row.kintai || {};
+
+  // 値のフォーマット（0・nullは空文字）
+  const f  = v => (v && Number(v) !== 0) ? Number(v).toLocaleString('ja-JP') : '';
+  // 文字列値はそのまま使う（実働時間計 "159:30" 等）
+  const fs = v => v || '';
+
+  // 子ども子育て支援金のお知らせ
+  const kosodate   = row['子ども子育て支援金'] || 0;
+  const noticeHtml = kosodate
+    ? `<div class="slip-notice">おしらせ：「健康保険」の内、子ども・子育て支援金：${Number(kosodate).toLocaleString('ja-JP')}円</div>`
+    : '';
+
+  // セル生成ヘルパー
+  const c  = (lbl, val) =>
+    `<td class="slip-cell"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
+  const ch = (lbl, val) =>
+    `<td class="slip-cell highlight"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
+  const cb = (span = 1) =>
+    `<td class="slip-cell blank" colspan="${span}"><div class="cell-hdr" style="min-height:52px"></div><div class="cell-val"></div></td>`;
+
+  return `
+<div class="slip-wrapper">
+  <!-- ヘッダー -->
+  <div class="slip-header-block">
+    <div>
+      <div class="slip-company-name">合同会社 GLAD Life Create</div>
+      <div class="slip-title-text">給与明細書</div>
+      <div class="slip-period-name">${monthLabel}　${row.staffName}　様</div>
+    </div>
+    <div class="slip-greeting">今月もご苦労さまでした。</div>
+  </div>
+  ${noticeHtml}
+
+  <!-- 支給セクション -->
+  <div class="slip-section">
+    <div class="sec-label">支<br>給</div>
+    <table class="sec-table">
+      <tr>
+        ${c('基本給',      f(row['基本給']))}
+        ${c('役職手当',    f(row['役職手当']))}
+        ${c('資格手当',    f(row['資格手当']))}
+        ${c('夜勤手当',    f(row['夜勤手当']))}
+        ${c('割増手当',    f(row['割増手当']))}
+        ${c('深夜手当',    f(row['深夜手当']))}
+        ${c('年末年始手当',f(row['年末年始手当']))}
+        ${c('調整手当',    f(row['調整手当']))}
+      </tr>
+      <tr>
+        ${c('処遇改善手当',f(row['処遇改善手当']))}
+        ${c('業績手当',    f(row['業績手当']))}
+        ${c('有給手当',    f(row['有給手当']))}
+        ${c('残業手当',    f(row['残業手当']))}
+        ${c('休日出勤',    f(row['休日出勤']))}
+        ${c('深夜残業',    f(row['深夜残業']))}
+        ${cb(2)}
+      </tr>
+      <tr>
+        ${c('60h超残業',  f(row['60h超残業']))}
+        ${c('遅早控除',   f(row['遅早控除']))}
+        ${c('欠勤控除',   f(row['欠勤控除']))}
+        ${c('通勤課税',   f(row['通勤課税']))}
+        ${c('通勤非課税', f(row['通勤非課税']))}
+        ${c('課税計',     f(row['課税計']))}
+        ${c('非課税計',   f(row['非課税計']))}
+        ${ch('総支給額',  f(row['総支給額']))}
+      </tr>
+    </table>
+  </div>
+
+  <!-- 控除セクション -->
+  <div class="slip-section">
+    <div class="sec-label">控<br>除</div>
+    <table class="sec-table">
+      <tr>
+        ${c('健康保険',   f(row['健康保険']))}
+        ${c('介護保険',   f(row['介護保険']))}
+        ${c('厚生年金',   f(row['厚生年金']))}
+        ${c('年金基金',   f(row['年金基金']))}
+        ${c('雇用保険',   f(row['雇用保険']))}
+        ${c('社会保険計', f(row['社会保険計']))}
+        ${c('課税対象額', f(row['課税対象額']))}
+        ${c('源泉所得税', f(row['源泉所得税']))}
+        ${c('住民税',     f(row['住民税']))}
+      </tr>
+      <tr>
+        ${c('その他控除', f(row['その他控除']))}
+        ${c('食費',       f(row['食費']))}
+        ${cb(5)}
+        ${c('控除計',     f(row['控除計']))}
+        ${ch('控除合計',  f(row['控除合計']))}
+      </tr>
+    </table>
+  </div>
+
+  <!-- 勤怠セクション -->
+  <div class="slip-section">
+    <div class="sec-label">勤<br>怠</div>
+    <table class="sec-table">
+      <tr>
+        ${c('出勤日数',  f(k['出勤日数']))}
+        ${c('有給日数',  f(k['有休日数']))}
+        ${c('欠勤日数',  f(k['欠勤']))}
+        ${c('特別休暇',  '')}
+        ${c('出勤時間',  fs(k['実働時間計']))}
+        ${c('60h超残業', '')}
+        ${c('夜勤回数',  f(k['内夜勤']))}
+        ${c('有給残日数',f(row['有給残日数']))}
+      </tr>
+      <tr>
+        ${c('残業時間',  fs(k['残業計']))}
+        ${c('休出日数',  '')}
+        ${c('休出時間',  '')}
+        ${c('深夜残業',  '')}
+        ${c('遅早回数',  f(k['遅刻回数']))}
+        ${c('遅早時間',  '')}
+        ${cb(2)}
+      </tr>
+    </table>
+  </div>
+
+  <!-- 記事セクション -->
+  <div class="slip-section">
+    <div class="sec-label">記<br>事</div>
+    <table class="sec-table">
+      <tr>
+        ${c('課税累計額', f(row['課税累計額']))}
+        ${c('税扶養人数', f(row['扶養人数']))}
+        ${cb(5)}
+        ${c('銀行振込１', f(row['銀行振込']))}
+        ${ch('差引支給額', f(row['差引支給額']))}
+      </tr>
+    </table>
+  </div>
+</div>`;
+}
+
 // 処遇改善加算タブの対象月セレクトを初期化する（給与一覧表と同じ月を初期値にする）
 (function initTreatmentMonth() {
   const now = new Date();
@@ -2683,5 +3012,27 @@ document.getElementById('treatment-total').addEventListener('input', () => updat
   document.getElementById('treatment-month').value = currentMonth;
 })();
 </script>
+<!-- ===================================================== -->
+<!-- 給与明細 スタッフ選択モーダル                         -->
+<!-- ===================================================== -->
+<div class="modal-overlay hidden" id="slip-modal" onclick="if(event.target===this)closeSlipModal()">
+  <div class="modal-box" style="max-width:480px">
+    <h3 style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 給与明細PDF 出力</h3>
+    <label style="display:flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.3rem">
+      <input type="checkbox" id="slip-check-all" onchange="toggleAllSlipStaff(this.checked)"> 全員選択
+    </label>
+    <div class="slip-staff-list" id="slip-staff-list"></div>
+    <div class="modal-btns" style="margin-top:0.8rem">
+      <button class="btn-cancel" onclick="closeSlipModal()">キャンセル</button>
+      <button class="btn-primary" id="slip-dl-btn" onclick="startSlipPDF()">
+        <i class="fa-solid fa-file-pdf"></i> ダウンロード
+      </button>
+    </div>
+    <div id="slip-progress" style="margin-top:0.6rem;font-size:0.85rem;color:var(--muted);min-height:1.2em"></div>
+  </div>
+</div>
+
+<!-- 給与明細 html2canvas 用隠し描画エリア -->
+<div id="slip-print-area"></div>
 </body>
 </html>
