@@ -783,18 +783,23 @@
     .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
     .slip-cell.highlight .cell-val { font-weight: 700; }
-    /* セル内の項目名：参考PDFに合わせて縦書き・中央揃え */
+    /* セル内の項目名：縦書きではなく横書きで2文字幅に折り返して縦に並べる（PDF完成形に合わせる）
+       writing-mode:vertical-rlだと英数字(60hなど)が横倒しになるため横書きに変更 */
     .cell-hdr {
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 8px;
-      line-height: 1.2;
       height: 66px;
       width: 100%;
       box-sizing: border-box;
+      overflow: hidden;
+    }
+    .cell-lbl {
+      font-size: 9px;
+      line-height: 1.4;
+      width: 2em;
+      word-break: break-all;
+      text-align: center;
       overflow: hidden;
     }
     /* セル内の値（右揃え）：区切り線を参考PDFに合わせて黒にする */
@@ -2903,13 +2908,13 @@ function buildSlipHTML(row, month) {
     ? `<div class="slip-notice">おしらせ：「健康保険」の内、子ども・子育て支援金：${Number(kosodate).toLocaleString('ja-JP')}円</div>`
     : '';
 
-  // セル生成ヘルパー（参考PDFに合わせて項目名は縦書き）
+  // セル生成ヘルパー（cell-lblで2文字幅に折り返してPDF完成形に合わせる）
   const c  = (lbl, val) =>
-    `<td class="slip-cell"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
+    `<td class="slip-cell"><div class="cell-hdr"><span class="cell-lbl">${lbl}</span></div><div class="cell-val">${val}</div></td>`;
   const ch = (lbl, val) =>
-    `<td class="slip-cell highlight"><div class="cell-hdr">${lbl}</div><div class="cell-val">${val}</div></td>`;
+    `<td class="slip-cell highlight"><div class="cell-hdr"><span class="cell-lbl">${lbl}</span></div><div class="cell-val">${val}</div></td>`;
   const cb = (span = 1) =>
-    `<td class="slip-cell blank" colspan="${span}"><div class="cell-hdr"></div><div class="cell-val"></div></td>`;
+    `<td class="slip-cell blank" colspan="${span}"><div class="cell-hdr"><span class="cell-lbl"></span></div><div class="cell-val"></div></td>`;
 
   return `
 <div class="slip-wrapper">
