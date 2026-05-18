@@ -405,6 +405,34 @@ const BADGE_COLOR = {
 const SHOPS = ['大浦家', '上津役家'];
 
 // ============================================================
+// 事業所別スタッフ表示順序
+// 配列に含まれる名前（部分一致）のスタッフは末尾にこの順で表示し、
+// リストにないスタッフは先頭に元の順序で表示する
+// ============================================================
+const SHOP_STAFF_ORDER = {
+  '大浦家':   ['池田', '川原将也', '中村夢永', '中川いずみ', '井上ひかる'],
+  '上津役家': ['奥田', '田中謹礼', '中川いずみ', '松山', '柏木', '吉山', '荒木', '御手洗', '三原'],
+};
+
+// 指定事業所のスタッフ配列を表示順序に従ってソートして返す
+function sortStaffForShop(staffArray, shop) {
+  const order = SHOP_STAFF_ORDER[shop];
+  // 順序指定がない事業所はそのまま返す
+  if (!order) return staffArray;
+
+  // 各スタッフの優先度を求める（リストのインデックス、未掲載は -1）
+  const priority = s => {
+    for (let i = 0; i < order.length; i++) {
+      if (s.name.includes(order[i])) return i;
+    }
+    return -1;  // リスト未掲載のスタッフは先頭グループ
+  };
+
+  // 安定ソート：同じ優先度のスタッフは元の相対順序を維持
+  return [...staffArray].sort((a, b) => priority(a) - priority(b));
+}
+
+// ============================================================
 // 状態管理
 // ============================================================
 let currentYear  = new Date().getFullYear();
@@ -544,7 +572,7 @@ function renderTable() {
     // 兼務スタッフは両方のセクションに現れ、その事業所のシフトを表示する
     let hasAny = false;
     for (const shop of SHOPS) {
-      const shopStaff = staffList.filter(s => s.shops.includes(shop));
+      const shopStaff = sortStaffForShop(staffList.filter(s => s.shops.includes(shop)), shop);
       if (shopStaff.length === 0) continue;
       hasAny = true;
 
@@ -565,7 +593,7 @@ function renderTable() {
     }
   } else {
     // 単一事業所ビュー
-    const shopStaff = staffList.filter(s => s.shops.includes(currentShop));
+    const shopStaff = sortStaffForShop(staffList.filter(s => s.shops.includes(currentShop)), currentShop);
     if (shopStaff.length === 0) {
       wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
       return;
