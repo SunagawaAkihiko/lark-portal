@@ -718,22 +718,22 @@
     .salary-print-header p,  .kintai-print-header p  { font-size: 0.85rem; }
 
     /* ==================== ▼ 給与明細スリップ ==================== */
-    /* 印刷用エリア：画面外に配置してhtml2canvasで取得する */
+    /* 印刷用エリア：A4横（1122px = 297mm@96dpi）、画面外に配置 */
     #slip-print-area {
       position: fixed; left: -9999px; top: 0;
-      width: 794px; /* A4幅（96dpi）*/
+      width: 1122px;
       background: white;
       font-family: 'Zen Kaku Gothic New', sans-serif;
       color: #000;
     }
     .slip-wrapper {
-      width: 754px; margin: 20px auto; padding: 0;
+      width: 1082px; margin: 18px auto; padding: 0;
       font-size: 10px; color: #000;
     }
     /* ヘッダーブロック */
     .slip-header-block {
       display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     .slip-company-name { font-size: 13px; font-weight: 700; }
     .slip-title-text   { font-size: 16px; font-weight: 700; margin: 2px 0; }
@@ -743,20 +743,21 @@
     .slip-notice { font-size: 10px; margin-bottom: 4px; }
     /* セクション（ラベル列 + テーブル列） */
     .slip-section {
-      display: flex; border-top: 1.5px solid #000;
+      display: flex;
+      border-top: 1.5px solid #000;
       border-left: 1.5px solid #000;
     }
-    .slip-section + .slip-section { margin-top: 0; }
-    /* 縦書きセクションラベル */
+    .slip-section:last-child { border-bottom: 1.5px solid #000; }
+    /* セクションラベル：flexboxで1文字ずつ縦積みする */
     .sec-label {
-      writing-mode: vertical-rl; text-orientation: upright;
-      font-size: 12px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      padding: 4px 3px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      padding: 3px 4px; gap: 2px;
       border-right: 1.5px solid #000;
-      min-width: 20px;
-      letter-spacing: 4px;
+      min-width: 22px; flex-shrink: 0;
     }
+    .sec-label span { display: block; text-align: center; line-height: 1; }
     /* セクション内テーブル */
     .sec-table {
       border-collapse: collapse; width: 100%; table-layout: fixed;
@@ -775,16 +776,16 @@
     /* セル内の縦書き項目名 */
     .cell-hdr {
       writing-mode: vertical-rl; text-orientation: mixed;
-      font-size: 7.5px; line-height: 1.1;
-      display: block; text-align: center;
-      padding: 3px 0; min-height: 52px;
+      font-size: 8px; line-height: 1.15;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 56px;
       width: 100%; box-sizing: border-box;
     }
     /* セル内の値（横書き・右揃え） */
     .cell-val {
       display: block; text-align: right;
-      font-size: 9px; padding: 1px 3px;
-      min-height: 14px; border-top: 1px solid #ccc;
+      font-size: 9.5px; padding: 2px 4px;
+      min-height: 16px; border-top: 1px solid #888;
       white-space: nowrap; overflow: hidden;
     }
 
@@ -2816,7 +2817,8 @@ async function startSlipPDF() {
 
   try {
     const { jsPDF } = window.jspdf;
-    const pdf        = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    // A4横（landscape）: 297mm × 210mm
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const printArea  = document.getElementById('slip-print-area');
 
     for (let i = 0; i < selected.length; i++) {
@@ -2834,9 +2836,9 @@ async function startSlipPDF() {
 
       const canvas  = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      // A4: 210 × 297mm に収める
+      // A4横: 297mm × 210mm に収める
       if (i > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+      pdf.addImage(imgData, 'PNG', 0, 0, 297, 210);
     }
 
     // ファイル名: YYYYMM_給与明細.pdf
@@ -2904,7 +2906,7 @@ function buildSlipHTML(row, month) {
 
   <!-- 支給セクション -->
   <div class="slip-section">
-    <div class="sec-label">支<br>給</div>
+    <div class="sec-label"><span>支</span><span>給</span></div>
     <table class="sec-table">
       <tr>
         ${c('基本給',      f(row['基本給']))}
@@ -2940,7 +2942,7 @@ function buildSlipHTML(row, month) {
 
   <!-- 控除セクション -->
   <div class="slip-section">
-    <div class="sec-label">控<br>除</div>
+    <div class="sec-label"><span>控</span><span>除</span></div>
     <table class="sec-table">
       <tr>
         ${c('健康保険',   f(row['健康保険']))}
@@ -2965,7 +2967,7 @@ function buildSlipHTML(row, month) {
 
   <!-- 勤怠セクション -->
   <div class="slip-section">
-    <div class="sec-label">勤<br>怠</div>
+    <div class="sec-label"><span>勤</span><span>怠</span></div>
     <table class="sec-table">
       <tr>
         ${c('出勤日数',  f(k['出勤日数']))}
@@ -2991,7 +2993,7 @@ function buildSlipHTML(row, month) {
 
   <!-- 記事セクション -->
   <div class="slip-section">
-    <div class="sec-label">記<br>事</div>
+    <div class="sec-label"><span>記</span><span>事</span></div>
     <table class="sec-table">
       <tr>
         ${c('課税累計額', f(row['課税累計額']))}
