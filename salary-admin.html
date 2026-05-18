@@ -772,8 +772,8 @@
     .sec-table {
       border-collapse: collapse; width: 100%; table-layout: fixed;
     }
-    .sec-table tr { border-bottom: 1px solid #000; }
-    .sec-table tr:last-child { border-bottom: none; }
+    /* html2canvasはtr要素のborder-bottomを正確に描画しないためtd側でborder-topを指定 */
+    .sec-table tr + tr > .slip-cell { border-top: 1px solid #000; }
     /* データセル */
     /* データセル */
     .slip-cell {
@@ -804,13 +804,14 @@
     }
     /* セル内の数値エリア：項目名エリアと同じ高さ・背景は白 */
     .cell-val {
-      display: block; text-align: right;
+      display: block;
       font-size: 13px; padding: 1px 3px;
       height: 22px; line-height: 20px;
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
       box-sizing: border-box;
       background-color: #fff;
+      text-align: center;
     }
 
     /* 給与明細スタッフ選択モーダル */
@@ -2943,6 +2944,7 @@ function buildSlipHTML(row, month) {
         ${c('深夜手当',    f(row['深夜手当']))}
         ${c('年末年始手当',f(row['年末年始手当']))}
         ${c('調整手当',    f(row['調整手当']))}
+        ${cb()}
       </tr>
       <tr>
         ${c('処遇改善手当',f(row['処遇改善手当']))}
@@ -2951,7 +2953,7 @@ function buildSlipHTML(row, month) {
         ${c('残業手当',    f(row['残業手当']))}
         ${c('休日出勤',    f(row['休日出勤']))}
         ${c('深夜残業',    f(row['深夜残業']))}
-        ${cb()}${cb()}
+        ${cb()}${cb()}${cb()}
       </tr>
       <tr>
         ${c('60h超残業',  f(row['60h超残業']))}
@@ -2961,6 +2963,7 @@ function buildSlipHTML(row, month) {
         ${c('通勤非課税', f(row['通勤非課税']))}
         ${c('課税計',     f(row['課税計']))}
         ${c('非課税計',   f(row['非課税計']))}
+        ${cb()}
         ${ch('総支給額',  f(row['総支給額']))}
       </tr>
     </table>
@@ -3004,6 +3007,7 @@ function buildSlipHTML(row, month) {
         ${c('60h超残業', '')}
         ${c('夜勤回数',  f(k['内夜勤']))}
         ${c('有給残日数',f(row['有給残日数']))}
+        ${cb()}
       </tr>
       <tr>
         ${c('残業時間',  fs(k['残業計']))}
@@ -3012,7 +3016,7 @@ function buildSlipHTML(row, month) {
         ${c('深夜残業',  '')}
         ${c('遅早回数',  f(k['遅刻回数']))}
         ${c('遅早時間',  '')}
-        ${cb()}${cb()}
+        ${cb()}${cb()}${cb()}
       </tr>
     </table>
   </div>
