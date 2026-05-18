@@ -793,10 +793,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2px 4px;
-      height: 22px;
-      min-height: 22px;
-      max-height: 22px;
+      /* 固定高さをやめ、上下均等paddingで中央揃え（cell-valと高さを揃える） */
+      padding: 5px 4px;
       width: 100%;
       box-sizing: border-box;
       overflow: hidden;
@@ -811,12 +809,10 @@
     .cell-val {
       display: block; text-align: center;
       font-size: 13px; line-height: 1;
-      /* border-top(1px)込み22px中でfont13pxを上下中央に: (22-1-13)/2≒4px */
-      padding: 4px 3px 0;
-      height: 22px;
+      /* 上下均等paddingで中央揃え。heightは指定せず自然高さに任せる */
+      padding: 5px 3px;
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
-      box-sizing: border-box;
       background-color: #fff;
     }
 
