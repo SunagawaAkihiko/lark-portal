@@ -718,76 +718,88 @@
     .salary-print-header p,  .kintai-print-header p  { font-size: 0.85rem; }
 
     /* ==================== ▼ 給与明細スリップ ==================== */
-    /* 印刷用エリア：A4横（1122px = 297mm@96dpi）、画面外に配置 */
+    /*
+     * A4横: 297mm × 210mm → 96dpi換算 1122px × 794px
+     * 各セル行高さ = 66px(header) + 18px(value) = 84px
+     * 8行 × 84px = 672px + ヘッダー等70px + 余白52px = 794px にぴったり収める
+     */
     #slip-print-area {
       position: fixed; left: -9999px; top: 0;
-      width: 1122px;
+      width: 1122px; height: 794px; overflow: hidden;
       background: white;
       font-family: 'Zen Kaku Gothic New', sans-serif;
       color: #000;
     }
     .slip-wrapper {
-      width: 1082px; margin: 18px auto; padding: 0;
+      width: 1086px; margin: 10px auto 0; padding: 0;
       font-size: 10px; color: #000;
     }
     /* ヘッダーブロック */
     .slip-header-block {
       display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
-    .slip-company-name { font-size: 13px; font-weight: 700; }
-    .slip-title-text   { font-size: 16px; font-weight: 700; margin: 2px 0; }
-    .slip-period-name  { font-size: 12px; }
+    /* 参考PDFに合わせてヘッダー左側を枠線で囲む */
+    .slip-header-box {
+      border: 1px solid #000;
+      padding: 6px 12px 6px 8px;
+      min-width: 280px;
+    }
+    .slip-company-name { font-size: 12px; font-weight: 700; line-height: 1.4; }
+    .slip-title-text   { font-size: 15px; font-weight: 700; margin: 2px 0; line-height: 1.4; }
+    .slip-period-name  { font-size: 11px; line-height: 1.4; }
     .slip-greeting     { font-size: 14px; font-weight: 700; align-self: center; }
     /* お知らせ */
-    .slip-notice { font-size: 10px; margin-bottom: 4px; }
+    .slip-notice { font-size: 10px; margin-bottom: 4px; line-height: 1.5; }
     /* セクション（ラベル列 + テーブル列） */
     .slip-section {
       display: flex;
-      border-top: 1.5px solid #000;
-      border-left: 1.5px solid #000;
+      border-top: 1px solid #000;
+      border-left: 1px solid #000;
     }
-    .slip-section:last-child { border-bottom: 1.5px solid #000; }
-    /* セクションラベル：flexboxで1文字ずつ縦積みする */
+    .slip-section:last-child { border-bottom: 1px solid #000; }
+    /* セクションラベル：1文字ずつ縦積み */
     .sec-label {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700;
-      padding: 3px 4px; gap: 2px;
-      border-right: 1.5px solid #000;
-      min-width: 22px; flex-shrink: 0;
+      font-size: 12px; font-weight: 700;
+      padding: 2px 3px; gap: 1px;
+      border-right: 1px solid #000;
+      width: 22px; min-width: 22px; flex-shrink: 0;
     }
-    .sec-label span { display: block; text-align: center; line-height: 1; }
+    .sec-label span { display: block; text-align: center; line-height: 1.1; }
     /* セクション内テーブル */
     .sec-table {
       border-collapse: collapse; width: 100%; table-layout: fixed;
     }
-    .sec-table tr { border-bottom: 1.5px solid #000; }
+    .sec-table tr { border-bottom: 1px solid #000; }
     .sec-table tr:last-child { border-bottom: none; }
-    /* データセル：縦書きヘッダー + 横書き値 */
+    /* データセル */
     .slip-cell {
       border-right: 1px solid #000;
-      padding: 0; vertical-align: bottom;
-      min-width: 0;
+      padding: 0; vertical-align: bottom; min-width: 0;
     }
-    .slip-cell:last-child { border-right: 1.5px solid #000; }
+    .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
-    .slip-cell.highlight .cell-val { background: #fffde7; font-weight: 700; }
-    /* セル内の縦書き項目名：writing-modeは使わずspanで1文字ずつ縦積みする */
+    .slip-cell.highlight .cell-val { font-weight: 700; }
+    /* セル内の縦書き項目名：spanで1文字ずつ縦積み */
     .cell-hdr {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      font-size: 8px; line-height: 1.25;
-      min-height: 72px;
-      width: 100%; box-sizing: border-box; padding: 3px 1px;
+      font-size: 8px; line-height: 1.1;
+      height: 66px; width: 100%;
+      box-sizing: border-box; padding: 3px 1px;
+      overflow: hidden;
     }
-    .cell-hdr span { display: block; text-align: center; white-space: nowrap; }
-    /* セル内の値（横書き・右揃え） */
+    .cell-hdr span { display: block; text-align: center; }
+    /* セル内の値（右揃え）：区切り線を参考PDFに合わせて黒にする */
     .cell-val {
       display: block; text-align: right;
-      font-size: 9.5px; padding: 2px 4px;
-      min-height: 18px; border-top: 1px solid #888;
+      font-size: 9px; padding: 1px 3px;
+      height: 18px; line-height: 16px;
+      border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
+      box-sizing: border-box;
     }
 
     /* 給与明細スタッフ選択モーダル */
@@ -2897,9 +2909,9 @@ function buildSlipHTML(row, month) {
 
   return `
 <div class="slip-wrapper">
-  <!-- ヘッダー -->
+  <!-- ヘッダー：参考PDFに合わせて左側を枠線付きボックスにする -->
   <div class="slip-header-block">
-    <div>
+    <div class="slip-header-box">
       <div class="slip-company-name">合同会社 GLAD Life Create</div>
       <div class="slip-title-text">給与明細書</div>
       <div class="slip-period-name">${monthLabel}　${row.staffName}　様</div>
