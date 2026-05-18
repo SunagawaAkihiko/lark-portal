@@ -1427,12 +1427,12 @@ async function renderToPdf(element, filename) {
   const PAGE_H = 194; // 210 - 8*2
   const MARGIN = 8;
 
-  // html2canvas でフル解像度キャプチャ（scale:2 = 高解像度）
-  const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+  // html2canvas でキャプチャ（scale:1.5 = 印刷品質を保ちつつファイルサイズ削減）
+  const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, logging: false });
 
-  // CSSピクセル換算（scale:2 なので÷2）
-  const csW = canvas.width  / 2;
-  const csH = canvas.height / 2;
+  // CSSピクセル換算（scale:1.5 なので÷1.5）
+  const csW = canvas.width  / 1.5;
+  const csH = canvas.height / 1.5;
 
   // 幅に合わせたスケール係数（mm/cssPixel）
   const scaleW = PAGE_W / csW;
@@ -1462,7 +1462,8 @@ async function renderToPdf(element, filename) {
     // スライス幅に対応するmm幅（最終ページは短くなる）
     const imgW = (srcW / 2) * finalScale;
     const imgH = csH * finalScale;
-    pdf.addImage(slice.toDataURL('image/png'), 'PNG', MARGIN, MARGIN, imgW, imgH);
+    // JPEG形式（quality:0.92）でPNG比70%前後ファイルサイズを削減
+    pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
   }
 
   pdf.save(filename);
@@ -2851,11 +2852,12 @@ async function startSlipPDF() {
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
 
-      const canvas  = await html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
+      // scale:1.5 でキャプチャしてJPEG変換（PNG比70%前後ファイルサイズ削減）
+      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       // A4横: 297mm × 210mm に収める
       if (i > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, 0, 297, 210);
+      pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
     }
 
     // ファイル名: YYYYMM_給与明細.pdf
