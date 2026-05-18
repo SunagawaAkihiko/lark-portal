@@ -420,10 +420,14 @@ function sortStaffForShop(staffArray, shop) {
   // 順序指定がない事業所はそのまま返す
   if (!order) return staffArray;
 
+  // 名前の空白を除去して比較（DBは「砂川 竜馬」のようにスペースあり形式で保存されているため）
+  const normalize = str => str.replace(/\s/g, '');
+
   // 各スタッフの優先度を求める（リストのインデックス、未掲載は -1）
   const priority = s => {
+    const normName = normalize(s.name);
     for (let i = 0; i < order.length; i++) {
-      if (s.name.includes(order[i])) return i;
+      if (normName.includes(normalize(order[i]))) return i;
     }
     return -1;  // リスト未掲載のスタッフは先頭グループ
   };
