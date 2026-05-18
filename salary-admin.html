@@ -720,8 +720,8 @@
     /* ==================== ▼ 給与明細スリップ ==================== */
     /*
      * A4横: 297mm × 210mm → 96dpi換算 1122px × 794px
-     * 各セル行高さ = 66px(header) + 18px(value) = 84px
-     * 8行 × 84px = 672px + ヘッダー等75px + 余白47px = 794px 収める
+     * 各セル行高さ = 32px(header) + 16px(value) = 48px
+     * 8行 × 48px = 384px + ヘッダー等88px ≈ 472px（ページ上部60%に収める完成形準拠）
      */
     #slip-print-area {
       position: fixed; left: -9999px; top: 0;
@@ -783,36 +783,41 @@
     .slip-cell:last-child { border-right: 1px solid #000; }
     .slip-cell.blank { background: #fff; }
     .slip-cell.highlight .cell-val { font-weight: 700; }
-    /* セル内の項目名：横書き・文字間スペース付き（PDF完成形準拠） */
+    /* セル内の項目名：横書き・文字間均等割り付け（完成形スクショ準拠） */
     .cell-hdr {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2px 3px;
-      height: 66px;
-      min-height: 66px;
-      max-height: 66px;
+      padding: 2px 4px;
+      height: 32px;
+      min-height: 32px;
+      max-height: 32px;
       width: 100%;
       box-sizing: border-box;
       overflow: hidden;
     }
     .cell-lbl {
-      /* 文字間スペースを入れて完成形と同じ見た目にする */
+      /* 完成形と同様に文字をセル幅いっぱいに均等配置する */
+      display: block;
+      width: 100%;
       font-size: 9px;
-      line-height: 1.35;
-      text-align: center;
-      letter-spacing: 0.12em;
-      word-break: keep-all;
-      overflow-wrap: normal;
+      line-height: 1.3;
+      text-align: justify;
+      text-justify: inter-character;
+      text-align-last: justify;
     }
-    /* セル内の値（右揃え）：区切り線を参考PDFに合わせて黒にする */
+    /* セル内の値（右揃え）：値ありセルは薄緑背景（完成形スクショ準拠） */
     .cell-val {
       display: block; text-align: right;
       font-size: 9px; padding: 1px 3px;
-      height: 18px; line-height: 16px;
+      height: 16px; line-height: 14px;
       border-top: 1px solid #000;
       white-space: nowrap; overflow: hidden;
       box-sizing: border-box;
+    }
+    /* 値が入っているセルのみ薄緑背景にする（空セルは白のまま） */
+    .cell-val:not(:empty) {
+      background-color: #d6f0d6;
     }
 
     /* 給与明細スタッフ選択モーダル */
