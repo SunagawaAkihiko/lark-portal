@@ -754,10 +754,10 @@
     /* セクション（ラベル列 + テーブル列） */
     .slip-section {
       display: flex;
-      border-top: 1px solid #000;
-      border-left: 1px solid #000;
+      border: 1px solid #000;
+      margin-bottom: 6px; /* セクション間のスペース */
     }
-    .slip-section:last-child { border-bottom: 1px solid #000; }
+    .slip-section:last-child { margin-bottom: 0; }
     /* セクションラベル：1文字ずつ縦積み */
     .sec-label {
       display: flex; flex-direction: column;
@@ -780,7 +780,8 @@
       border-right: 1px solid #000;
       padding: 0; vertical-align: bottom; min-width: 0;
     }
-    .slip-cell:last-child { border-right: 1px solid #000; }
+    /* セクションdivがborder-rightを持つため最終セルの右ボーダーは不要 */
+    .slip-cell:last-child { border-right: none; }
     .slip-cell.blank { background: #fff; }
     /* highlight セルは太字なし（完成形準拠） */
     /* セル内の項目名エリア：全セルに薄緑背景・中央揃え（完成形スクショ準拠） */
