@@ -61,6 +61,22 @@ function requireOfficeWifi(req, res, next) {
   res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
 }
 
+// ---- キャッシュバスティング用バージョン定数 ----
+// デプロイのたびにこの値を更新する。
+// URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
+// LarkのWebViewがキャッシュを使わず最新のHTMLを取得するよう強制する。
+const PAGE_VERSION = 'v7';
+
+// HTMLページへのアクセス時に _v パラメータが最新でなければリダイレクトする
+app.use((req, res, next) => {
+  if (!req.path.endsWith('.html')) return next();
+  if (req.query._v === PAGE_VERSION) return next();
+  const params = new URLSearchParams(req.query);
+  params.set('_v', PAGE_VERSION);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.redirect(302, `${req.path}?${params.toString()}`);
+});
+
 // ---- /staff ルート（スタッフ個人スマホ用・Wi-Fi限定）----
 // URLを /staff（末尾スラッシュなし）にすることで、index.html内の
 // 相対リンク（care-record.html等）が /care-record.html に正しく解決される
