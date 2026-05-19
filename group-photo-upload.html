@@ -579,12 +579,17 @@
           );
           const blob = await compressImage(selectedFiles[idx]);
 
-          // FormDataで送信（LarkアプリWebViewでも確実に動作する方式）
-          const formData = new FormData();
-          formData.append('image', blob, `photo_${idx + 1}.${(blob.type || 'image/jpeg').split('/')[1]}`);
+          // base64 JSONで送信（LarkアプリWebViewを含む全環境で確実に動作する方式）
+          const base64 = await new Promise((ok, ng) => {
+            const r = new FileReader();
+            r.onload  = () => ok(r.result);
+            r.onerror = ng;
+            r.readAsDataURL(blob);
+          });
           const res = await fetch(`${API_BASE}/upload-image`, {
-            method: 'POST',
-            body:   formData
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ image: base64, mime_type: blob.type || 'image/jpeg' })
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
