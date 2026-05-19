@@ -422,8 +422,8 @@
   const WEBP_QUALITY  = 0.8;
   /** サムネイル最大表示枚数（超過分は「他 +N 枚」で折りたたむ） */
   const THUMB_MAX     = 15;
-  /** バックエンドAPIのベースURL（同一サーバー想定） */
-  const API_BASE      = '/api/chat';
+  /** バックエンドAPIのベースURL（attendance-appサーバーの絶対URL） */
+  const API_BASE      = 'https://attendance-app-irf1.onrender.com/api/chat';
   /** 同時並列アップロード数（10並列で最速化。LarkのAPI制限を超える場合は減らす） */
   const PARALLEL      = 10;
 
