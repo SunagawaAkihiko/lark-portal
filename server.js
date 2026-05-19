@@ -74,7 +74,16 @@ app.get('/staff/', (req, res) => {
 });
 
 // ---- その他のルート（管理者用・制限なし）----
-app.use(express.static(__dirname));
+// HTMLはWebViewキャッシュを防ぐためno-cacheヘッダーを付与する
+app.use(express.static(__dirname, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 app.listen(PORT, () => {
   const ips = [...getAllOfficeIPs()];
