@@ -789,23 +789,22 @@
     .slip-cell.blank { background: #fff; }
     /* highlight セルは太字なし（完成形準拠） */
     /* セル内の項目名エリア：全セルに薄緑背景・中央揃え（完成形スクショ準拠） */
-    /* 項目名・数値エリアとも同じflex中央揃え・同じ固定高さで統一 */
+    /* line-height=heightで上下中央揃え（html2canvasでflexが効かないため） */
     .cell-hdr {
-      display: flex; align-items: center; justify-content: center;
-      padding: 2px 4px;
-      height: 22px; min-height: 22px; max-height: 22px;
-      width: 100%; box-sizing: border-box; overflow: hidden;
+      display: block; text-align: center;
+      height: 22px; line-height: 22px;
+      width: 100%; box-sizing: content-box; overflow: hidden;
       background-color: #d6f0d6;
     }
     .cell-lbl {
-      font-size: 11px; text-align: center; line-height: 1.3;
+      font-size: 11px; line-height: 22px;
     }
     .cell-val {
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; padding: 0 3px;
-      height: 22px; min-height: 22px; max-height: 22px;
+      display: block; text-align: center;
+      font-size: 13px;
+      height: 22px; line-height: 22px;
       border-top: 1px solid #000;
-      box-sizing: border-box; overflow: hidden;
+      box-sizing: content-box; overflow: hidden;
       background-color: #fff;
     }
 
