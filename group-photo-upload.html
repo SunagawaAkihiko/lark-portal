@@ -326,7 +326,7 @@
     <i class="fa-solid fa-images"></i>
     <div>
       <h1>グループ写真アルバム</h1>
-      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v4</small></p>
+      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v5</small></p>
     </div>
   </header>
 
@@ -571,29 +571,50 @@
         const batch = Array.from({ length: end - start }, (_, i) => start + i);
 
         await Promise.all(batch.map(async idx => {
-          // 圧縮
+          const file = selectedFiles[idx];
+
+          // ── ステップA: 圧縮（canvas失敗時は元ファイルで続行） ──
           updateProgress(
             `${total} 枚中 ${doneCount} 枚完了`,
             Math.round(doneCount / (total + 1) * 100),
-            `圧縮中... (${idx + 1}/${total})`
+            `[A] 圧縮中... (${idx + 1}/${total})`
           );
-          const blob = await compressImage(selectedFiles[idx]);
+          let blob;
+          try {
+            blob = await compressImage(file);
+          } catch (compErr) {
+            // canvasが使えない環境では元ファイルをそのまま使用する
+            blob = file;
+          }
 
-          // base64 JSONで送信（LarkアプリWebViewを含む全環境で確実に動作する方式）
+          // ── ステップB: base64変換 ──
+          updateProgress(
+            `${total} 枚中 ${doneCount} 枚完了`,
+            Math.round(doneCount / (total + 1) * 100),
+            `[B] 変換中... (${idx + 1}/${total})`
+          );
           const base64 = await new Promise((ok, ng) => {
             const r = new FileReader();
             r.onload  = () => ok(r.result);
-            r.onerror = ng;
+            r.onerror = () => ng(new Error(`[B] ファイル読み込みエラー (${idx + 1}枚目)`));
             r.readAsDataURL(blob);
           });
+          if (!base64 || base64.length < 10) throw new Error(`[B] base64変換失敗 (${idx + 1}枚目)`);
+
+          // ── ステップC: サーバー送信 ──
+          updateProgress(
+            `${total} 枚中 ${doneCount} 枚完了`,
+            Math.round(doneCount / (total + 1) * 100),
+            `[C] 送信中... (${idx + 1}/${total})`
+          );
           const res = await fetch(`${API_BASE}/upload-image`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ image: base64, mime_type: blob.type || 'image/jpeg' })
-          });
+            body:    JSON.stringify({ image: base64, mime_type: blob.type || file.type || 'image/jpeg' })
+          }).catch(netErr => { throw new Error(`[C] 通信エラー: ${netErr.message}`); });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || `アップロード失敗 [HTTP ${res.status}] URL:${res.url}`);
+            throw new Error(`[C] HTTP ${res.status}: ${err.error || '不明'}`);
           }
           const data = await res.json();
           imageKeys[idx] = data.image_key;
@@ -627,7 +648,8 @@
 
     } catch (e) {
       console.error('[upload] エラー:', e);
-      showResult('error', '送信に失敗しました', e.message || '不明なエラーが発生しました。');
+      // エラーメッセージをそのまま表示してデバッグできるようにする
+      showResult('error', 'エラーが発生しました', e.message || '不明なエラー');
     }
   }
 
