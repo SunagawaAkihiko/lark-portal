@@ -315,7 +315,7 @@
   <div class="container">
     <i class="fa-solid fa-link-slash"></i>
     <h2>URLが正しくありません</h2>
-    <p>このページは <code>?chat_id=xxxx</code> 付きのURLで開いてください。</p>
+    <p>このページは <code>?webhook=https://open.larksuite.com/open-apis/bot/v2/hook/xxxx</code> 付きのURLで開いてください。</p>
   </div>
 </div>
 
@@ -326,7 +326,7 @@
     <i class="fa-solid fa-images"></i>
     <div>
       <h1>グループ写真アルバム</h1>
-      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v6</small></p>
+      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v7</small></p>
     </div>
   </header>
 
@@ -428,13 +428,13 @@
   const PARALLEL      = 10;
 
   // ============================================================
-  // 初期化：URL から chat_id を取得する
+  // 初期化：URL から webhook URL を取得する
   // ============================================================
-  const params = new URLSearchParams(location.search);
-  const chatId = params.get('chat_id') || '';
+  const params     = new URLSearchParams(location.search);
+  const webhookUrl = params.get('webhook') || '';
 
-  if (!chatId) {
-    // chat_id が未指定の場合はエラー画面を表示してメイン画面を隠す
+  if (!webhookUrl) {
+    // webhook が未指定の場合はエラー画面を表示してメイン画面を隠す
     document.getElementById('no-chatid-screen').classList.remove('hidden');
     document.getElementById('main-screen').classList.add('hidden');
   }
@@ -549,7 +549,7 @@
   btnUpload.addEventListener('click', startUpload);
 
   async function startUpload() {
-    if (!selectedFiles.length || !chatId) return;
+    if (!selectedFiles.length || !webhookUrl) return;
     hideError();
 
     // UI を進捗モードに切り替える
@@ -633,7 +633,7 @@
       const albumRes = await fetch(`${API_BASE}/create-album`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, image_keys: imageKeys })
+        body: JSON.stringify({ webhook_url: webhookUrl, image_keys: imageKeys })
       });
       if (!albumRes.ok) {
         const err = await albumRes.json().catch(() => ({}));
