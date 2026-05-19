@@ -593,7 +593,7 @@
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || `画像アップロードに失敗しました (${idx + 1}枚目)`);
+            throw new Error(err.error || `アップロード失敗 [HTTP ${res.status}] URL:${res.url}`);
           }
           const data = await res.json();
           imageKeys[idx] = data.image_key;
