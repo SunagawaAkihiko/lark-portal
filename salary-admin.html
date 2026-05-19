@@ -2904,13 +2904,16 @@ function buildSlipHTML(row, month) {
     ? `<div class="slip-notice">おしらせ：「健康保険」の内、子ども・子育て支援金：${Number(kosodate).toLocaleString('ja-JP')}円</div>`
     : '';
 
-  // セル生成ヘルパー（項目名は中央揃え・全セル薄緑背景はCSS側で制御）
+  // インラインスタイルで高さ・縦中央揃えを確実に指定（CSSキャッシュ回避）
+  const HDR = 'display:block;height:22px;line-height:22px;text-align:center;font-size:11px;background-color:#d6f0d6;overflow:hidden;box-sizing:content-box;';
+  const VAL = 'display:block;height:22px;line-height:22px;text-align:center;font-size:13px;border-top:1px solid #000;background-color:#fff;overflow:hidden;box-sizing:content-box;';
+
   const c  = (lbl, val) =>
-    `<td class="slip-cell"><div class="cell-hdr"><span class="cell-lbl">${lbl}</span></div><div class="cell-val">${val}</div></td>`;
+    `<td class="slip-cell"><div style="${HDR}">${lbl}</div><div style="${VAL}">${val}</div></td>`;
   const ch = (lbl, val) =>
-    `<td class="slip-cell highlight"><div class="cell-hdr"><span class="cell-lbl">${lbl}</span></div><div class="cell-val">${val}</div></td>`;
-  const cb = (span = 1) =>
-    `<td class="slip-cell blank" colspan="${span}"><div class="cell-hdr"></div><div class="cell-val"></div></td>`;
+    `<td class="slip-cell highlight"><div style="${HDR}">${lbl}</div><div style="${VAL}">${val}</div></td>`;
+  const cb = () =>
+    `<td class="slip-cell blank"><div style="${HDR}"></div><div style="${VAL}"></div></td>`;
 
   return `
 <div class="slip-wrapper">
