@@ -2904,16 +2904,19 @@ function buildSlipHTML(row, month) {
     ? `<div class="slip-notice">おしらせ：「健康保険」の内、子ども・子育て支援金：${Number(kosodate).toLocaleString('ja-JP')}円</div>`
     : '';
 
-  // ネストtd+vertical-align:middleで上下中央揃え（html2canvasで最も確実な手法）
-  const cell = (lbl, val) =>
-    `<table style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed;">` +
-    `<tr><td style="height:22px;text-align:center;font-size:11px;background-color:#d6f0d6;vertical-align:middle;padding:0 4px;white-space:nowrap;overflow:hidden;">${lbl}</td></tr>` +
-    `<tr><td style="height:22px;text-align:center;font-size:13px;background-color:#fff;vertical-align:middle;border-top:1px solid #000;padding:0 3px;white-space:nowrap;overflow:hidden;">${val}</td></tr>` +
-    `</table>`;
+  // position:absolute+top:50%+translateY(-50%)で上下中央揃え
+  // html2canvasではflex/vertical-align/line-heightが効かないためtransformを使用
+  const H = 22; // 各エリアの高さ(px)
+  const hdrDiv = (txt) =>
+    `<div style="position:relative;height:${H}px;background-color:#d6f0d6;overflow:hidden;">` +
+    `<span style="position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:11px;white-space:nowrap;">${txt}</span></div>`;
+  const valDiv = (txt) =>
+    `<div style="position:relative;height:${H}px;background-color:#fff;border-top:1px solid #000;overflow:hidden;">` +
+    `<span style="position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:13px;white-space:nowrap;">${txt}</span></div>`;
 
-  const c  = (lbl, val) => `<td class="slip-cell">${cell(lbl, val)}</td>`;
-  const ch = (lbl, val) => `<td class="slip-cell highlight">${cell(lbl, val)}</td>`;
-  const cb = ()          => `<td class="slip-cell blank">${cell('', '')}</td>`;
+  const c  = (lbl, val) => `<td class="slip-cell">${hdrDiv(lbl)}${valDiv(val)}</td>`;
+  const ch = (lbl, val) => `<td class="slip-cell highlight">${hdrDiv(lbl)}${valDiv(val)}</td>`;
+  const cb = ()          => `<td class="slip-cell blank">${hdrDiv('')}${valDiv('')}</td>`;
 
   return `
 <div class="slip-wrapper">
