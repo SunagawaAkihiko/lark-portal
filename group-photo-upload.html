@@ -326,7 +326,7 @@
     <i class="fa-solid fa-images"></i>
     <div>
       <h1>グループ写真アルバム</h1>
-      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v5</small></p>
+      <p>写真を選んでグループに一括送信できます <small style="opacity:.5">v6</small></p>
     </div>
   </header>
 
@@ -637,7 +637,7 @@
       });
       if (!albumRes.ok) {
         const err = await albumRes.json().catch(() => ({}));
-        throw new Error(err.error || 'アルバムの作成に失敗しました');
+        throw new Error(`[D] アルバム作成失敗: ${err.error || 'アルバムの作成に失敗しました'}`);
       }
 
       // ── 成功 ──
