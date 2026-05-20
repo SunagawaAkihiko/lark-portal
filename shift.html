@@ -496,6 +496,7 @@ async function loadRequests() {
       const dateStr = tsToJstDate(r.date);
       if (r.openId && dateStr) requestsMap[`${r.openId}__${dateStr}`] = r;
     }
+    console.log('[希望] 件数:', d.requests.length, 'マップキー例:', Object.keys(requestsMap).slice(0, 3));
   } catch (e) {
     console.error('シフト希望読み込みエラー:', e);
   }
@@ -505,7 +506,10 @@ async function loadStaff() {
   try {
     const res = await fetch(`${API}/api/shift/staff`);
     const d   = await res.json();
-    if (d.ok) staffList = d.staff;
+    if (d.ok) {
+      staffList = d.staff;
+      console.log('[スタッフ] openId例:', staffList.slice(0, 3).map(s => `${s.name}=${s.openId}`));
+    }
   } catch (e) {
     console.error('スタッフ読み込みエラー:', e);
   }
