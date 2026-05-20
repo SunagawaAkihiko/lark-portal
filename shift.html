@@ -751,21 +751,31 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
     for (const { str, dow } of dates) {
       const td  = row.insertCell();
       const s   = shiftMap[`${staff.name}__${str}`];
-      const typ = s?.shiftType || '';
+      // 他事業所で勤務している日は「他店」として扱い、このセクションではカウント・編集しない
+      const isOtherShop = s && s.shop && s.shop !== shop;
+      const typ = isOtherShop ? '他店' : (s?.shiftType || '');
 
       if (dow === 0) td.className = 'sun';
       if (dow === 6) td.className = 'sat';
 
-      if (['日勤', '日勤(16)', '日勤(18)', '夜勤'].includes(typ)) workDays++;
-      else if (['公休', '公休(希)', '定休'].includes(typ)) kyukuDays++;
-      else if (typ === '有休') yukuDays++;
+      if (!isOtherShop) {
+        if (['日勤', '日勤(16)', '日勤(18)', '夜勤'].includes(typ)) workDays++;
+        else if (['公休', '公休(希)', '定休'].includes(typ)) kyukuDays++;
+        else if (typ === '有休') yukuDays++;
+      }
 
       const badge = document.createElement('span');
       badge.className = 'shift-badge';
       badge.textContent = typ || '－';
-      badge.style.background = BADGE_COLOR[typ] || '#eee';
-      badge.style.color = BADGE_COLOR[typ] ? '#fff' : '#999';
-      if (!BADGE_COLOR[typ]) badge.style.border = '1px dashed #ccc';
+      if (isOtherShop) {
+        badge.style.background = '#d0d0d0';
+        badge.style.color = '#888';
+        badge.title = `${s.shop}で勤務（${s.shiftType}）`;
+      } else {
+        badge.style.background = BADGE_COLOR[typ] || '#eee';
+        badge.style.color = BADGE_COLOR[typ] ? '#fff' : '#999';
+        if (!BADGE_COLOR[typ]) badge.style.border = '1px dashed #ccc';
+      }
 
       // クリック編集：事業所名をクロージャで保持してドロップダウンに渡す
       badge.addEventListener('click', (e) => {
