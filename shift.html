@@ -285,6 +285,20 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ==================== シフト希望インジケーター ==================== */
+    /* 各セルのバッジ下に「希望あり」を示す小さなピル */
+    .req-indicator {
+      display: block;
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: #fff;
+      border-radius: 3px;
+      padding: 0.05rem 0.3rem;
+      margin-top: 2px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
     /* ==================== 警告パネル ==================== */
     #warning-panel {
       background: #fff3cd;
@@ -404,6 +418,15 @@ const BADGE_COLOR = {
 // 事業所の表示順（全事業所ビューでのセクション順序）
 const SHOPS = ['大浦家', '上津役家'];
 
+// シフト希望インジケーターの色（種別ごと）
+const REQ_BADGE_COLOR = {
+  '公休':  '#82a0b0',
+  '定休':  '#8d99ae',
+  '有休':  '#2d9a6b',
+  '明け':  '#9b59b6',
+  '出勤':  '#1a6fba',
+};
+
 // ============================================================
 // 事業所別スタッフ表示順序
 // 配列に含まれる名前（部分一致）のスタッフは末尾にこの順で表示し、
@@ -446,6 +469,7 @@ let currentShop  = 'all';
 let staffList    = [];   // スタッフマスタ
 let shifts       = [];   // 現在表示中のシフトデータ（全事業所）
 let dirty        = false; // 未保存変更あり
+let requestsMap  = {};   // `${openId}__${dateStr}` → request object
 
 // ============================================================
 // 初期化
@@ -454,6 +478,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadStaff();
   await loadShiftResult();
 });
+
+// Lark DateTime タイムスタンプ(ms) → JST日付文字列 "YYYY/MM/DD"
+function tsToJstDate(ts) {
+  if (!ts || typeof ts !== 'number') return String(ts || '');
+  const d = new Date(ts + 9 * 3600 * 1000);
+  return `${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+
+async function loadRequests() {
+  try {
+    const res = await fetch(`${API}/api/shift/requests?year=${currentYear}&month=${currentMonth}`);
+    const d   = await res.json();
+    if (!d.ok) return;
+    requestsMap = {};
+    for (const r of d.requests) {
+      const dateStr = tsToJstDate(r.date);
+      if (r.openId && dateStr) requestsMap[`${r.openId}__${dateStr}`] = r;
+    }
+  } catch (e) {
+    console.error('シフト希望読み込みエラー:', e);
+  }
+}
 
 async function loadStaff() {
   try {
@@ -468,6 +514,7 @@ async function loadStaff() {
 async function loadShiftResult() {
   showOverlay(true);
   try {
+    await loadRequests();
     const res = await fetch(`${API}/api/shift/result?year=${currentYear}&month=${currentMonth}`);
     const d   = await res.json();
     if (d.ok) {
@@ -512,14 +559,27 @@ function switchTab(shop) {
 }
 
 // ============================================================
-// シフトマップ構築（事業所でフィルタ）
+// シフトマップ構築
 // staffName + date をキーにして素早く参照できる形にする
 // ============================================================
+
+// 事業所でフィルタしたマップ（集計行の人数カウント用）
 function buildShiftMap(shop) {
   const map = {};
   for (const s of shifts) {
     if (s.shop !== shop) continue;
     map[`${s.staffName}__${s.date}`] = s;
+  }
+  return map;
+}
+
+// 事業所フィルタなし（全事業所ビューのスタッフ行表示用）
+// 兼務スタッフが別事業所に割り当てられた日も「－」にならないようにする
+function buildDisplayShiftMap() {
+  const map = {};
+  for (const s of shifts) {
+    const key = `${s.staffName}__${s.date}`;
+    if (!map[key]) map[key] = s;
   }
   return map;
 }
@@ -575,6 +635,8 @@ function renderTable() {
     // 全事業所ビュー：各事業所をセクションに分けて連続表示する
     // 兼務スタッフは両方のセクションに現れ、その事業所のシフトを表示する
     let hasAny = false;
+    // 表示用は事業所フィルタなし（兼務スタッフの別事業所シフトも表示する）
+    const displayMap = buildDisplayShiftMap();
     for (const shop of SHOPS) {
       const shopStaff = sortStaffForShop(staffList.filter(s => s.shops.includes(shop)), shop);
       if (shopStaff.length === 0) continue;
@@ -587,9 +649,10 @@ function renderTable() {
       tdSection.colSpan = dates.length + 4;
       tdSection.textContent = `  ${shop}`;
 
-      const shiftMap = buildShiftMap(shop);
-      appendStaffRows(tbody, shopStaff, dates, shiftMap, shop);
-      appendSummaryRows(tbody, shopStaff, dates, shiftMap);
+      // 集計行の人数カウントは事業所フィルタ済みマップを使う
+      const countMap = buildShiftMap(shop);
+      appendStaffRows(tbody, shopStaff, dates, displayMap, shop);
+      appendSummaryRows(tbody, shopStaff, dates, countMap);
     }
     if (!hasAny) {
       wrapper.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">スタッフが見つかりません</div>';
@@ -706,6 +769,16 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       });
 
       td.appendChild(badge);
+
+      // シフト希望インジケーター（登録済みの希望があれば小さなピルで表示）
+      const req = requestsMap[`${staff.openId}__${str}`];
+      if (req) {
+        const ind = document.createElement('span');
+        ind.className = 'req-indicator';
+        ind.textContent = `★${req.type}`;
+        ind.style.background = REQ_BADGE_COLOR[req.type] || '#888';
+        td.appendChild(ind);
+      }
     }
 
     // 右端に勤務・公休・有休の合計セルを追加
@@ -824,8 +897,16 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, sh
   dirty = true;
   document.getElementById('btn-save').disabled = false;
 
-  // 集計行を再描画
+  // スクロール位置を保持したまま集計行を再描画
+  const scrollEl = document.querySelector('.shift-scroll');
+  const savedTop  = scrollEl?.scrollTop  || 0;
+  const savedLeft = scrollEl?.scrollLeft || 0;
   renderTable();
+  const newScrollEl = document.querySelector('.shift-scroll');
+  if (newScrollEl) {
+    newScrollEl.scrollTop  = savedTop;
+    newScrollEl.scrollLeft = savedLeft;
+  }
 }
 
 // ============================================================
