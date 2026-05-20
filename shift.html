@@ -780,7 +780,10 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (req) {
         const ind = document.createElement('span');
         ind.className = 'req-indicator';
-        ind.textContent = `★${req.type}`;
+        // 出勤希望かつ希望シフト種別がある場合は「★出勤[日勤]」のように表示
+        ind.textContent = (req.type === '出勤' && req.hopeShift)
+          ? `★出勤[${req.hopeShift}]`
+          : `★${req.type}`;
         ind.style.background = REQ_BADGE_COLOR[req.type] || '#888';
         td.appendChild(ind);
       }
