@@ -751,8 +751,9 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
     for (const { str, dow } of dates) {
       const td  = row.insertCell();
       const s   = shiftMap[`${staff.name}__${str}`];
-      // 他事業所で勤務している日は「他店」として扱い、このセクションではカウント・編集しない
-      const isOtherShop = s && s.shop && s.shop !== shop;
+      // 他事業所で実勤務（日勤・夜勤）している日のみ「他店」表示。公休系は両セクション共通で表示。
+      const OTHER_SHOP_TYPES = ['日勤', '日勤(16)', '日勤(18)', '夜勤'];
+      const isOtherShop = s && s.shop && s.shop !== shop && OTHER_SHOP_TYPES.includes(s.shiftType);
       const typ = isOtherShop ? '他店' : (s?.shiftType || '');
 
       if (dow === 0) td.className = 'sun';
