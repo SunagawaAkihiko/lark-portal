@@ -757,7 +757,7 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       // 他事業所で実勤務（日勤・夜勤）している日のみ「他店」表示。公休系は両セクション共通で表示。
       const OTHER_SHOP_TYPES = ['日勤', '日勤(16)', '日勤(18)', '夜勤'];
       const isOtherShop = s && s.shop && s.shop !== shop && OTHER_SHOP_TYPES.includes(s.shiftType);
-      const typ = isOtherShop ? '他店' : (s?.shiftType || '');
+      const typ = isOtherShop ? s.shop : (s?.shiftType || '');
 
       if (dow === 0) td.className = 'sun';
       if (dow === 6) td.className = 'sat';
