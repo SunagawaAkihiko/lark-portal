@@ -496,6 +496,7 @@ async function loadRequests() {
       const dateStr = tsToJstDate(r.date);
       if (r.openId && dateStr) requestsMap[`${r.openId}__${dateStr}`] = r;
     }
+    console.log('[希望] APIレスポンス全体:', JSON.stringify(d).slice(0, 500));
     console.log('[希望] 件数:', d.requests.length, 'マップキー例:', Object.keys(requestsMap).slice(0, 3));
   } catch (e) {
     console.error('シフト希望読み込みエラー:', e);
