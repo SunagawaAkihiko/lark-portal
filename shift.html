@@ -95,6 +95,7 @@
     }
     .btn-green  { background: #52b788; color: #fff; }
     .btn-purple { background: #6a0572; color: #fff; }
+    .btn-indigo { background: #3a5a9c; color: #fff; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ==================== タブ ==================== */
@@ -353,8 +354,11 @@
     <button onclick="changeMonth(1)"><i class="fa fa-chevron-right"></i></button>
   </div>
   <div class="toolbar-right">
-    <button class="btn btn-purple" id="btn-generate" onclick="onGenerate()">
-      <i class="fa fa-magic"></i> 自動作成
+    <button class="btn btn-purple" id="btn-gen-night" onclick="onGenerateNight()">
+      <i class="fa fa-moon-o"></i> ①夜勤生成
+    </button>
+    <button class="btn btn-indigo" id="btn-gen-day" onclick="onGenerateDay()">
+      <i class="fa fa-sun-o"></i> ②日勤生成
     </button>
     <button class="btn btn-green" id="btn-save" onclick="onSave()" disabled>
       <i class="fa fa-save"></i> 保存
@@ -932,37 +936,73 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, sh
 }
 
 // ============================================================
-// 自動作成：サーバー側で全事業所・全スタッフのシフトを一括生成する
+// 自動作成（2フェーズ方式）
+//   ①夜勤生成: 夜勤専従・夜勤パート・兼務の夜勤のみ確定
+//   ②日勤生成: ①の結果を固定として全スタッフの日勤を確定
 // ============================================================
-async function onGenerate() {
+
+// 生成結果の共通後処理
+function _applyGenerateResult(d, phaseLabel) {
+  shifts = d.shifts;
+  dirty  = true;
+  document.getElementById('btn-save').disabled = false;
+
+  const panel = document.getElementById('warning-panel');
+  const list  = document.getElementById('warning-list');
+  if (d.warnings?.length > 0) {
+    list.innerHTML = d.warnings.map(w => `<li>${w}</li>`).join('');
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
+
+  renderTable();
+  showToast(`${phaseLabel}が完了しました`);
+}
+
+async function onGenerateNight() {
   if (shifts.length > 0 &&
       !confirm(`${currentYear}年${currentMonth}月のシフトが既にあります。上書きしますか？`)) return;
 
   showOverlay(true);
-  document.getElementById('warning-panel').classList.add('hidden');
-
   try {
     const res = await fetch(`${API}/api/shift/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year: currentYear, month: currentMonth }),
+      body: JSON.stringify({ year: currentYear, month: currentMonth, phase: 'night' }),
     });
     const d = await res.json();
     if (!d.ok) throw new Error(d.error);
+    _applyGenerateResult(d, '①夜勤シフト生成');
+  } catch (e) {
+    showToast(`エラー: ${e.message}`, 'error');
+  } finally {
+    showOverlay(false);
+  }
+}
 
-    shifts = d.shifts;
-    dirty  = true;
-    document.getElementById('btn-save').disabled = false;
+async function onGenerateDay() {
+  if (shifts.length === 0) {
+    showToast('先に①夜勤シフトを生成してください', 'error');
+    return;
+  }
+  if (!confirm(`①夜勤シフトを固定として、②日勤シフトを生成します。現在のシフトは上書きされます。よろしいですか？`)) return;
 
-    if (d.warnings?.length > 0) {
-      const panel = document.getElementById('warning-panel');
-      const list  = document.getElementById('warning-list');
-      list.innerHTML = d.warnings.map(w => `<li>${w}</li>`).join('');
-      panel.classList.remove('hidden');
-    }
-
-    renderTable();
-    showToast('自動作成が完了しました');
+  showOverlay(true);
+  try {
+    const res = await fetch(`${API}/api/shift/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: currentYear,
+        month: currentMonth,
+        phase: 'day',
+        confirmedShifts: shifts,   // 現在表示中のシフト（①の結果）を固定として渡す
+      }),
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error);
+    _applyGenerateResult(d, '②日勤シフト生成');
   } catch (e) {
     showToast(`エラー: ${e.message}`, 'error');
   } finally {
