@@ -1424,10 +1424,13 @@
       const nameSet    = new Set();
       const byNameDate = {}; // { name: { date: record[] } }
       bowelRecordsByNameDate = byNameDate; // 削除セクションで参照できるようモジュールスコープに保持する
+      // 契約終了の利用者を除外する（officeNamesMap未ロード時は全員表示にフォールバック）
+      const activeNamesForOffice = officeNamesMap[currentOffice];
+      const hasActiveList = activeNamesForOffice && activeNamesForOffice.length > 0;
       for (const r of records) {
         const name = r.name || '—';
         const date = r.date || '—';
-        if (name !== '—') nameSet.add(name);
+        if (name !== '—' && (!hasActiveList || activeNamesForOffice.includes(name))) nameSet.add(name);
         if (!byNameDate[name]) byNameDate[name] = {};
         if (!byNameDate[name][date]) byNameDate[name][date] = [];
         byNameDate[name][date].push(r);
