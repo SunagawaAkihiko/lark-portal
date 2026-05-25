@@ -820,6 +820,20 @@
       padding: 0.3rem 0.2rem; cursor: pointer; font-size: 0.9rem;
     }
     .slip-staff-list label:hover { background: var(--primary-lt); border-radius: 4px; }
+
+    /* ==================== ▼ 賞与一覧表 ==================== */
+    .bonus-input {
+      width: 76px;
+      text-align: right;
+      border: 1px solid #d0c4b4;
+      border-radius: 3px;
+      background: #fffef8;
+      padding: 1px 3px;
+      font-size: 0.78rem;
+      font-family: inherit;
+    }
+    .bonus-input:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+    .bonus-calc-cell { text-align: right; }
   </style>
 </head>
 <body>
@@ -841,6 +855,9 @@
   </button>
   <button class="main-tab active" data-tab="salary">
     <i class="fa-solid fa-table"></i>給与一覧表
+  </button>
+  <button class="main-tab" data-tab="bonus">
+    <i class="fa-solid fa-gift"></i>賞与一覧表
   </button>
   <button class="main-tab" data-tab="treatment">
     <i class="fa-solid fa-hand-holding-heart"></i>処遇改善加算
@@ -883,6 +900,38 @@
     <!-- 1テーブル sticky 方式: col-sec・col-item 列を position:sticky で左固定する -->
     <div class="table-scroll-wrap">
       <table class="salary-table" id="salary-table"></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- タブ: 賞与一覧表                                      -->
+<!-- ===================================================== -->
+<section id="tab-bonus" class="tab-content">
+  <div class="ctrl-bar">
+    <label>支払日</label>
+    <input type="date" id="bonus-date" style="height:2.2rem;box-sizing:border-box;padding:0.35rem 0.5rem;border:1.5px solid var(--border);border-radius:6px;font-size:0.88rem;background:white;color:var(--text)">
+    <button class="btn-primary" onclick="loadBonus()">
+      <i class="fa-solid fa-rotate"></i> 読込
+    </button>
+  </div>
+  <div class="print-toolbar hidden" id="bonus-print-bar">
+    <span class="month-label" id="bonus-print-label"></span>
+    <button class="btn-secondary" onclick="saveBonus()">
+      <i class="fa-solid fa-floppy-disk"></i> 保存
+    </button>
+    <button class="btn-secondary" id="bonus-pdf-btn" onclick="downloadBonus()" style="margin-left:0.4rem">
+      <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
+    </button>
+  </div>
+  <div id="bonus-status" class="status-area">支払日を選択して「読込」を押してください。</div>
+  <div class="salary-scroll hidden" id="bonus-scroll">
+    <div class="salary-print-header">
+      <h2 id="bonus-print-title"></h2>
+      <p id="bonus-print-sub"></p>
+    </div>
+    <div class="table-scroll-wrap">
+      <table class="salary-table" id="bonus-table"></table>
     </div>
   </div>
 </section>
@@ -3031,6 +3080,242 @@ function buildSlipHTML(row, month) {
     </table>
   </div>
 </div>`;
+}
+
+// ============================================================
+// タブ: 賞与一覧表
+// ============================================================
+const BONUS_STAFF_ORDER = [
+  '砂川 明彦', '砂川 竜馬', '鞍馬 玲菜', '砂川 繁', '中村 ともみ',
+  '中村 考',   '榊 志満子', '御手洗 悦子', '中村 夢永', '中川 いずみ',
+  '井上 ひかる', '松山 朋美', '川原 将也', '奥田 愛美', '池田 祐子',
+  '三原 和樹', '吉山 康子', '田中 謹礼', '柏木 愛',   '小路 悦子',
+  '荒木 由美子', '秋吉 布美子',
+];
+
+let bonusStaffList  = [];
+let bonusCurrentDate = '';
+
+function bonusStorageKey(date) { return `bonus_${date}`; }
+
+function loadBonusFromStorage(date) {
+  try { return JSON.parse(localStorage.getItem(bonusStorageKey(date))) || {}; }
+  catch { return {}; }
+}
+
+function saveBonusToStorage(date, data) {
+  localStorage.setItem(bonusStorageKey(date), JSON.stringify(data));
+}
+
+async function loadBonus() {
+  const date = document.getElementById('bonus-date').value;
+  if (!date) { alert('支払日を選択してください。'); return; }
+  bonusCurrentDate = date;
+  setStatus('bonus', 'loading', 'スタッフリストを読み込み中…');
+  document.getElementById('bonus-scroll').classList.add('hidden');
+  document.getElementById('bonus-print-bar').classList.add('hidden');
+  try {
+    if (staffList.length === 0) {
+      const r = await fetch(`${API_BASE}/api/salary/staff-list`);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      bonusStaffList = j.list.map(s => s.staffName);
+    } else {
+      bonusStaffList = staffList.map(s => s.staffName);
+    }
+    bonusStaffList = [...bonusStaffList].sort((a, b) => {
+      const ia = BONUS_STAFF_ORDER.indexOf(a);
+      const ib = BONUS_STAFF_ORDER.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return 0;
+    });
+    const saved = loadBonusFromStorage(date);
+    renderBonusTable(bonusStaffList, saved);
+    setStatus('bonus', '');
+    document.getElementById('bonus-scroll').classList.remove('hidden');
+    document.getElementById('bonus-print-bar').classList.remove('hidden');
+    const [y, m, d] = date.split('-');
+    document.getElementById('bonus-print-label').textContent = `${y}年${m}月${d}日　賞与支給控除一覧表`;
+  } catch(e) {
+    setStatus('bonus', 'error', `エラー: ${e.message}`);
+  }
+}
+
+function renderBonusTable(staffNames, saved) {
+  const rowDefs = [
+    { k: '賞与支給額',   label: '賞　与　支　給　額',   sec: 'pay', hl: 'gross', manual: true  },
+    { k: '健康保険',     label: '健　康　保　険',         sec: 'ded',              manual: true  },
+    { k: '介護保険',     label: '介　護　保　険',         sec: 'ded',              manual: true  },
+    { k: '厚生年金',     label: '厚　生　年　金',         sec: 'ded',              manual: true  },
+    { k: '子育て支援金', label: '子育て支援金',           sec: 'ded',              manual: true  },
+    { k: '雇用保険',     label: '雇　用　保　険',         sec: 'ded',              manual: true  },
+    { k: '社会保険計',   label: '社会保険計',             sec: 'ded', hl: 'gross', manual: false },
+    { k: '課税対象額',   label: '課税対象額',             sec: 'ded',              manual: false },
+    { k: '源泉所得税',   label: '源　泉　所　得　税',     sec: 'ded',              manual: true  },
+    { k: '住民税',       label: '住　　民　　税',         sec: 'ded',              manual: true  },
+    { k: 'その他控除',   label: 'その他控除',             sec: 'ded',              manual: true  },
+    { k: '控除合計',     label: '控　除　合　計',         sec: 'ded', hl: 'gross', manual: false },
+    { k: '差引支給額',   label: '差引支給額',             sec: 'ded', hl: 'net',   manual: false },
+  ];
+
+  let html = '<thead><tr>';
+  html += '<th class="col-item">項　　目</th>';
+  staffNames.forEach(name => { html += `<th class="col-staff">${name}</th>`; });
+  html += '<th class="col-total">合　計</th></tr></thead><tbody>';
+
+  const secUsed = {};
+  rowDefs.forEach(def => {
+    const rowCls = def.hl === 'net' ? 'row-net' : def.hl === 'gross' ? 'row-gross' : '';
+    const isFirst = !secUsed[def.sec];
+    if (isFirst) secUsed[def.sec] = true;
+    const trCls = [rowCls, isFirst ? 'sec-start' : ''].filter(Boolean).join(' ');
+
+    html += `<tr class="${trCls}">`;
+    html += `<td class="col-item">${def.label}</td>`;
+
+    let total = 0;
+    staffNames.forEach(name => {
+      if (def.manual) {
+        const v = (saved[name] && saved[name][def.k]) ? saved[name][def.k] : 0;
+        total += Number(v);
+        html += `<td style="padding:1px 2px;text-align:right">` +
+          `<input type="number" class="bonus-input" min="0" step="1"` +
+          ` data-staff="${name}" data-field="${def.k}" value="${v || ''}"` +
+          ` oninput="onBonusInput(this)"></td>`;
+      } else {
+        html += `<td class="bonus-calc-cell" data-staff="${name}" data-calc="${def.k}"></td>`;
+      }
+    });
+
+    if (def.manual) {
+      html += `<td class="col-total bonus-total" data-totalfor="${def.k}">${total ? fmtNum(total) : ''}</td>`;
+    } else {
+      html += `<td class="col-total bonus-total" data-totalfor="${def.k}"></td>`;
+    }
+    html += '</tr>';
+  });
+
+  document.getElementById('bonus-table').innerHTML = html + '</tbody>';
+  staffNames.forEach(name => recalcBonus(name, saved[name] || {}));
+}
+
+function onBonusInput(input) {
+  const staff = input.dataset.staff;
+  const staffData = {};
+  document.querySelectorAll(`.bonus-input[data-staff="${staff}"]`).forEach(el => {
+    staffData[el.dataset.field] = parseInt(el.value, 10) || 0;
+  });
+  recalcBonus(staff, staffData);
+  updateBonusColumnTotal(input.dataset.field);
+}
+
+function recalcBonus(staff, data) {
+  const n = k => parseInt(data[k] || 0, 10);
+  const shakai    = n('健康保険') + n('介護保険') + n('厚生年金') + n('子育て支援金') + n('雇用保険');
+  const kazei     = n('賞与支給額') - shakai;
+  const kojoTotal = shakai + n('源泉所得税') + n('住民税') + n('その他控除');
+  const sashihiki = n('賞与支給額') - kojoTotal;
+
+  const calcs = { '社会保険計': shakai, '課税対象額': kazei, '控除合計': kojoTotal, '差引支給額': sashihiki };
+  Object.entries(calcs).forEach(([k, v]) => {
+    const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staff}"][data-calc="${k}"]`);
+    if (!cell) return;
+    cell.textContent = v ? fmtNum(v) : '';
+    cell.classList.toggle('zero', v === 0);
+  });
+  ['社会保険計','課税対象額','控除合計','差引支給額'].forEach(k => updateBonusColumnTotal(k));
+}
+
+function updateBonusColumnTotal(field) {
+  const totalCell = document.querySelector(`.bonus-total[data-totalfor="${field}"]`);
+  if (!totalCell) return;
+  const inputs = document.querySelectorAll(`.bonus-input[data-field="${field}"]`);
+  let t = 0;
+  if (inputs.length > 0) {
+    inputs.forEach(el => { t += parseInt(el.value, 10) || 0; });
+  } else {
+    document.querySelectorAll(`.bonus-calc-cell[data-calc="${field}"]`).forEach(el => {
+      t += parseInt((el.textContent || '').replace(/,/g, ''), 10) || 0;
+    });
+  }
+  totalCell.textContent = t ? fmtNum(t) : '';
+  totalCell.classList.toggle('zero', t === 0);
+}
+
+function saveBonus() {
+  if (!bonusCurrentDate || bonusStaffList.length === 0) {
+    alert('先に「読込」ボタンを押してください。');
+    return;
+  }
+  const data = {};
+  document.querySelectorAll('.bonus-input').forEach(el => {
+    const staff = el.dataset.staff;
+    if (!data[staff]) data[staff] = {};
+    data[staff][el.dataset.field] = parseInt(el.value, 10) || 0;
+  });
+  saveBonusToStorage(bonusCurrentDate, data);
+  alert('保存しました。');
+}
+
+async function downloadBonus() {
+  if (!bonusCurrentDate) { alert('先に「読込」を押してください。'); return; }
+  const btn        = document.getElementById('bonus-pdf-btn');
+  const label      = document.getElementById('bonus-print-label').textContent;
+  const scroll     = document.getElementById('bonus-scroll');
+  const tabContent = scroll.closest('.tab-content');
+  const body       = document.body;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
+
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = 'pdf-sticky-reset-bonus';
+  tmpStyle.textContent = `
+    .salary-table thead th { position: static !important; top: auto !important; }
+    .salary-table .col-item { position: static !important; left: auto !important; }
+    .table-scroll-wrap { overflow: visible !important; }
+    .bonus-input { border: none !important; background: transparent !important; }
+  `;
+  document.head.appendChild(tmpStyle);
+
+  const header = scroll.querySelector('.salary-print-header');
+  if (header) {
+    document.getElementById('bonus-print-title').textContent = label;
+    document.getElementById('bonus-print-sub').textContent   = '合同会社 GLAD Life Create';
+    header.style.display = 'block';
+  }
+
+  const sv = {
+    bodyH:   body.style.height,       bodyOv:  body.style.overflow,
+    tabFlex: tabContent.style.flex,   tabH:    tabContent.style.height, tabOv: tabContent.style.overflow,
+    sFlx:    scroll.style.flex,       sH:      scroll.style.height,
+    sW:      scroll.style.width,      sOv:     scroll.style.overflow,   sMxH:  scroll.style.maxHeight,
+  };
+  body.style.height         = 'auto';
+  body.style.overflow       = 'visible';
+  tabContent.style.flex     = 'none';
+  tabContent.style.height   = 'auto';
+  tabContent.style.overflow = 'visible';
+  scroll.style.flex         = 'none';
+  scroll.style.height       = 'auto';
+  scroll.style.width        = 'max-content';
+  scroll.style.overflow     = 'visible';
+  scroll.style.maxHeight    = 'none';
+
+  const [y, m, d] = bonusCurrentDate.split('-');
+  try {
+    await renderToPdf(scroll, `${y}${m}${d}_賞与支給控除一覧表.pdf`);
+  } finally {
+    document.getElementById('pdf-sticky-reset-bonus')?.remove();
+    if (header) header.style.display = '';
+    Object.assign(body.style,       { height: sv.bodyH, overflow: sv.bodyOv });
+    Object.assign(tabContent.style, { flex: sv.tabFlex, height: sv.tabH, overflow: sv.tabOv });
+    Object.assign(scroll.style,     { flex: sv.sFlx, height: sv.sH, width: sv.sW, overflow: sv.sOv, maxHeight: sv.sMxH });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> 一覧表PDF';
+  }
 }
 
 // 処遇改善加算タブの対象月セレクトを初期化する（給与一覧表と同じ月を初期値にする）
