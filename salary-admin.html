@@ -3084,6 +3084,9 @@ function buildSlipHTML(row, month) {
 
 // ============================================================
 // タブ: 賞与一覧表
+// 手入力: 賞与額・調整手当・食費
+// 自動計算(API): 健康保険・介護保険・厚生年金・子育て支援金・雇用保険・
+//               社会保険計・課税対象額・源泉所得税・控除合計・差引支給額
 // ============================================================
 const BONUS_STAFF_ORDER = [
   '砂川 明彦', '砂川 竜馬', '鞍馬 玲菜', '砂川 繁', '中村 ともみ',
@@ -3093,18 +3096,37 @@ const BONUS_STAFF_ORDER = [
   '荒木 由美子', '秋吉 布美子',
 ];
 
-let bonusStaffList  = [];
+// 手入力フィールド（APIへ送る項目）
+const BONUS_MANUAL_FIELDS = ['賞与支給額', '調整手当'];
+// 自動計算フィールド（API返却値で埋める）
+const BONUS_API_FIELDS = ['健康保険','介護保険','厚生年金','子育て支援金','雇用保険',
+                          '社会保険計','課税対象額','源泉所得税'];
+// ローカル計算フィールド（食費を足すだけ）
+const BONUS_LOCAL_FIELDS = ['支給合計','控除合計','差引支給額'];
+
+let bonusStaffList   = [];
 let bonusCurrentDate = '';
+let bonusCalcTimer   = null;  // デバウンス用
 
 function bonusStorageKey(date) { return `bonus_${date}`; }
-
 function loadBonusFromStorage(date) {
   try { return JSON.parse(localStorage.getItem(bonusStorageKey(date))) || {}; }
   catch { return {}; }
 }
-
 function saveBonusToStorage(date, data) {
   localStorage.setItem(bonusStorageKey(date), JSON.stringify(data));
+}
+
+// スタッフ一覧の取得・ソート
+function sortedBonusStaff(list) {
+  return [...list].sort((a, b) => {
+    const ia = BONUS_STAFF_ORDER.indexOf(a);
+    const ib = BONUS_STAFF_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return 0;
+  });
 }
 
 async function loadBonus() {
@@ -3119,18 +3141,10 @@ async function loadBonus() {
       const r = await fetch(`${API_BASE}/api/salary/staff-list`);
       const j = await r.json();
       if (!j.ok) throw new Error(j.error);
-      bonusStaffList = j.list.map(s => s.staffName);
+      bonusStaffList = sortedBonusStaff(j.list.map(s => s.staffName));
     } else {
-      bonusStaffList = staffList.map(s => s.staffName);
+      bonusStaffList = sortedBonusStaff(staffList.map(s => s.staffName));
     }
-    bonusStaffList = [...bonusStaffList].sort((a, b) => {
-      const ia = BONUS_STAFF_ORDER.indexOf(a);
-      const ib = BONUS_STAFF_ORDER.indexOf(b);
-      if (ia !== -1 && ib !== -1) return ia - ib;
-      if (ia !== -1) return -1;
-      if (ib !== -1) return 1;
-      return 0;
-    });
     const saved = loadBonusFromStorage(date);
     renderBonusTable(bonusStaffList, saved);
     setStatus('bonus', '');
@@ -3138,6 +3152,10 @@ async function loadBonus() {
     document.getElementById('bonus-print-bar').classList.remove('hidden');
     const [y, m, d] = date.split('-');
     document.getElementById('bonus-print-label').textContent = `${y}年${m}月${d}日　賞与支給控除一覧表`;
+
+    // 保存済みデータがあれば即座に自動計算を走らせる
+    const hasData = bonusStaffList.some(n => saved[n]?.['賞与支給額'] > 0);
+    if (hasData) callBonusCalcAPI();
   } catch(e) {
     setStatus('bonus', 'error', `エラー: ${e.message}`);
   }
@@ -3145,19 +3163,22 @@ async function loadBonus() {
 
 function renderBonusTable(staffNames, saved) {
   const rowDefs = [
-    { k: '賞与支給額',   label: '賞　与　支　給　額',   sec: 'pay', hl: 'gross', manual: true  },
-    { k: '健康保険',     label: '健　康　保　険',         sec: 'ded',              manual: true  },
-    { k: '介護保険',     label: '介　護　保　険',         sec: 'ded',              manual: true  },
-    { k: '厚生年金',     label: '厚　生　年　金',         sec: 'ded',              manual: true  },
-    { k: '子育て支援金', label: '子育て支援金',           sec: 'ded',              manual: true  },
-    { k: '雇用保険',     label: '雇　用　保　険',         sec: 'ded',              manual: true  },
-    { k: '社会保険計',   label: '社会保険計',             sec: 'ded', hl: 'gross', manual: false },
-    { k: '課税対象額',   label: '課税対象額',             sec: 'ded',              manual: false },
-    { k: '源泉所得税',   label: '源　泉　所　得　税',     sec: 'ded',              manual: true  },
-    { k: '住民税',       label: '住　　民　　税',         sec: 'ded',              manual: true  },
-    { k: 'その他控除',   label: 'その他控除',             sec: 'ded',              manual: true  },
-    { k: '控除合計',     label: '控　除　合　計',         sec: 'ded', hl: 'gross', manual: false },
-    { k: '差引支給額',   label: '差引支給額',             sec: 'ded', hl: 'net',   manual: false },
+    // 支給
+    { k: '賞与支給額', label: '賞　与　支　給　額', sec: 'pay', hl: 'gross', type: 'manual' },
+    { k: '調整手当',   label: '調　整　手　当',     sec: 'pay',              type: 'manual' },
+    { k: '支給合計',   label: '支　給　合　計',     sec: 'pay', hl: 'gross', type: 'local'  },
+    // 控除（APIで自動計算）
+    { k: '健康保険',     label: '健　康　保　険',     sec: 'ded',              type: 'api' },
+    { k: '介護保険',     label: '介　護　保　険',     sec: 'ded',              type: 'api' },
+    { k: '厚生年金',     label: '厚　生　年　金',     sec: 'ded',              type: 'api' },
+    { k: '子育て支援金', label: '子育て支援金',       sec: 'ded',              type: 'api' },
+    { k: '雇用保険',     label: '雇　用　保　険',     sec: 'ded',              type: 'api' },
+    { k: '社会保険計',   label: '社会保険計',         sec: 'ded', hl: 'gross', type: 'api' },
+    { k: '課税対象額',   label: '課税対象額',         sec: 'ded',              type: 'api' },
+    { k: '源泉所得税',   label: '源　泉　所　得　税', sec: 'ded',              type: 'api' },
+    { k: '食費',         label: '食　　　　費',       sec: 'ded',              type: 'manual' },
+    { k: '控除合計',     label: '控　除　合　計',     sec: 'ded', hl: 'gross', type: 'local' },
+    { k: '差引支給額',   label: '差引支給額',         sec: 'ded', hl: 'net',   type: 'local' },
   ];
 
   let html = '<thead><tr>';
@@ -3172,25 +3193,25 @@ function renderBonusTable(staffNames, saved) {
     if (isFirst) secUsed[def.sec] = true;
     const trCls = [rowCls, isFirst ? 'sec-start' : ''].filter(Boolean).join(' ');
 
-    html += `<tr class="${trCls}">`;
-    html += `<td class="col-item">${def.label}</td>`;
+    html += `<tr class="${trCls}"><td class="col-item">${def.label}</td>`;
+    let manualTotal = 0;
 
-    let total = 0;
     staffNames.forEach(name => {
-      if (def.manual) {
-        const v = (saved[name] && saved[name][def.k]) ? saved[name][def.k] : 0;
-        total += Number(v);
+      if (def.type === 'manual') {
+        const v = saved[name]?.[def.k] || 0;
+        manualTotal += Number(v);
         html += `<td style="padding:1px 2px;text-align:right">` +
           `<input type="number" class="bonus-input" min="0" step="1"` +
           ` data-staff="${name}" data-field="${def.k}" value="${v || ''}"` +
           ` oninput="onBonusInput(this)"></td>`;
       } else {
+        // api / local: どちらも計算セル
         html += `<td class="bonus-calc-cell" data-staff="${name}" data-calc="${def.k}"></td>`;
       }
     });
 
-    if (def.manual) {
-      html += `<td class="col-total bonus-total" data-totalfor="${def.k}">${total ? fmtNum(total) : ''}</td>`;
+    if (def.type === 'manual') {
+      html += `<td class="col-total bonus-total" data-totalfor="${def.k}">${manualTotal ? fmtNum(manualTotal) : ''}</td>`;
     } else {
       html += `<td class="col-total bonus-total" data-totalfor="${def.k}"></td>`;
     }
@@ -3198,46 +3219,106 @@ function renderBonusTable(staffNames, saved) {
   });
 
   document.getElementById('bonus-table').innerHTML = html + '</tbody>';
-  staffNames.forEach(name => recalcBonus(name, saved[name] || {}));
 }
 
+// 入力変更時: 支給合計を即時更新 + APIデバウンス
 function onBonusInput(input) {
   const staff = input.dataset.staff;
-  const staffData = {};
-  document.querySelectorAll(`.bonus-input[data-staff="${staff}"]`).forEach(el => {
-    staffData[el.dataset.field] = parseInt(el.value, 10) || 0;
-  });
-  recalcBonus(staff, staffData);
-  updateBonusColumnTotal(input.dataset.field);
+  const field = input.dataset.field;
+  // 支給合計をローカル更新（即時フィードバック）
+  if (field === '賞与支給額' || field === '調整手当') {
+    const bonusAmt = parseInt(document.querySelector(`.bonus-input[data-staff="${staff}"][data-field="賞与支給額"]`)?.value || 0, 10);
+    const adj      = parseInt(document.querySelector(`.bonus-input[data-staff="${staff}"][data-field="調整手当"]`)?.value || 0, 10);
+    setBonusCell(staff, '支給合計', bonusAmt + adj);
+  }
+  updateBonusColumnTotal(field);
+  if (field === '支給合計' || field === '賞与支給額' || field === '調整手当') {
+    updateBonusColumnTotal('支給合計');
+  }
+  // 食費は控除合計・差引支給額のみローカル更新
+  if (field === '食費') {
+    recalcBonusLocals(staff);
+    updateBonusColumnTotal('控除合計');
+    updateBonusColumnTotal('差引支給額');
+    return;
+  }
+  // APIデバウンス (800ms)
+  clearTimeout(bonusCalcTimer);
+  bonusCalcTimer = setTimeout(callBonusCalcAPI, 800);
 }
 
-function recalcBonus(staff, data) {
-  const n = k => parseInt(data[k] || 0, 10);
-  const shakai    = n('健康保険') + n('介護保険') + n('厚生年金') + n('子育て支援金') + n('雇用保険');
-  const kazei     = n('賞与支給額') - shakai;
-  const kojoTotal = shakai + n('源泉所得税') + n('住民税') + n('その他控除');
-  const sashihiki = n('賞与支給額') - kojoTotal;
+// API呼び出し: 全スタッフ一括計算
+async function callBonusCalcAPI() {
+  if (!bonusCurrentDate || bonusStaffList.length === 0) return;
+  const staffInputs = bonusStaffList.map(name => ({
+    staffName: name,
+    賞与支給額: parseInt(document.querySelector(`.bonus-input[data-staff="${name}"][data-field="賞与支給額"]`)?.value || 0, 10),
+    調整手当:   parseInt(document.querySelector(`.bonus-input[data-staff="${name}"][data-field="調整手当"]`)?.value || 0, 10),
+  }));
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/bonus-calc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: bonusCurrentDate, staffInputs }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    // API返却値をセルへ反映する
+    j.data.forEach(row => {
+      BONUS_API_FIELDS.forEach(k => setBonusCell(row.staffName, k, row[k] ?? 0));
+      // 支給合計もAPIから取得する
+      setBonusCell(row.staffName, '支給合計', row['支給合計'] ?? 0);
+      // ローカル計算（食費を足して 控除合計・差引支給額を更新）
+      recalcBonusLocals(row.staffName);
+    });
+    // 全合計列を更新する
+    [...BONUS_API_FIELDS, '支給合計', '控除合計', '差引支給額'].forEach(updateBonusColumnTotal);
+  } catch(e) {
+    console.warn('[bonus-calc] API エラー:', e.message);
+  }
+}
 
-  const calcs = { '社会保険計': shakai, '課税対象額': kazei, '控除合計': kojoTotal, '差引支給額': sashihiki };
-  Object.entries(calcs).forEach(([k, v]) => {
-    const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staff}"][data-calc="${k}"]`);
-    if (!cell) return;
-    cell.textContent = v ? fmtNum(v) : '';
-    cell.classList.toggle('zero', v === 0);
-  });
-  ['社会保険計','課税対象額','控除合計','差引支給額'].forEach(k => updateBonusColumnTotal(k));
+// 計算セルに値をセットする
+function setBonusCell(staff, field, val) {
+  const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staff}"][data-calc="${field}"]`);
+  if (!cell) return;
+  cell.textContent = val ? fmtNum(val) : '';
+  cell.classList.toggle('zero', val === 0);
+  cell.dataset.numval = val;  // 合計計算用に数値保存
+}
+
+// 食費を含むローカル控除合計・差引支給額を更新する
+function recalcBonusLocals(staff) {
+  const get = field => {
+    const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staff}"][data-calc="${field}"]`);
+    return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
+  };
+  const getInput = field => {
+    const el = document.querySelector(`.bonus-input[data-staff="${staff}"][data-field="${field}"]`);
+    return el ? parseInt(el.value || 0, 10) : 0;
+  };
+  const shakai    = get('社会保険計');
+  const incTax    = get('源泉所得税');
+  const shokuhi   = getInput('食費');
+  const kojoTotal = shakai + incTax + shokuhi;
+  const shikyu    = get('支給合計');
+  const sashihiki = shikyu - kojoTotal;
+  setBonusCell(staff, '控除合計', kojoTotal);
+  setBonusCell(staff, '差引支給額', sashihiki);
 }
 
 function updateBonusColumnTotal(field) {
   const totalCell = document.querySelector(`.bonus-total[data-totalfor="${field}"]`);
   if (!totalCell) return;
-  const inputs = document.querySelectorAll(`.bonus-input[data-field="${field}"]`);
   let t = 0;
+  // 手入力列
+  const inputs = document.querySelectorAll(`.bonus-input[data-field="${field}"]`);
   if (inputs.length > 0) {
     inputs.forEach(el => { t += parseInt(el.value, 10) || 0; });
   } else {
+    // 計算列: data-numval を使う
     document.querySelectorAll(`.bonus-calc-cell[data-calc="${field}"]`).forEach(el => {
-      t += parseInt((el.textContent || '').replace(/,/g, ''), 10) || 0;
+      t += parseInt(el.dataset.numval || 0, 10);
     });
   }
   totalCell.textContent = t ? fmtNum(t) : '';
@@ -3288,21 +3369,15 @@ async function downloadBonus() {
   }
 
   const sv = {
-    bodyH:   body.style.height,       bodyOv:  body.style.overflow,
-    tabFlex: tabContent.style.flex,   tabH:    tabContent.style.height, tabOv: tabContent.style.overflow,
-    sFlx:    scroll.style.flex,       sH:      scroll.style.height,
-    sW:      scroll.style.width,      sOv:     scroll.style.overflow,   sMxH:  scroll.style.maxHeight,
+    bodyH: body.style.height, bodyOv: body.style.overflow,
+    tabFlex: tabContent.style.flex, tabH: tabContent.style.height, tabOv: tabContent.style.overflow,
+    sFlx: scroll.style.flex, sH: scroll.style.height,
+    sW: scroll.style.width,  sOv: scroll.style.overflow, sMxH: scroll.style.maxHeight,
   };
-  body.style.height         = 'auto';
-  body.style.overflow       = 'visible';
-  tabContent.style.flex     = 'none';
-  tabContent.style.height   = 'auto';
-  tabContent.style.overflow = 'visible';
-  scroll.style.flex         = 'none';
-  scroll.style.height       = 'auto';
-  scroll.style.width        = 'max-content';
-  scroll.style.overflow     = 'visible';
-  scroll.style.maxHeight    = 'none';
+  body.style.height = 'auto'; body.style.overflow = 'visible';
+  tabContent.style.flex = 'none'; tabContent.style.height = 'auto'; tabContent.style.overflow = 'visible';
+  scroll.style.flex = 'none'; scroll.style.height = 'auto'; scroll.style.width = 'max-content';
+  scroll.style.overflow = 'visible'; scroll.style.maxHeight = 'none';
 
   const [y, m, d] = bonusCurrentDate.split('-');
   try {
