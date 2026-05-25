@@ -3108,15 +3108,6 @@ let bonusStaffList   = [];
 let bonusCurrentDate = '';
 let bonusCalcTimer   = null;  // デバウンス用
 
-function bonusStorageKey(date) { return `bonus_${date}`; }
-function loadBonusFromStorage(date) {
-  try { return JSON.parse(localStorage.getItem(bonusStorageKey(date))) || {}; }
-  catch { return {}; }
-}
-function saveBonusToStorage(date, data) {
-  localStorage.setItem(bonusStorageKey(date), JSON.stringify(data));
-}
-
 // スタッフ一覧の取得・ソート
 function sortedBonusStaff(list) {
   return [...list].sort((a, b) => {
@@ -3137,6 +3128,7 @@ async function loadBonus() {
   document.getElementById('bonus-scroll').classList.add('hidden');
   document.getElementById('bonus-print-bar').classList.add('hidden');
   try {
+    // スタッフリスト取得
     if (staffList.length === 0) {
       const r = await fetch(`${API_BASE}/api/salary/staff-list`);
       const j = await r.json();
@@ -3145,17 +3137,34 @@ async function loadBonus() {
     } else {
       bonusStaffList = sortedBonusStaff(staffList.map(s => s.staffName));
     }
-    const saved = loadBonusFromStorage(date);
-    renderBonusTable(bonusStaffList, saved);
+
+    // Lark から保存済みデータを取得する
+    setStatus('bonus', 'loading', '保存済みデータを取得中…');
+    const r2  = await fetch(`${API_BASE}/api/salary/bonus?date=${date}`);
+    const j2  = await r2.json();
+    const savedArray = (j2.ok && j2.data) ? j2.data : [];
+    const savedMap   = {};
+    savedArray.forEach(row => { savedMap[row.staffName] = row; });
+
+    renderBonusTable(bonusStaffList, savedMap);
     setStatus('bonus', '');
     document.getElementById('bonus-scroll').classList.remove('hidden');
     document.getElementById('bonus-print-bar').classList.remove('hidden');
     const [y, m, d] = date.split('-');
     document.getElementById('bonus-print-label').textContent = `${y}年${m}月${d}日　賞与支給控除一覧表`;
 
-    // 保存済みデータがあれば即座に自動計算を走らせる
-    const hasData = bonusStaffList.some(n => saved[n]?.['賞与支給額'] > 0);
-    if (hasData) callBonusCalcAPI();
+    if (savedArray.length > 0) {
+      // 保存済みデータがある → 計算フィールドも復元する（API再計算不要）
+      const calcKeys = ['健康保険','介護保険','厚生年金','子育て支援金','雇用保険',
+                        '社会保険計','課税対象額','源泉所得税','支給合計'];
+      savedArray.forEach(row => {
+        calcKeys.forEach(k => setBonusCell(row.staffName, k, row[k] || 0));
+        recalcBonusLocals(row.staffName);
+      });
+      ['賞与支給額','調整手当','食費','支給合計','健康保険','介護保険','厚生年金',
+       '子育て支援金','雇用保険','社会保険計','課税対象額','源泉所得税','控除合計','差引支給額']
+        .forEach(updateBonusColumnTotal);
+    }
   } catch(e) {
     setStatus('bonus', 'error', `エラー: ${e.message}`);
   }
@@ -3325,19 +3334,47 @@ function updateBonusColumnTotal(field) {
   totalCell.classList.toggle('zero', t === 0);
 }
 
-function saveBonus() {
+async function saveBonus() {
   if (!bonusCurrentDate || bonusStaffList.length === 0) {
     alert('先に「読込」ボタンを押してください。');
     return;
   }
-  const data = {};
-  document.querySelectorAll('.bonus-input').forEach(el => {
-    const staff = el.dataset.staff;
-    if (!data[staff]) data[staff] = {};
-    data[staff][el.dataset.field] = parseInt(el.value, 10) || 0;
-  });
-  saveBonusToStorage(bonusCurrentDate, data);
-  alert('保存しました。');
+
+  const getVal = (staffName, field) => {
+    const input = document.querySelector(`.bonus-input[data-staff="${staffName}"][data-field="${field}"]`);
+    if (input) return parseInt(input.value, 10) || 0;
+    const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="${field}"]`);
+    return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
+  };
+
+  const staffDataArray = bonusStaffList.map(staffName => ({
+    staffName,
+    賞与支給額:   getVal(staffName, '賞与支給額'),
+    調整手当:     getVal(staffName, '調整手当'),
+    食費:         getVal(staffName, '食費'),
+    健康保険:     getVal(staffName, '健康保険'),
+    介護保険:     getVal(staffName, '介護保険'),
+    厚生年金:     getVal(staffName, '厚生年金'),
+    子育て支援金: getVal(staffName, '子育て支援金'),
+    雇用保険:     getVal(staffName, '雇用保険'),
+    社会保険計:   getVal(staffName, '社会保険計'),
+    源泉所得税:   getVal(staffName, '源泉所得税'),
+    控除合計:     getVal(staffName, '控除合計'),
+    差引支給額:   getVal(staffName, '差引支給額'),
+  }));
+
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/bonus`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: bonusCurrentDate, staffDataArray }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    alert(`保存しました。（新規: ${j.created}件、更新: ${j.updated}件）`);
+  } catch(e) {
+    alert(`保存エラー: ${e.message}`);
+  }
 }
 
 async function downloadBonus() {
