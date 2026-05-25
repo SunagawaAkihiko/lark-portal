@@ -652,8 +652,14 @@
         </select>
       </div>
       <div class="form-row">
-        <label class="form-label">スタッフ <span class="form-required">*</span></label>
+        <label class="form-label" id="createStaffLabel">スタッフ <span class="form-required">*</span></label>
         <select id="createStaff" class="form-select">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+      <div class="form-row hidden" id="createStaff2Row">
+        <label class="form-label">夜勤2人目 <span class="form-required">*</span></label>
+        <select id="createStaff2" class="form-select">
           <option value="">選択してください</option>
         </select>
       </div>
@@ -1463,6 +1469,7 @@
     // 日勤系と夜勤系で表示するスタッフを絞り込むために使用する
     const KINMU_EMPLOYMENT_MAP = {
       '日勤':     ['正社員', '日勤パート', '正社員(日勤夜勤兼務)'],
+      '夜勤':     ['正社員(夜勤専従)', '夜勤パート', '正社員(日勤夜勤兼務)'],
       '夜勤担当①': ['正社員(夜勤専従)', '夜勤パート', '正社員(日勤夜勤兼務)'],
       '夜勤担当②': ['正社員(夜勤専従)', '夜勤パート', '正社員(日勤夜勤兼務)'],
     };
@@ -1470,6 +1477,7 @@
     const ALL_ALLOWED_EMPLOYMENT = [...new Set(Object.values(KINMU_EMPLOYMENT_MAP).flat())];
 
     // 事業所ごとの勤務区分選択肢（label: 画面表示、value: Larkに保存する値）
+    // フィルター・編集モーダル・振替記録用（実際の保存値を使用する）
     const KINMU_OPTIONS = {
       '大浦家': [
         { label: '日勤', value: '日勤' },
@@ -1477,21 +1485,38 @@
       ],
       '上津役家': [
         { label: '日勤',    value: '日勤' },
-        { label: '夜勤1人目', value: '夜勤担当①' },
-        { label: '夜勤2人目', value: '夜勤担当②' },
+        { label: '夜勤担当①', value: '夜勤担当①' },
+        { label: '夜勤担当②', value: '夜勤担当②' },
+      ],
+    };
+
+    // 一括記録作成フォーム専用の勤務区分選択肢
+    // 上津役家の夜勤は「夜勤」1択にして、2名分のスタッフを同時登録できるようにする
+    const KINMU_OPTIONS_CREATE = {
+      '大浦家': [
+        { label: '日勤', value: '日勤' },
+        { label: '夜勤', value: '夜勤担当①' },
+      ],
+      '上津役家': [
+        { label: '日勤', value: '日勤' },
+        { label: '夜勤', value: '夜勤' },
       ],
     };
 
     /**
      * 事業所に合わせて勤務区分セレクトの選択肢を更新する。
-     * フィルター・記録作成・編集モーダルの3箇所を同時に更新する。
+     * - フィルター・編集モーダル・振替記録: KINMU_OPTIONS（実際の保存値を使用）
+     * - 一括記録作成フォーム: KINMU_OPTIONS_CREATE（上津役家は夜勤を1択に集約）
      */
     function updateKinmuSelects(office) {
-      const opts = KINMU_OPTIONS[office] || [
+      const fallback = [
         { label: '日勤',    value: '日勤' },
         { label: '夜勤担当①', value: '夜勤担当①' },
         { label: '夜勤担当②', value: '夜勤担当②' },
       ];
+      const opts       = KINMU_OPTIONS[office]        || fallback;
+      const createOpts = KINMU_OPTIONS_CREATE[office] || fallback;
+
       // フィルター用（先頭に「全区分」を追加する）
       const filterSel = document.getElementById('filterKinmu');
       filterSel.innerHTML = '<option value="">全区分</option>';
@@ -1500,18 +1525,18 @@
         opt.value = o.value; opt.textContent = o.label;
         filterSel.appendChild(opt);
       });
-      // 記録作成用
+      // 一括記録作成用（KINMU_OPTIONS_CREATE を使う）
       const createSel = document.getElementById('createKinmu');
       createSel.innerHTML = '<option value="">選択してください</option>';
-      opts.forEach(o => {
+      createOpts.forEach(o => {
         const opt = document.createElement('option');
         opt.value = o.value; opt.textContent = o.label;
         createSel.appendChild(opt);
       });
-      // 編集モーダル用
+      // 編集モーダル用（実際の保存値で選択肢を構成する）
       const editSel = document.getElementById('editKinmu');
       if (editSel) {
-        const cur = editSel.value; // 現在値を保持して再設定する
+        const cur = editSel.value;
         editSel.innerHTML = '';
         opts.forEach(o => {
           const opt = document.createElement('option');
@@ -1520,7 +1545,7 @@
         });
         if (cur && opts.some(o => o.value === cur)) editSel.value = cur;
       }
-      // 振替・時間変更記録用（一括記録と同じラベル表示になるように更新する）
+      // 振替・時間変更記録用（実際の保存値を使用する）
       const indivKinmuSel = document.getElementById('indivKinmu');
       if (indivKinmuSel) {
         const cur = indivKinmuSel.value;
@@ -1532,6 +1557,22 @@
         });
         if (cur && opts.some(o => o.value === cur)) indivKinmuSel.value = cur;
       }
+      // 事業所切替後に夜勤2人目行の表示をリセットする
+      updateNightShift2Visibility(office, '');
+    }
+
+    /**
+     * 上津役家で夜勤が選ばれたとき夜勤2人目行を表示し、ラベルを更新する。
+     * それ以外の場合は非表示にして通常の「スタッフ」ラベルに戻す。
+     */
+    function updateNightShift2Visibility(office, kinmu) {
+      const isYakin2 = office === '上津役家' && kinmu === '夜勤';
+      const row = document.getElementById('createStaff2Row');
+      const lbl = document.getElementById('createStaffLabel');
+      if (row) row.classList.toggle('hidden', !isYakin2);
+      if (lbl) lbl.innerHTML = isYakin2
+        ? '夜勤1人目 <span class="form-required">*</span>'
+        : 'スタッフ <span class="form-required">*</span>';
     }
 
     // 勤務区分に対応するバッジスタイルを返す
@@ -1678,9 +1719,11 @@
     // 事業所・勤務区分でスタッフセレクトを絞り込む（記録作成・編集モーダル両方）
     // kinmu未選択時は許可雇用形態全体、選択時は対応する雇用形態のみ表示する
     function updateStaffSelects(office, kinmu) {
+      // '夜勤'（上津役家一括入力用の集約値）は夜勤担当①と同じ雇用形態でフィルタする
+      const filterKinmu = kinmu === '夜勤' ? '夜勤担当①' : kinmu;
       // 勤務区分から許可雇用形態を決定する
-      const allowedEmp = (kinmu && KINMU_EMPLOYMENT_MAP[kinmu])
-        ? KINMU_EMPLOYMENT_MAP[kinmu]
+      const allowedEmp = (filterKinmu && KINMU_EMPLOYMENT_MAP[filterKinmu])
+        ? KINMU_EMPLOYMENT_MAP[filterKinmu]
         : ALL_ALLOWED_EMPLOYMENT;
 
       // 事業所フィルター：事業所一致 ＋ 事業所未設定スタッフを候補にする
@@ -1695,7 +1738,11 @@
       const empMap = Object.fromEntries(staffAllData.map(s => [s.name, s.employment]));
       const names  = officePool.filter(n => allowedEmp.includes(empMap[n] || ''));
 
-      [document.getElementById('createStaff'), document.getElementById('editStaff')].forEach(sel => {
+      [
+        document.getElementById('createStaff'),
+        document.getElementById('createStaff2'),
+        document.getElementById('editStaff'),
+      ].forEach(sel => {
         if (!sel) return;
         const current = sel.value;
         sel.innerHTML = '<option value="">選択してください</option>';
@@ -2616,9 +2663,16 @@
       const 事業所   = document.getElementById('createOffice').value;
       const 勤務区分 = document.getElementById('createKinmu').value;
       const スタッフ = document.getElementById('createStaff').value;
+      // 上津役家で「夜勤」を選択した場合は夜勤担当①②を同時作成する
+      const isYakin2 = 事業所 === '上津役家' && 勤務区分 === '夜勤';
+      const スタッフ2 = isYakin2 ? document.getElementById('createStaff2').value : '';
 
       if (!実施日 || !事業所 || !勤務区分 || !スタッフ) {
         alert('すべての項目を入力してください。');
+        return;
+      }
+      if (isYakin2 && !スタッフ2) {
+        alert('夜勤2人目のスタッフを選択してください。');
         return;
       }
 
@@ -2629,29 +2683,58 @@
       result.classList.add('hidden');
 
       try {
-        const res  = await fetch(`${API_BASE}/api/helper/records/batch-create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 実施日, 事業所, 勤務区分, スタッフ }),
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error);
+        let allErrors = [], totalCreated = 0, totalUpdated = 0, total = 0;
 
-        if (data.errors && data.errors.length > 0) {
+        if (isYakin2) {
+          // 夜勤担当① と 夜勤担当② を同時作成する
+          const [r1, r2] = await Promise.all([
+            fetch(`${API_BASE}/api/helper/records/batch-create`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 実施日, 事業所, 勤務区分: '夜勤担当①', スタッフ }),
+            }),
+            fetch(`${API_BASE}/api/helper/records/batch-create`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 実施日, 事業所, 勤務区分: '夜勤担当②', スタッフ: スタッフ2 }),
+            }),
+          ]);
+          const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+          if (!d1.ok) throw new Error(d1.error);
+          if (!d2.ok) throw new Error(d2.error);
+          allErrors    = [...(d1.errors || []), ...(d2.errors || [])];
+          totalCreated = (d1.created || 0) + (d2.created || 0);
+          totalUpdated = (d1.updated || 0) + (d2.updated || 0);
+          total        = (d1.total   || 0) + (d2.total   || 0);
+        } else {
+          const res  = await fetch(`${API_BASE}/api/helper/records/batch-create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 実施日, 事業所, 勤務区分, スタッフ }),
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error);
+          allErrors    = data.errors || [];
+          totalCreated = data.created || 0;
+          totalUpdated = data.updated || 0;
+          total        = data.total   || 0;
+        }
+
+        if (allErrors.length > 0) {
           // 一部でも失敗した場合はエラー表示して再作成を促す
           result.className = 'create-result err';
           result.textContent =
-            `⚠ ${data.errors.length} 件の作成に失敗しました。再度「記録を一括作成する」を押してください。\n` +
-            data.errors.map(e => `・${e}`).join('\n');
+            `⚠ ${allErrors.length} 件の作成に失敗しました。再度「記録を一括作成する」を押してください。\n` +
+            allErrors.map(e => `・${e}`).join('\n');
         } else {
           result.className = 'create-result ok';
-          if (data.created === 0 && data.updated === 0) {
-            result.textContent = data.message || '該当するサービス設定が見つかりませんでした。';
+          if (totalCreated === 0 && totalUpdated === 0) {
+            result.textContent = '該当するサービス設定が見つかりませんでした。';
           } else {
             const parts = [];
-            if (data.created > 0) parts.push(`新規 ${data.created} 件作成`);
-            if (data.updated > 0) parts.push(`既存 ${data.updated} 件を上書き`);
-            result.textContent = `✓ ${parts.join('・')}（全 ${data.total} 件中）`;
+            if (totalCreated > 0) parts.push(`新規 ${totalCreated} 件作成`);
+            if (totalUpdated > 0) parts.push(`既存 ${totalUpdated} 件を上書き`);
+            result.textContent = `✓ ${parts.join('・')}（全 ${total} 件中）`;
           }
         }
         result.classList.remove('hidden');
@@ -3520,9 +3603,11 @@
     // スタッフ・利用者リストはバックグラウンドで非同期取得する
     loadMeta();
 
-    // 勤務区分変更時にスタッフセレクトを雇用形態で再絞り込みする
+    // 勤務区分変更時にスタッフセレクトを再絞り込みし、夜勤2人目行の表示を切り替える
     document.getElementById('createKinmu').addEventListener('change', () => {
-      updateStaffSelects(activeOffice, document.getElementById('createKinmu').value);
+      const kinmu = document.getElementById('createKinmu').value;
+      updateStaffSelects(activeOffice, kinmu);
+      updateNightShift2Visibility(activeOffice, kinmu);
     });
   </script>
 </body>
