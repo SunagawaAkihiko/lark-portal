@@ -1323,7 +1323,6 @@ function renderSalaryTable(rows, month) {
     { k:null,           label:'60ｈ超残業',       sec:'pay' },
     { k:'遅早控除',     label:'遅　早　控　除',   sec:'pay' },
     { k:'欠勤控除',     label:'欠　勤　控　除',   sec:'pay' },
-    { k:'通勤課税',     label:'通　勤　課　税',   sec:'pay' },
     { k:'通勤非課税',   label:'通　勤　非課税',   sec:'pay' },
     { k:'課税計',       label:'課　　税　　計',   sec:'pay', hl:'gross' },
     { k:'非課税計',     label:'非　課　税　計',   sec:'pay' },
@@ -1332,7 +1331,6 @@ function renderSalaryTable(rows, month) {
     { k:'健康保険',           label:'健　康　保　険',       sec:'ded' },
     { k:'介護保険',           label:'介　護　保　険',       sec:'ded' },
     { k:'厚生年金',           label:'厚　生　年　金',       sec:'ded' },
-    { k:null,                 label:'年　金　基　金',       sec:'ded' },
     { k:'子ども子育て支援金', label:'子育て支援金',         sec:'ded' },
     { k:'雇用保険',           label:'雇　用　保　険',       sec:'ded' },
     { k:'社会保険計', label:'社会保険計',     sec:'ded', hl:'gross' },
@@ -1344,7 +1342,6 @@ function renderSalaryTable(rows, month) {
     { k:'控除計',     label:'控　　除　　計', sec:'ded', hl:'gross' },
     { k:'控除合計',   label:'控　除　合　計', sec:'ded', hl:'gross' },
     { k:'差引支給額', label:'差引支給額',     sec:'ded', hl:'net' },
-    { k:'銀行振込',   label:'銀行振込　１',   sec:'ded', hl:'net' },
     // ── 参考（PDF下部の参考欄） ──
     { k:'基本給単価', label:'基本給（単価）', sec:'ref' },
     { k:'扶養人数',   label:'扶　養　人　数', sec:'ref', fmt:'int' },
@@ -2959,7 +2956,7 @@ function buildSlipHTML(row, month) {
         ${c('60h超残業',  f(row['60h超残業']))}
         ${c('遅早控除',   f(row['遅早控除']))}
         ${c('欠勤控除',   f(row['欠勤控除']))}
-        ${c('通勤課税',   f(row['通勤課税']))}
+
         ${c('通勤非課税', f(row['通勤非課税']))}
         ${c('課税計',     f(row['課税計']))}
         ${c('非課税計',   f(row['非課税計']))}
@@ -2977,7 +2974,7 @@ function buildSlipHTML(row, month) {
         ${c('健康保険',   f(row['健康保険']))}
         ${c('介護保険',   f(row['介護保険']))}
         ${c('厚生年金',   f(row['厚生年金']))}
-        ${c('年金基金',   f(row['年金基金']))}
+
         ${c('雇用保険',   f(row['雇用保険']))}
         ${c('社会保険計', f(row['社会保険計']))}
         ${c('課税対象額', f(row['課税対象額']))}
@@ -3029,7 +3026,6 @@ function buildSlipHTML(row, month) {
         ${c('課税累計額', f(row['課税累計額']))}
         ${c('税扶養人数', f(row['扶養人数']))}
         ${cb()}${cb()}${cb()}${cb()}${cb()}
-        ${c('銀行振込１', f(row['銀行振込']))}
         ${ch('差引支給額', f(row['差引支給額']))}
       </tr>
     </table>
