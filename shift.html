@@ -509,7 +509,7 @@ async function loadRequests() {
 
 async function loadStaff() {
   try {
-    const res = await fetch(`${API}/api/shift/staff`);
+    const res = await fetch(`${API}/api/shift/staff?year=${currentYear}&month=${currentMonth}`);
     const d   = await res.json();
     if (d.ok) {
       staffList = d.staff;
@@ -523,6 +523,7 @@ async function loadStaff() {
 async function loadShiftResult() {
   showOverlay(true);
   try {
+    await loadStaff(); // 月が切り替わったときに退職者リストを更新するため
     await loadRequests();
     const res = await fetch(`${API}/api/shift/result?year=${currentYear}&month=${currentMonth}`);
     const d   = await res.json();
