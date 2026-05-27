@@ -936,11 +936,18 @@
   </div>
   <div class="print-toolbar hidden" id="bonus-print-bar">
     <span class="month-label" id="bonus-print-label"></span>
-    <button class="btn-secondary" onclick="saveBonus()">
-      <i class="fa-solid fa-floppy-disk"></i> 保存
+    <span id="bonus-lock-badge" class="lock-badge hidden"></span>
+    <button id="bonus-lock-btn"   class="btn-lock   hidden" onclick="lockBonus()">
+      <i class="fa-solid fa-lock"></i> 賞与を確定してLarkに保存
+    </button>
+    <button id="bonus-unlock-btn" class="btn-unlock hidden" onclick="unlockBonus()">
+      <i class="fa-solid fa-lock-open"></i> 確定を解除して再編集
     </button>
     <button class="btn-secondary" id="bonus-pdf-btn" onclick="downloadBonus()" style="margin-left:0.4rem">
       <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
+    </button>
+    <button class="btn-secondary" id="bonus-slip-btn" onclick="openBonusSlipModal()" style="margin-left:0.4rem">
+      <i class="fa-solid fa-receipt"></i> 賞与明細PDF
     </button>
   </div>
   <div id="bonus-status" class="status-area">支払日を選択して「読込」を押してください。</div>
@@ -3232,12 +3239,30 @@ async function loadBonus() {
     const savedMap   = {};
     savedArray.forEach(row => { savedMap[row.staffName] = row; });
 
-    renderBonusTable(bonusStaffList, savedMap);
+    renderBonusTable(bonusStaffList, savedMap, j2.locked);
     setStatus('bonus', '');
     document.getElementById('bonus-scroll').classList.remove('hidden');
     document.getElementById('bonus-print-bar').classList.remove('hidden');
     const [y, m, d] = date.split('-');
     document.getElementById('bonus-print-label').textContent = `${y}年${m}月${d}日　賞与支給控除一覧表`;
+
+    // ── ロック状態に応じてバッジ・ボタンを切り替える ──
+    const badge     = document.getElementById('bonus-lock-badge');
+    const lockBtn   = document.getElementById('bonus-lock-btn');
+    const unlockBtn = document.getElementById('bonus-unlock-btn');
+    if (j2.locked) {
+      badge.textContent = '🔒 確定済み（保存データ）';
+      badge.className   = 'lock-badge locked';
+      badge.classList.remove('hidden');
+      lockBtn.classList.add('hidden');
+      unlockBtn.classList.remove('hidden');
+    } else {
+      badge.textContent = '🔓 未確定';
+      badge.className   = 'lock-badge unlocked';
+      badge.classList.remove('hidden');
+      lockBtn.classList.remove('hidden');
+      unlockBtn.classList.add('hidden');
+    }
 
     if (savedArray.length > 0) {
       // 保存済みデータがある → 計算フィールドも復元する（API再計算不要）
@@ -3256,7 +3281,7 @@ async function loadBonus() {
   }
 }
 
-function renderBonusTable(staffNames, saved) {
+function renderBonusTable(staffNames, saved, locked) {
   const rowDefs = [
     // 支給
     { k: '賞与支給額', label: '賞　与　支　給　額', sec: 'pay', hl: 'gross', type: 'manual' },
@@ -3295,10 +3320,14 @@ function renderBonusTable(staffNames, saved) {
       if (def.type === 'manual') {
         const v = saved[name]?.[def.k] || 0;
         manualTotal += Number(v);
-        html += `<td style="padding:1px 2px;text-align:right">` +
-          `<input type="number" class="bonus-input" min="0" step="1"` +
-          ` data-staff="${name}" data-field="${def.k}" value="${v || ''}"` +
-          ` oninput="onBonusInput(this)"></td>`;
+        if (locked) {
+          html += `<td style="padding:1px 4px;text-align:right">${v ? fmtNum(v) : ''}</td>`;
+        } else {
+          html += `<td style="padding:1px 2px;text-align:right">` +
+            `<input type="number" class="bonus-input" min="0" step="1"` +
+            ` data-staff="${name}" data-field="${def.k}" value="${v || ''}"` +
+            ` oninput="onBonusInput(this)"></td>`;
+        }
       } else {
         // api / local: どちらも計算セル
         html += `<td class="bonus-calc-cell" data-staff="${name}" data-calc="${def.k}"></td>`;
@@ -3420,20 +3449,14 @@ function updateBonusColumnTotal(field) {
   totalCell.classList.toggle('zero', t === 0);
 }
 
-async function saveBonus() {
-  if (!bonusCurrentDate || bonusStaffList.length === 0) {
-    alert('先に「読込」ボタンを押してください。');
-    return;
-  }
-
+function collectBonusStaffData() {
   const getVal = (staffName, field) => {
     const input = document.querySelector(`.bonus-input[data-staff="${staffName}"][data-field="${field}"]`);
     if (input) return parseInt(input.value, 10) || 0;
     const cell = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="${field}"]`);
     return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
   };
-
-  const staffDataArray = bonusStaffList.map(staffName => ({
+  return bonusStaffList.map(staffName => ({
     staffName,
     賞与支給額:   getVal(staffName, '賞与支給額'),
     調整手当:     getVal(staffName, '調整手当'),
@@ -3448,18 +3471,58 @@ async function saveBonus() {
     控除合計:     getVal(staffName, '控除合計'),
     差引支給額:   getVal(staffName, '差引支給額'),
   }));
+}
 
+async function lockBonus() {
+  const date = bonusCurrentDate;
+  if (!date || !bonusStaffList.length) { alert('先に賞与データを読み込んでください。'); return; }
+  const [y, m, d] = date.split('-');
+  if (!confirm(`${y}年${m}月${d}日の賞与を確定してLarkに保存します。\n確定後は編集できなくなります。\n\nよろしいですか？`)) return;
+
+  const btn = document.getElementById('bonus-lock-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…';
   try {
-    const r = await fetch(`${API_BASE}/api/salary/bonus`, {
+    const staffDataArray = collectBonusStaffData();
+    const r = await fetch(`${API_BASE}/api/salary/bonus-lock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: bonusCurrentDate, staffDataArray }),
+      body: JSON.stringify({ date, staffDataArray }),
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error);
-    alert(`保存しました。（${j.saved}人分、${j.action === 'updated' ? '上書き更新' : '新規保存'}）`);
+    alert(`${y}年${m}月${d}日の賞与を確定しました（${j.count}人分保存）。`);
+    await loadBonus();
   } catch(e) {
-    alert(`保存エラー: ${e.message}`);
+    alert('確定保存エラー: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 賞与を確定してLarkに保存';
+  }
+}
+
+async function unlockBonus() {
+  const date = bonusCurrentDate;
+  if (!date) { alert('先に賞与データを読み込んでください。'); return; }
+  const [y, m, d] = date.split('-');
+  if (!confirm(`${y}年${m}月${d}日の確定を解除します。\n保存されたデータは削除され、再び編集できるようになります。\n\n本当に解除しますか？`)) return;
+
+  const btn = document.getElementById('bonus-unlock-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解除中…';
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/bonus-unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    alert(`${y}年${m}月${d}日の確定を解除しました。`);
+    await loadBonus();
+  } catch(e) {
+    alert('確定解除エラー: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定を解除して再編集';
   }
 }
 
@@ -3516,6 +3579,164 @@ async function downloadBonus() {
   }
 }
 
+// ============================================================
+// 賞与明細PDF
+// ============================================================
+function openBonusSlipModal() {
+  if (!bonusCurrentDate || !bonusStaffList.length) {
+    alert('先に賞与データを読み込んでください。');
+    return;
+  }
+  const list = document.getElementById('bonus-slip-staff-list');
+  list.innerHTML = bonusStaffList.map(name =>
+    `<label style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0">` +
+    `<input type="checkbox" class="bonus-slip-staff-cb" value="${name}" checked> ${name}</label>`
+  ).join('');
+  document.getElementById('bonus-slip-check-all').checked = true;
+  document.getElementById('bonus-slip-progress').textContent = '';
+  document.getElementById('bonus-slip-modal').classList.remove('hidden');
+}
+
+function closeBonusSlipModal() {
+  document.getElementById('bonus-slip-modal').classList.add('hidden');
+}
+
+function toggleAllBonusSlipStaff(checked) {
+  document.querySelectorAll('.bonus-slip-staff-cb').forEach(cb => { cb.checked = checked; });
+}
+
+async function startBonusSlipPDF() {
+  const selected = [...document.querySelectorAll('.bonus-slip-staff-cb:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+
+  const btn      = document.getElementById('bonus-slip-dl-btn');
+  const progress = document.getElementById('bonus-slip-progress');
+  btn.disabled   = true;
+
+  // 現在表示中の賞与データを収集する
+  const getVal = (staffName, field) => {
+    const input = document.querySelector(`.bonus-input[data-staff="${staffName}"][data-field="${field}"]`);
+    if (input) return parseInt(input.value, 10) || 0;
+    const cell  = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="${field}"]`);
+    return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
+  };
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf       = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const printArea = document.getElementById('bonus-slip-print-area');
+
+    for (let i = 0; i < selected.length; i++) {
+      const name = selected[i];
+      progress.textContent = `生成中… ${i + 1} / ${selected.length}  ${name}`;
+
+      const row = {
+        staffName:    name,
+        賞与支給額:   getVal(name, '賞与支給額'),
+        調整手当:     getVal(name, '調整手当'),
+        食費:         getVal(name, '食費'),
+        健康保険:     getVal(name, '健康保険'),
+        介護保険:     getVal(name, '介護保険'),
+        厚生年金:     getVal(name, '厚生年金'),
+        子育て支援金: getVal(name, '子育て支援金'),
+        雇用保険:     getVal(name, '雇用保険'),
+        社会保険計:   getVal(name, '社会保険計'),
+        課税対象額:   getVal(name, '課税対象額'),
+        源泉所得税:   getVal(name, '源泉所得税'),
+        支給合計:     getVal(name, '支給合計'),
+        控除合計:     getVal(name, '控除合計'),
+        差引支給額:   getVal(name, '差引支給額'),
+      };
+
+      printArea.innerHTML = buildBonusSlipHTML(row, bonusCurrentDate);
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+
+      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
+    }
+
+    const [y, m, d]  = bonusCurrentDate.split('-');
+    const fileName = `${y}${m}${d}_賞与明細.pdf`;
+    pdf.save(fileName);
+    progress.textContent = `✅ ${fileName} をダウンロードしました`;
+    setTimeout(closeBonusSlipModal, 1500);
+  } catch(e) {
+    progress.textContent = `⚠ エラー: ${e.message}`;
+    console.error('[bonus-slip-pdf]', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function buildBonusSlipHTML(row, date) {
+  const [y, m, d]   = date.split('-').map(Number);
+  const dateLabel   = `${toReiwa(y)}年${m}月${d}日`;
+  const f           = v => (v && Number(v) !== 0) ? Number(v).toLocaleString('ja-JP') : '';
+
+  const H      = 22;
+  const hdrDiv = (txt) =>
+    `<div style="position:relative;height:${H}px;background-color:#d6f0d6;overflow:hidden;">` +
+    `<span style="position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:11px;white-space:nowrap;">${txt}</span></div>`;
+  const valDiv = (txt) =>
+    `<div style="position:relative;height:${H}px;background-color:#fff;border-top:1px solid #000;overflow:hidden;">` +
+    `<span style="position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:13px;white-space:nowrap;">${txt}</span></div>`;
+
+  const c  = (lbl, val) => `<td class="slip-cell">${hdrDiv(lbl)}${valDiv(val)}</td>`;
+  const ch = (lbl, val) => `<td class="slip-cell highlight">${hdrDiv(lbl)}${valDiv(val)}</td>`;
+  const cb = ()          => `<td class="slip-cell blank">${hdrDiv('')}${valDiv('')}</td>`;
+
+  return `
+<div class="slip-wrapper">
+  <div class="slip-header-block">
+    <div class="slip-header-box">
+      <div class="slip-company-name">合同会社 GLAD Life Create</div>
+      <div class="slip-title-text">賞与明細書</div>
+      <div class="slip-period-name">${dateLabel}　${row.staffName}　様</div>
+    </div>
+    <div class="slip-greeting">今回もご苦労さまでした。</div>
+  </div>
+
+  <!-- 支給セクション -->
+  <div class="slip-section">
+    <div class="sec-label"><span>支</span><span>給</span></div>
+    <table class="sec-table">
+      <tr>
+        ${c('賞与支給額', f(row['賞与支給額']))}
+        ${c('調整手当',   f(row['調整手当']))}
+        ${cb()}${cb()}${cb()}${cb()}${cb()}
+        ${ch('支給合計',  f(row['支給合計']))}
+      </tr>
+    </table>
+  </div>
+
+  <!-- 控除セクション -->
+  <div class="slip-section">
+    <div class="sec-label"><span>控</span><span>除</span></div>
+    <table class="sec-table">
+      <tr>
+        ${c('健康保険',     f(row['健康保険']))}
+        ${c('介護保険',     f(row['介護保険']))}
+        ${c('厚生年金',     f(row['厚生年金']))}
+        ${c('子育て支援金', f(row['子育て支援金']))}
+        ${c('雇用保険',     f(row['雇用保険']))}
+        ${c('社会保険計',   f(row['社会保険計']))}
+        ${c('課税対象額',   f(row['課税対象額']))}
+        ${c('源泉所得税',   f(row['源泉所得税']))}
+      </tr>
+      <tr>
+        ${c('食費', f(row['食費']))}
+        ${cb()}${cb()}${cb()}${cb()}${cb()}
+        ${c('控除合計',  f(row['控除合計']))}
+        ${ch('差引支給額', f(row['差引支給額']))}
+      </tr>
+    </table>
+  </div>
+</div>`;
+}
+
 // 処遇改善加算タブの対象月セレクトを初期化する（給与一覧表と同じ月を初期値にする）
 (function initTreatmentMonth() {
   const now = new Date();
@@ -3545,5 +3766,28 @@ async function downloadBonus() {
 
 <!-- 給与明細 html2canvas 用隠し描画エリア -->
 <div id="slip-print-area"></div>
+
+<!-- ===================================================== -->
+<!-- 賞与明細 スタッフ選択モーダル                         -->
+<!-- ===================================================== -->
+<div class="modal-overlay hidden" id="bonus-slip-modal" onclick="if(event.target===this)closeBonusSlipModal()">
+  <div class="modal-box" style="max-width:480px">
+    <h3 style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 賞与明細PDF 出力</h3>
+    <label style="display:flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.3rem">
+      <input type="checkbox" id="bonus-slip-check-all" onchange="toggleAllBonusSlipStaff(this.checked)"> 全員選択
+    </label>
+    <div class="slip-staff-list" id="bonus-slip-staff-list"></div>
+    <div class="modal-btns" style="margin-top:0.8rem">
+      <button class="btn-cancel" onclick="closeBonusSlipModal()">キャンセル</button>
+      <button class="btn-primary" id="bonus-slip-dl-btn" onclick="startBonusSlipPDF()">
+        <i class="fa-solid fa-file-pdf"></i> ダウンロード
+      </button>
+    </div>
+    <div id="bonus-slip-progress" style="margin-top:0.6rem;font-size:0.85rem;color:var(--muted);min-height:1.2em"></div>
+  </div>
+</div>
+
+<!-- 賞与明細 html2canvas 用隠し描画エリア -->
+<div id="bonus-slip-print-area"></div>
 </body>
 </html>
