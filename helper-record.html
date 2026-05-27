@@ -628,7 +628,7 @@
     </div>
     <!-- 件数表示 -->
     <div id="recordCount" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
-    <!-- アーカイブ状態バッジ・操作ボタン -->
+    <!-- 圧縮状態バッジ・操作ボタン -->
     <div id="archiveBar" style="display:none;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"></div>
     <!-- レコードリスト -->
     <div class="records-area" id="recordsList">
@@ -1860,32 +1860,32 @@
       }
     }
 
-    // アーカイブ状態バッジ・ボタンを更新する
+    // 圧縮状態バッジ・ボタンを更新する
     function updateArchiveBar(isArchived, year, month) {
       const bar = document.getElementById('archiveBar');
       if (!year || !month) { bar.style.display = 'none'; return; }
       const monthStr = `${year}-${month.padStart(2, '0')}`;
 
       if (isArchived) {
-        // 状態A: アーカイブ済み → バッジ＋解除ボタン
+        // 状態A: 圧縮済み → バッジ＋圧縮解除ボタン
         bar.style.display = 'flex';
         bar.innerHTML =
           `<span style="background:#d1ecf1;color:#0c5460;border:1.5px solid #bee5eb;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.82rem;font-weight:700;">` +
-          `🔒 アーカイブ済み（編集不可）</span>` +
-          `<button onclick="unarchiveMonth('${monthStr}')" ` +
+          `🔒 圧縮済み（編集不可）</span>` +
+          `<button onclick="decompressMonth('${monthStr}')" ` +
           `style="background:#c0392b;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
-          `<i class="fa-solid fa-lock-open"></i> アーカイブを解除して編集可能にする</button>`;
+          `<i class="fa-solid fa-lock-open"></i> 🔓 圧縮解除</button>`;
       } else {
         // 2ヶ月以上前かどうかを判定する
         const now = new Date();
         const diffMonths = (now.getFullYear() - parseInt(year)) * 12 + (now.getMonth() + 1 - parseInt(month));
         if (diffMonths >= 2) {
-          // 状態B: 非アーカイブ + 2ヶ月以上前 → アーカイブボタンのみ
+          // 状態B: 未圧縮 + 2ヶ月以上前 → 再圧縮ボタンのみ
           bar.style.display = 'flex';
           bar.innerHTML =
-            `<button onclick="archiveMonth('${monthStr}')" ` +
+            `<button onclick="compressMonth('${monthStr}')" ` +
             `style="background:#2d6a4f;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
-            `<i class="fa-solid fa-box-archive"></i> 1ヶ月分の記録をアーカイブして容量を節約</button>`;
+            `<i class="fa-solid fa-box-archive"></i> 🔒 再圧縮する</button>`;
         } else {
           // 状態C: 今月・先月 → バーを非表示
           bar.style.display = 'none';
@@ -1893,32 +1893,32 @@
       }
     }
 
-    async function archiveMonth(monthStr) {
-      if (!confirm(`${monthStr} の全ヘルパー記録をアーカイブ（圧縮保存）しますか？\n元のレコードは削除されますが、解除ボタンで復元できます。`)) return;
+    async function compressMonth(monthStr) {
+      if (!confirm(`${monthStr} の全ヘルパー記録を圧縮保存しますか？\n元のレコードは削除されますが、圧縮解除ボタンで復元できます。`)) return;
       const bar = document.getElementById('archiveBar');
-      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> アーカイブ中…</span>`;
+      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> 圧縮中…</span>`;
       try {
-        const r = await fetch(`${API_BASE}/api/helper/archive`, {
+        const r = await fetch(`${API_BASE}/api/helper/compress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ month: monthStr }),
         });
         const j = await r.json();
         if (!j.ok) throw new Error(j.error);
-        alert(`${monthStr} のヘルパー記録 ${j.archived}件をアーカイブしました。`);
+        alert(`${monthStr} のヘルパー記録 ${j.archived}件を圧縮しました。`);
         await loadRecords();
       } catch(e) {
-        alert('アーカイブエラー: ' + e.message);
+        alert('圧縮エラー: ' + e.message);
         await loadRecords();
       }
     }
 
-    async function unarchiveMonth(monthStr) {
-      if (!confirm(`${monthStr} のアーカイブを解除して元のレコードに戻しますか？\n数百件の復元処理が発生する場合があります。`)) return;
+    async function decompressMonth(monthStr) {
+      if (!confirm(`${monthStr} の圧縮を解除して元のレコードに戻しますか？\n数百件の復元処理が発生する場合があります。`)) return;
       const bar = document.getElementById('archiveBar');
-      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> 解凍・復元中… しばらくお待ちください</span>`;
+      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> 圧縮解除・復元中… しばらくお待ちください</span>`;
       try {
-        const r = await fetch(`${API_BASE}/api/helper/unarchive`, {
+        const r = await fetch(`${API_BASE}/api/helper/decompress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ month: monthStr }),
@@ -1928,7 +1928,7 @@
         alert(`${monthStr} のヘルパー記録 ${j.restored}件を復元しました。`);
         await loadRecords();
       } catch(e) {
-        alert('アーカイブ解除エラー: ' + e.message);
+        alert('圧縮解除エラー: ' + e.message);
         await loadRecords();
       }
     }
@@ -1966,7 +1966,7 @@
       return `${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${days[jst.getUTCDay()]})`;
     }
 
-    let currentIsArchived = false; // アーカイブ状態を保持する
+    let currentIsArchived = false; // 圧縮状態を保持する
 
     function renderRecords(records, isArchived) {
       currentIsArchived = !!isArchived;
@@ -2121,7 +2121,7 @@
 
     // 異常ボタン：異常記録モーダルを開く
     function onIjo() {
-      if (currentIsArchived) { alert('アーカイブ済みの記録は編集できません。先に解除してください。'); return; }
+      if (currentIsArchived) { alert('圧縮済みの記録は編集できません。先に圧縮解除してください。'); return; }
       if (!getSelectedRecord()) return;
       openIjoModal();
     }
@@ -2527,7 +2527,7 @@
 
     // 中止ボタン：中止記録モーダルを開く
     function onChushi() {
-      if (currentIsArchived) { alert('アーカイブ済みの記録は編集できません。先に解除してください。'); return; }
+      if (currentIsArchived) { alert('圧縮済みの記録は編集できません。先に圧縮解除してください。'); return; }
       const r = getSelectedRecord();
       if (!r) return;
       openChushiModal();
@@ -2673,7 +2673,7 @@
 
     // 削除ボタン（アクションバー用）：選択中の記録を削除する
     function onFabDelete() {
-      if (currentIsArchived) { alert('アーカイブ済みの記録は編集・削除できません。\n先に「アーカイブを解除して編集可能にする」ボタンを押してください。'); return; }
+      if (currentIsArchived) { alert('圧縮済みの記録は編集・削除できません。\n先に「🔓 圧縮解除」ボタンを押してください。'); return; }
       const r = getSelectedRecord();
       if (!r) return;
       deleteRecord(r.recordId, r.氏名);
