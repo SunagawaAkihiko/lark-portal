@@ -540,6 +540,8 @@
     }
 
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -619,6 +621,9 @@
       </div>
       <button class="filter-btn" id="searchBtn">
         <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+      <button class="filter-btn" id="pdfBtn" onclick="downloadPDF()" title="PDFダウンロード" style="background:#457b9d">
+        <i class="fa-solid fa-file-pdf"></i>
       </button>
     </div>
     <!-- 件数表示 -->
@@ -3692,6 +3697,119 @@
       updateStaffSelects(activeOffice, kinmu);
       updateNightShift2Visibility(activeOffice, kinmu);
     });
+
+    // ============================================================
+    // PDFダウンロード
+    // ============================================================
+
+    async function downloadPDF() {
+      if (currentRecords.length === 0) { alert('表示中の記録がありません。先に検索してください。'); return; }
+
+      const pdfBtn = document.getElementById('pdfBtn');
+      pdfBtn.disabled = true;
+      pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const monthVal = document.getElementById('filterMonth').value || '';
+        const [year, month] = monthVal.split('-');
+        const nameVal  = document.getElementById('filterName').value;
+        const kinmuVal = document.getElementById('filterKinmu').value;
+
+        // タイトル文字列
+        let title = `ヘルパー記録　${year}年${month}月`;
+        if (activeOffice) title += `　${activeOffice}`;
+        if (nameVal)      title += `　${nameVal}`;
+        if (kinmuVal)     title += `　${kinmuVal}`;
+
+        // 日付昇順で並べ直す
+        const sorted = [...currentRecords].sort((a, b) => a.実施日 - b.実施日);
+        const days = ['日','月','火','水','木','金','土'];
+
+        // テーブル行HTML生成
+        let rowsHtml = '';
+        let prevDateKey = '';
+        for (const r of sorted) {
+          const jst = new Date(r.実施日 + 9 * 3600 * 1000);
+          const dateKey = `${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${days[jst.getUTCDay()]})`;
+          const isNewDate = dateKey !== prevDateKey;
+          prevDateKey = dateKey;
+          const rowBg = isNewDate ? '#fdf6ec' : '#ffffff';
+          rowsHtml += `
+            <tr style="background:${rowBg};border-bottom:1px solid #ddd">
+              <td style="padding:3px 5px;white-space:nowrap;font-weight:${isNewDate?700:400}">${dateKey}</td>
+              <td style="padding:3px 5px;white-space:nowrap">${escHtml(r.氏名||'')}</td>
+              <td style="padding:3px 5px;white-space:nowrap;font-size:9px">${escHtml(r.勤務区分||'')}</td>
+              <td style="padding:3px 5px;white-space:nowrap">${escHtml(r.作業項目||'')}</td>
+              <td style="padding:3px 5px;text-align:center;white-space:nowrap">${escHtml(r.提供時間||'')}</td>
+              <td style="padding:3px 5px;white-space:nowrap;font-size:9px">${escHtml(r.スタッフ||'')}</td>
+              <td style="padding:3px 5px;white-space:nowrap;font-size:9px">${escHtml(r.記録分類||'')}</td>
+              <td style="padding:3px 5px;font-size:9px;max-width:260px;word-break:break-all">${escHtml(r.記録内容||'')}</td>
+            </tr>`;
+        }
+
+        // PDF用オフスクリーンコンテナを構築（A4横比率に合わせた幅 1120px）
+        const wrap = document.createElement('div');
+        wrap.style.cssText = [
+          'position:fixed','top:-9999px','left:0',
+          'width:1120px','background:#fff',
+          'padding:20px 24px','box-sizing:border-box',
+          'font-family:"Zen Kaku Gothic New",sans-serif','color:#333',
+        ].join(';');
+        wrap.innerHTML = `
+          <div style="margin-bottom:10px;display:flex;align-items:baseline;gap:12px">
+            <span style="font-size:13px;font-weight:700">${title}</span>
+            <span style="font-size:10px;color:#888">${sorted.length}件</span>
+            <span style="font-size:9px;color:#aaa;margin-left:auto">出力日: ${new Date().toLocaleDateString('ja-JP')}</span>
+          </div>
+          <table style="border-collapse:collapse;width:100%;font-size:11px">
+            <thead>
+              <tr style="background:#4a3f35;color:#fff">
+                <th style="padding:4px 5px;text-align:left;white-space:nowrap">実施日</th>
+                <th style="padding:4px 5px;text-align:left">氏名</th>
+                <th style="padding:4px 5px;text-align:left">勤務区分</th>
+                <th style="padding:4px 5px;text-align:left">作業項目</th>
+                <th style="padding:4px 5px;text-align:center">時間</th>
+                <th style="padding:4px 5px;text-align:left">スタッフ</th>
+                <th style="padding:4px 5px;text-align:left">分類</th>
+                <th style="padding:4px 5px;text-align:left">記録内容</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>`;
+        document.body.appendChild(wrap);
+
+        const canvas = await html2canvas(wrap, { scale: 1.5, useCORS: true, logging: false });
+        document.body.removeChild(wrap);
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const pdf    = new jsPDF('l', 'mm', 'a4');
+        const pdfW   = pdf.internal.pageSize.getWidth();
+        const pdfH   = pdf.internal.pageSize.getHeight();
+        const ratio  = pdfW / canvas.width;
+        const imgH   = canvas.height * ratio;
+
+        let yOff = 0;
+        while (yOff < imgH) {
+          if (yOff > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -yOff, pdfW, imgH);
+          yOff += pdfH;
+        }
+
+        const namePart  = nameVal  ? `_${nameVal}`  : '';
+        const kinmuPart = kinmuVal ? `_${kinmuVal}` : '';
+        const officePart = activeOffice ? `_${activeOffice}` : '';
+        pdf.save(`ヘルパー記録_${year}年${month}月${officePart}${namePart}${kinmuPart}.pdf`);
+
+      } catch (e) {
+        console.error('[downloadPDF]', e);
+        alert('PDF生成に失敗しました: ' + e.message);
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+      }
+    }
+
   </script>
 </body>
 </html>
