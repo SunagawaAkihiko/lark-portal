@@ -3221,9 +3221,10 @@ async function loadBonus() {
   document.getElementById('bonus-scroll').classList.add('hidden');
   document.getElementById('bonus-print-bar').classList.add('hidden');
   try {
-    // スタッフリスト取得
+    // スタッフリスト取得（退職月の翌々月以降は非表示フィルタを適用）
+    const bonusMonth = date.slice(0, 7); // 'YYYY-MM'
     if (staffList.length === 0) {
-      const r = await fetch(`${API_BASE}/api/salary/staff-list`);
+      const r = await fetch(`${API_BASE}/api/salary/staff-list?month=${bonusMonth}`);
       const j = await r.json();
       if (!j.ok) throw new Error(j.error);
       bonusStaffList = sortedBonusStaff(j.list.map(s => s.staffName));
