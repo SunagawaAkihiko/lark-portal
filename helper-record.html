@@ -1865,8 +1865,10 @@
       const bar = document.getElementById('archiveBar');
       if (!year || !month) { bar.style.display = 'none'; return; }
       const monthStr = `${year}-${month.padStart(2, '0')}`;
-      bar.style.display = 'flex';
+
       if (isArchived) {
+        // 状態A: アーカイブ済み → バッジ＋解除ボタン
+        bar.style.display = 'flex';
         bar.innerHTML =
           `<span style="background:#d1ecf1;color:#0c5460;border:1.5px solid #bee5eb;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.82rem;font-weight:700;">` +
           `🔒 アーカイブ済み（編集不可）</span>` +
@@ -1874,10 +1876,20 @@
           `style="background:#c0392b;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
           `<i class="fa-solid fa-lock-open"></i> アーカイブを解除して編集可能にする</button>`;
       } else {
-        bar.innerHTML =
-          `<button onclick="archiveMonth('${monthStr}')" ` +
-          `style="background:#2d6a4f;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
-          `<i class="fa-solid fa-box-archive"></i> 1ヶ月分の記録をアーカイブして容量を節約</button>`;
+        // 2ヶ月以上前かどうかを判定する
+        const now = new Date();
+        const diffMonths = (now.getFullYear() - parseInt(year)) * 12 + (now.getMonth() + 1 - parseInt(month));
+        if (diffMonths >= 2) {
+          // 状態B: 非アーカイブ + 2ヶ月以上前 → アーカイブボタンのみ
+          bar.style.display = 'flex';
+          bar.innerHTML =
+            `<button onclick="archiveMonth('${monthStr}')" ` +
+            `style="background:#2d6a4f;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
+            `<i class="fa-solid fa-box-archive"></i> 1ヶ月分の記録をアーカイブして容量を節約</button>`;
+        } else {
+          // 状態C: 今月・先月 → バーを非表示
+          bar.style.display = 'none';
+        }
       }
     }
 
