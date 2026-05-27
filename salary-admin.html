@@ -1361,7 +1361,7 @@ async function lockSalary() {
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '確定保存失敗');
-    alert(`${month.replace('-','年')}月分の給与を確定しました（${j.created}件保存）。`);
+    alert(`${month.replace('-','年')}月分の給与を確定しました（${j.count}人分保存）。`);
     await loadSalary(); // 再読み込みしてロック状態を反映
   } catch(e) {
     alert('確定保存エラー: ' + e.message);
