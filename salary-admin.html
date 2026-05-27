@@ -3457,7 +3457,7 @@ async function saveBonus() {
     });
     const j = await r.json();
     if (!j.ok) throw new Error(j.error);
-    alert(`保存しました。（新規: ${j.created}件、更新: ${j.updated}件）`);
+    alert(`保存しました。（${j.saved}人分、${j.action === 'updated' ? '上書き更新' : '新規保存'}）`);
   } catch(e) {
     alert(`保存エラー: ${e.message}`);
   }
