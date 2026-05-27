@@ -908,6 +908,9 @@
     <button class="btn-secondary" onclick="openSlipModal()" style="margin-left:0.4rem">
       <i class="fa-solid fa-receipt"></i> 給与明細PDF
     </button>
+    <button class="btn-secondary" onclick="openSlipModal('email')" style="margin-left:0.4rem">
+      <i class="fa-solid fa-envelope"></i> メール送信
+    </button>
   </div>
   <div id="salary-status" class="status-area">月を選択して「取得」を押してください。</div>
   <div class="salary-scroll hidden" id="salary-scroll">
@@ -948,6 +951,9 @@
     </button>
     <button class="btn-secondary" id="bonus-slip-btn" onclick="openBonusSlipModal()" style="margin-left:0.4rem">
       <i class="fa-solid fa-receipt"></i> 賞与明細PDF
+    </button>
+    <button class="btn-secondary" onclick="openBonusSlipModal('email')" style="margin-left:0.4rem">
+      <i class="fa-solid fa-envelope"></i> メール送信
     </button>
   </div>
   <div id="bonus-status" class="status-area">支払日を選択して「読込」を押してください。</div>
@@ -2934,15 +2940,18 @@ document.getElementById('treatment-total').addEventListener('input', () => updat
 let salaryRows        = [];
 let salaryCurrentMonth = '';
 
+let slipModalMode = 'pdf'; // 'pdf' or 'email'
+
 /**
  * 給与明細モーダルを開く
- * salaryRowsが空の場合はアラートを出して中断する
+ * mode='pdf' → ダウンロードモード / mode='email' → メール送信モード
  */
-function openSlipModal() {
+function openSlipModal(mode = 'pdf') {
   if (!salaryRows.length) {
     alert('先に給与データを取得してください。');
     return;
   }
+  slipModalMode = mode;
   // スタッフ選択チェックボックスを生成する
   const list = document.getElementById('slip-staff-list');
   list.innerHTML = '';
@@ -2953,6 +2962,13 @@ function openSlipModal() {
   });
   document.getElementById('slip-check-all').checked = true;
   document.getElementById('slip-progress').textContent = '';
+  // モードに応じてタイトルとボタンを切り替える
+  const isEmail = mode === 'email';
+  document.getElementById('slip-modal-title').innerHTML =
+    isEmail ? '<i class="fa-solid fa-envelope"></i> 給与明細 メール送信'
+            : '<i class="fa-solid fa-receipt"></i> 給与明細PDF 出力';
+  document.getElementById('slip-dl-btn').classList.toggle('hidden', isEmail);
+  document.getElementById('slip-email-btn').classList.toggle('hidden', !isEmail);
   document.getElementById('slip-modal').classList.remove('hidden');
 }
 
@@ -3009,6 +3025,54 @@ async function startSlipPDF() {
   } catch(e) {
     progress.textContent = `⚠ エラー: ${e.message}`;
     console.error('[slip-pdf]', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** 選択スタッフの給与明細PDFを生成してメール送信する */
+async function startSlipEmailSend() {
+  const selected = [...document.querySelectorAll('.slip-staff-cb:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+
+  const btn      = document.getElementById('slip-email-btn');
+  const progress = document.getElementById('slip-progress');
+  btn.disabled   = true;
+
+  const printArea = document.getElementById('slip-print-area');
+  let sent = 0, skipped = 0;
+
+  try {
+    for (let i = 0; i < selected.length; i++) {
+      const name = selected[i];
+      const row  = salaryRows.find(r => r.staffName === name);
+      if (!row) { skipped++; continue; }
+
+      progress.textContent = `処理中… ${i + 1} / ${selected.length}  ${name}`;
+
+      // 1人分のPDFをBase64で生成する
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      printArea.innerHTML = buildSlipHTML(row, salaryCurrentMonth);
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
+      const pdfBase64 = pdf.output('datauristring');
+
+      const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffName: name, month: salaryCurrentMonth, type: 'salary', pdfBase64 }),
+      });
+      const j2 = await r2.json();
+      if (!j2.ok) throw new Error(j2.error);
+      if (j2.skipped) skipped++; else sent++;
+    }
+    progress.textContent = `✅ 完了：${sent}件送信、${skipped}件スキップ（メールアドレスなし等）`;
+  } catch(e) {
+    progress.textContent = `⚠ エラー: ${e.message}`;
+    console.error('[slip-email]', e);
   } finally {
     btn.disabled = false;
   }
@@ -3581,13 +3645,16 @@ async function downloadBonus() {
 }
 
 // ============================================================
-// 賞与明細PDF
+// 賞与明細PDF / メール送信
 // ============================================================
-function openBonusSlipModal() {
+let bonusSlipModalMode = 'pdf'; // 'pdf' or 'email'
+
+function openBonusSlipModal(mode = 'pdf') {
   if (!bonusCurrentDate || !bonusStaffList.length) {
     alert('先に賞与データを読み込んでください。');
     return;
   }
+  bonusSlipModalMode = mode;
   const list = document.getElementById('bonus-slip-staff-list');
   list.innerHTML = bonusStaffList.map(name =>
     `<label style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0">` +
@@ -3595,6 +3662,12 @@ function openBonusSlipModal() {
   ).join('');
   document.getElementById('bonus-slip-check-all').checked = true;
   document.getElementById('bonus-slip-progress').textContent = '';
+  const isEmail = mode === 'email';
+  document.getElementById('bonus-slip-modal-title').innerHTML =
+    isEmail ? '<i class="fa-solid fa-envelope"></i> 賞与明細 メール送信'
+            : '<i class="fa-solid fa-receipt"></i> 賞与明細PDF 出力';
+  document.getElementById('bonus-slip-dl-btn').classList.toggle('hidden', isEmail);
+  document.getElementById('bonus-slip-email-btn').classList.toggle('hidden', !isEmail);
   document.getElementById('bonus-slip-modal').classList.remove('hidden');
 }
 
@@ -3667,6 +3740,74 @@ async function startBonusSlipPDF() {
   } catch(e) {
     progress.textContent = `⚠ エラー: ${e.message}`;
     console.error('[bonus-slip-pdf]', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** 選択スタッフの賞与明細PDFを生成してメール送信する */
+async function startBonusSlipEmailSend() {
+  const selected = [...document.querySelectorAll('.bonus-slip-staff-cb:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+
+  const btn      = document.getElementById('bonus-slip-email-btn');
+  const progress = document.getElementById('bonus-slip-progress');
+  btn.disabled   = true;
+
+  const printArea = document.getElementById('bonus-slip-print-area');
+  const getVal = (staffName, field) => {
+    const input = document.querySelector(`.bonus-input[data-staff="${staffName}"][data-field="${field}"]`);
+    if (input) return parseInt(input.value, 10) || 0;
+    const cell  = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="${field}"]`);
+    return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
+  };
+
+  let sent = 0, skipped = 0;
+  try {
+    for (let i = 0; i < selected.length; i++) {
+      const name = selected[i];
+      progress.textContent = `処理中… ${i + 1} / ${selected.length}  ${name}`;
+
+      const row = {
+        staffName:    name,
+        賞与支給額:   getVal(name, '賞与支給額'),
+        調整手当:     getVal(name, '調整手当'),
+        食費:         getVal(name, '食費'),
+        健康保険:     getVal(name, '健康保険'),
+        介護保険:     getVal(name, '介護保険'),
+        厚生年金:     getVal(name, '厚生年金'),
+        子育て支援金: getVal(name, '子育て支援金'),
+        雇用保険:     getVal(name, '雇用保険'),
+        社会保険計:   getVal(name, '社会保険計'),
+        課税対象額:   getVal(name, '課税対象額'),
+        源泉所得税:   getVal(name, '源泉所得税'),
+        支給合計:     getVal(name, '支給合計'),
+        控除合計:     getVal(name, '控除合計'),
+        差引支給額:   getVal(name, '差引支給額'),
+      };
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      printArea.innerHTML = buildBonusSlipHTML(row, bonusCurrentDate);
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
+      const pdfBase64 = pdf.output('datauristring');
+
+      const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffName: name, month: bonusCurrentDate, type: 'bonus', pdfBase64 }),
+      });
+      const j2 = await r2.json();
+      if (!j2.ok) throw new Error(j2.error);
+      if (j2.skipped) skipped++; else sent++;
+    }
+    progress.textContent = `✅ 完了：${sent}件送信、${skipped}件スキップ（メールアドレスなし等）`;
+  } catch(e) {
+    progress.textContent = `⚠ エラー: ${e.message}`;
+    console.error('[bonus-slip-email]', e);
   } finally {
     btn.disabled = false;
   }
@@ -3746,11 +3887,11 @@ function buildBonusSlipHTML(row, date) {
 })();
 </script>
 <!-- ===================================================== -->
-<!-- 給与明細 スタッフ選択モーダル                         -->
+<!-- 給与明細 スタッフ選択モーダル（PDF / メール送信 共用） -->
 <!-- ===================================================== -->
 <div class="modal-overlay hidden" id="slip-modal" onclick="if(event.target===this)closeSlipModal()">
   <div class="modal-box" style="max-width:480px">
-    <h3 style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 給与明細PDF 出力</h3>
+    <h3 id="slip-modal-title" style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 給与明細PDF 出力</h3>
     <label style="display:flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.3rem">
       <input type="checkbox" id="slip-check-all" onchange="toggleAllSlipStaff(this.checked)"> 全員選択
     </label>
@@ -3759,6 +3900,9 @@ function buildBonusSlipHTML(row, date) {
       <button class="btn-cancel" onclick="closeSlipModal()">キャンセル</button>
       <button class="btn-primary" id="slip-dl-btn" onclick="startSlipPDF()">
         <i class="fa-solid fa-file-pdf"></i> ダウンロード
+      </button>
+      <button class="btn-primary hidden" id="slip-email-btn" onclick="startSlipEmailSend()" style="background:#1a6fa0">
+        <i class="fa-solid fa-paper-plane"></i> メール送信
       </button>
     </div>
     <div id="slip-progress" style="margin-top:0.6rem;font-size:0.85rem;color:var(--muted);min-height:1.2em"></div>
@@ -3769,11 +3913,11 @@ function buildBonusSlipHTML(row, date) {
 <div id="slip-print-area"></div>
 
 <!-- ===================================================== -->
-<!-- 賞与明細 スタッフ選択モーダル                         -->
+<!-- 賞与明細 スタッフ選択モーダル（PDF / メール送信 共用） -->
 <!-- ===================================================== -->
 <div class="modal-overlay hidden" id="bonus-slip-modal" onclick="if(event.target===this)closeBonusSlipModal()">
   <div class="modal-box" style="max-width:480px">
-    <h3 style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 賞与明細PDF 出力</h3>
+    <h3 id="bonus-slip-modal-title" style="margin-bottom:0.8rem"><i class="fa-solid fa-receipt"></i> 賞与明細PDF 出力</h3>
     <label style="display:flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.3rem">
       <input type="checkbox" id="bonus-slip-check-all" onchange="toggleAllBonusSlipStaff(this.checked)"> 全員選択
     </label>
@@ -3782,6 +3926,9 @@ function buildBonusSlipHTML(row, date) {
       <button class="btn-cancel" onclick="closeBonusSlipModal()">キャンセル</button>
       <button class="btn-primary" id="bonus-slip-dl-btn" onclick="startBonusSlipPDF()">
         <i class="fa-solid fa-file-pdf"></i> ダウンロード
+      </button>
+      <button class="btn-primary hidden" id="bonus-slip-email-btn" onclick="startBonusSlipEmailSend()" style="background:#1a6fa0">
+        <i class="fa-solid fa-paper-plane"></i> メール送信
       </button>
     </div>
     <div id="bonus-slip-progress" style="margin-top:0.6rem;font-size:0.85rem;color:var(--muted);min-height:1.2em"></div>
