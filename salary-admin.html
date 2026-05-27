@@ -243,6 +243,18 @@
     }
     .print-toolbar .month-label { font-weight: 700; font-size: 0.95rem; color: var(--brown-dark); flex: 1; }
 
+    /* ── 給与確定ロックバッジ ── */
+    .lock-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.82rem; font-weight: 700;
+    }
+    .lock-badge.locked   { background: #d1ecf1; color: #0c5460; border: 1.5px solid #bee5eb; }
+    .lock-badge.unlocked { background: #fff3cd; color: #856404; border: 1.5px solid #ffc107; }
+    .btn-lock   { background: #2d6a4f; color: white; border: none; border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.82rem; font-weight: 700; height: 2.2rem; }
+    .btn-lock:hover   { opacity: 0.85; }
+    .btn-unlock { background: #c0392b; color: white; border: none; border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.82rem; font-weight: 700; height: 2.2rem; }
+    .btn-unlock:hover { opacity: 0.85; }
+
     /* ==================== ▼ タブ2: 有休管理 ==================== */
     /* flex: 1 + min-height: 0 + overflow-y: auto で縦スクロールを発生させる */
     .leave-grid {
@@ -883,6 +895,13 @@
   </div>
   <div class="print-toolbar hidden" id="salary-print-bar">
     <span class="month-label" id="salary-print-label"></span>
+    <span id="salary-lock-badge" class="lock-badge hidden"></span>
+    <button id="salary-lock-btn"   class="btn-lock   hidden" onclick="lockSalary()">
+      <i class="fa-solid fa-lock"></i> 給与を確定してLarkに保存
+    </button>
+    <button id="salary-unlock-btn" class="btn-unlock hidden" onclick="unlockSalary()">
+      <i class="fa-solid fa-lock-open"></i> 確定を解除して再計算
+    </button>
     <button class="btn-secondary" id="salary-pdf-btn" onclick="downloadSalary()">
       <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
     </button>
@@ -1295,7 +1314,6 @@ async function loadSalary() {
     const r = await fetch(`${API_BASE}/api/salary/monthly?month=${month}`);
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '取得失敗');
-    // 給与明細PDF生成用にデータをグローバルに保持する
     salaryRows         = j.data;
     salaryCurrentMonth = month;
     renderSalaryTable(j.data, month);
@@ -1304,8 +1322,76 @@ async function loadSalary() {
     document.getElementById('salary-print-bar').classList.remove('hidden');
     document.getElementById('salary-print-label').textContent =
       `${month.replace('-','年')}月分 給与支給控除一覧表`;
+
+    // ── ロック状態に応じてバッジ・ボタンを切り替える ──
+    const badge     = document.getElementById('salary-lock-badge');
+    const lockBtn   = document.getElementById('salary-lock-btn');
+    const unlockBtn = document.getElementById('salary-unlock-btn');
+    if (j.locked) {
+      badge.textContent = '🔒 確定済み（保存データ）';
+      badge.className   = 'lock-badge locked';
+      badge.classList.remove('hidden');
+      lockBtn.classList.add('hidden');
+      unlockBtn.classList.remove('hidden');
+    } else {
+      badge.textContent = '🔓 未確定（リアルタイム計算）';
+      badge.className   = 'lock-badge unlocked';
+      badge.classList.remove('hidden');
+      lockBtn.classList.remove('hidden');
+      unlockBtn.classList.add('hidden');
+    }
   } catch(e) {
     setStatus('salary', 'error', `エラー: ${e.message}`);
+  }
+}
+
+async function lockSalary() {
+  const month = salaryCurrentMonth;
+  if (!month || !salaryRows.length) { alert('先に給与データを取得してください。'); return; }
+  if (!confirm(`${month.replace('-','年')}月分の給与を確定してLarkに保存します。\n確定後は自動再計算が停止され、保存済みデータのみ表示されます。\n\nよろしいですか？`)) return;
+
+  const btn = document.getElementById('salary-lock-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…';
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/lock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, salaryData: salaryRows }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '確定保存失敗');
+    alert(`${month.replace('-','年')}月分の給与を確定しました（${j.created}件保存）。`);
+    await loadSalary(); // 再読み込みしてロック状態を反映
+  } catch(e) {
+    alert('確定保存エラー: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 給与を確定してLarkに保存';
+  }
+}
+
+async function unlockSalary() {
+  const month = salaryCurrentMonth;
+  if (!month) { alert('先に給与データを取得してください。'); return; }
+  if (!confirm(`${month.replace('-','年')}月分の確定を解除します。\n保存されたデータは削除され、再びリアルタイム計算に戻ります。\n\n本当に解除しますか？`)) return;
+
+  const btn = document.getElementById('salary-unlock-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解除中…';
+  try {
+    const r = await fetch(`${API_BASE}/api/salary/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month }),
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '確定解除失敗');
+    alert(`${month.replace('-','年')}月分の確定を解除しました。`);
+    await loadSalary(); // 再読み込みしてリアルタイム計算を表示
+  } catch(e) {
+    alert('確定解除エラー: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定を解除して再計算';
   }
 }
 
