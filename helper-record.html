@@ -623,6 +623,8 @@
     </div>
     <!-- 件数表示 -->
     <div id="recordCount" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
+    <!-- アーカイブ状態バッジ・操作ボタン -->
+    <div id="archiveBar" style="display:none;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"></div>
     <!-- レコードリスト -->
     <div class="records-area" id="recordsList">
       <div class="status-msg">
@@ -1839,7 +1841,8 @@
 
         currentRecords = data.records || [];
         document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
-        renderRecords(currentRecords);
+        renderRecords(currentRecords, data.isArchived);
+        updateArchiveBar(data.isArchived, year, month);
         // 氏名フィルターなし時のみ全員リストを更新する
         // フィルターあり時は filtered 結果しか返らないためキャッシュを上書きしない
         if (!name) {
@@ -1848,6 +1851,68 @@
         refreshFilterNames();
       } catch (err) {
         list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-triangle-exclamation"></i>${escHtml(err.message)}</div>`;
+        document.getElementById('archiveBar').style.display = 'none';
+      }
+    }
+
+    // アーカイブ状態バッジ・ボタンを更新する
+    function updateArchiveBar(isArchived, year, month) {
+      const bar = document.getElementById('archiveBar');
+      if (!year || !month) { bar.style.display = 'none'; return; }
+      const monthStr = `${year}-${month.padStart(2, '0')}`;
+      bar.style.display = 'flex';
+      if (isArchived) {
+        bar.innerHTML =
+          `<span style="background:#d1ecf1;color:#0c5460;border:1.5px solid #bee5eb;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.82rem;font-weight:700;">` +
+          `🔒 アーカイブ済み（編集不可）</span>` +
+          `<button onclick="unarchiveMonth('${monthStr}')" ` +
+          `style="background:#c0392b;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
+          `<i class="fa-solid fa-lock-open"></i> アーカイブを解除して編集可能にする</button>`;
+      } else {
+        bar.innerHTML =
+          `<button onclick="archiveMonth('${monthStr}')" ` +
+          `style="background:#2d6a4f;color:white;border:none;border-radius:6px;padding:0.3rem 0.8rem;font-size:0.82rem;font-weight:700;cursor:pointer;">` +
+          `<i class="fa-solid fa-box-archive"></i> 1ヶ月分の記録をアーカイブして容量を節約</button>`;
+      }
+    }
+
+    async function archiveMonth(monthStr) {
+      if (!confirm(`${monthStr} の全ヘルパー記録をアーカイブ（圧縮保存）しますか？\n元のレコードは削除されますが、解除ボタンで復元できます。`)) return;
+      const bar = document.getElementById('archiveBar');
+      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> アーカイブ中…</span>`;
+      try {
+        const r = await fetch(`${API_BASE}/api/helper/archive`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: monthStr }),
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        alert(`${monthStr} のヘルパー記録 ${j.archived}件をアーカイブしました。`);
+        await loadRecords();
+      } catch(e) {
+        alert('アーカイブエラー: ' + e.message);
+        await loadRecords();
+      }
+    }
+
+    async function unarchiveMonth(monthStr) {
+      if (!confirm(`${monthStr} のアーカイブを解除して元のレコードに戻しますか？\n数百件の復元処理が発生する場合があります。`)) return;
+      const bar = document.getElementById('archiveBar');
+      bar.innerHTML = `<span style="font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> 解凍・復元中… しばらくお待ちください</span>`;
+      try {
+        const r = await fetch(`${API_BASE}/api/helper/unarchive`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: monthStr }),
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        alert(`${monthStr} のヘルパー記録 ${j.restored}件を復元しました。`);
+        await loadRecords();
+      } catch(e) {
+        alert('アーカイブ解除エラー: ' + e.message);
+        await loadRecords();
       }
     }
 
@@ -1884,7 +1949,10 @@
       return `${jst.getUTCMonth()+1}/${jst.getUTCDate()}(${days[jst.getUTCDay()]})`;
     }
 
-    function renderRecords(records) {
+    let currentIsArchived = false; // アーカイブ状態を保持する
+
+    function renderRecords(records, isArchived) {
+      currentIsArchived = !!isArchived;
       const list = document.getElementById('recordsList');
       if (records.length === 0) {
         list.innerHTML = `<div class="status-msg"><i class="fa-solid fa-folder-open"></i>記録がありません</div>`;
@@ -2036,6 +2104,7 @@
 
     // 異常ボタン：異常記録モーダルを開く
     function onIjo() {
+      if (currentIsArchived) { alert('アーカイブ済みの記録は編集できません。先に解除してください。'); return; }
       if (!getSelectedRecord()) return;
       openIjoModal();
     }
@@ -2441,6 +2510,7 @@
 
     // 中止ボタン：中止記録モーダルを開く
     function onChushi() {
+      if (currentIsArchived) { alert('アーカイブ済みの記録は編集できません。先に解除してください。'); return; }
       const r = getSelectedRecord();
       if (!r) return;
       openChushiModal();
@@ -2586,6 +2656,7 @@
 
     // 削除ボタン（アクションバー用）：選択中の記録を削除する
     function onFabDelete() {
+      if (currentIsArchived) { alert('アーカイブ済みの記録は編集・削除できません。\n先に「アーカイブを解除して編集可能にする」ボタンを押してください。'); return; }
       const r = getSelectedRecord();
       if (!r) return;
       deleteRecord(r.recordId, r.氏名);
