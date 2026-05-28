@@ -300,6 +300,35 @@
       white-space: nowrap;
     }
 
+    /* ==================== パターン選択パネル ==================== */
+    #pattern-panel {
+      background: #eef4fb;
+      border-left: 4px solid #457b9d;
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      flex-shrink: 0;
+    }
+    #pattern-panel .pattern-title { font-weight: 700; margin-bottom: 0.4rem; color: #2c5f7a; }
+    #pattern-panel .pattern-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pattern-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.22rem 0.65rem;
+      border: 1px solid #aac4d8;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #fff;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .pattern-option input[type="radio"] { display: none; }
+    .pattern-option.selected {
+      background: #457b9d;
+      color: #fff;
+      border-color: #457b9d;
+    }
+
     /* ==================== 警告パネル ==================== */
     #warning-panel {
       background: #fff3cd;
@@ -365,6 +394,12 @@
       <i class="fa fa-print"></i> PDF
     </button>
   </div>
+</div>
+
+<!-- パターン選択パネル（自動生成後に表示） -->
+<div id="pattern-panel" class="hidden">
+  <div class="pattern-title">パターン選択</div>
+  <div class="pattern-options" id="pattern-options"></div>
 </div>
 
 <!-- 警告パネル（自動作成の警告を表示） -->
@@ -472,6 +507,8 @@ let staffList    = [];   // スタッフマスタ
 let shifts       = [];   // 現在表示中のシフトデータ（全事業所）
 let dirty        = false; // 未保存変更あり
 let requestsMap  = {};   // `${openId}__${dateStr}` → request object
+let currentPatterns     = [];  // 生成された全パターン
+let selectedPatternIndex = 0;  // 選択中のパターンインデックス
 
 // ============================================================
 // 初期化
@@ -530,6 +567,9 @@ async function loadShiftResult() {
       dirty  = false;
       document.getElementById('btn-save').disabled = true;
     }
+    currentPatterns = [];
+    selectedPatternIndex = 0;
+    document.getElementById('pattern-panel').classList.add('hidden');
     updateMonthLabel();
     renderTable();
   } catch (e) {
@@ -926,21 +966,60 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, sh
 
 // 生成結果の共通後処理
 function _applyGenerateResult(d, phaseLabel) {
-  shifts = d.shifts;
+  currentPatterns      = d.patterns ?? [];
+  selectedPatternIndex = 0;
+
+  // パターン選択UIを構築
+  const patPanel = document.getElementById('pattern-panel');
+  const patOpts  = document.getElementById('pattern-options');
+  if (currentPatterns.length > 1) {
+    patOpts.innerHTML = currentPatterns.map((p, i) => {
+      const warnText = p.warnings.length === 0 ? '警告なし' : `警告${p.warnings.length}件`;
+      return `<label class="pattern-option${i === 0 ? ' selected' : ''}" id="pat-opt-${i}">
+        <input type="radio" name="pattern" value="${i}" ${i === 0 ? 'checked' : ''} onchange="onSelectPattern(${i})">
+        パターン${i + 1}（${warnText}）
+      </label>`;
+    }).join('');
+    patPanel.classList.remove('hidden');
+  } else {
+    patPanel.classList.add('hidden');
+  }
+
+  // 最良パターン（警告最少）を適用
+  const best = currentPatterns[0] ?? { shifts: [], warnings: [] };
+  shifts = best.shifts;
   dirty  = true;
   document.getElementById('btn-save').disabled = false;
 
+  _updateWarningPanel(best.warnings);
+  renderTable();
+  showToast(`${phaseLabel}が完了しました（${currentPatterns.length}パターン生成）`);
+}
+
+// 警告パネルを更新するヘルパー
+function _updateWarningPanel(warnings) {
   const panel = document.getElementById('warning-panel');
   const list  = document.getElementById('warning-list');
-  if (d.warnings?.length > 0) {
-    list.innerHTML = d.warnings.map(w => `<li>${w}</li>`).join('');
+  if (warnings?.length > 0) {
+    list.innerHTML = warnings.map(w => `<li>${w}</li>`).join('');
     panel.classList.remove('hidden');
   } else {
     panel.classList.add('hidden');
   }
+}
 
+// パターン切り替え
+function onSelectPattern(idx) {
+  if (!currentPatterns[idx]) return;
+  selectedPatternIndex = idx;
+  shifts = currentPatterns[idx].shifts;
+  dirty  = true;
+  document.getElementById('btn-save').disabled = false;
+  document.querySelectorAll('.pattern-option').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+  _updateWarningPanel(currentPatterns[idx].warnings);
   renderTable();
-  showToast(`${phaseLabel}が完了しました`);
 }
 
 async function onGenerateNight() {
@@ -1058,7 +1137,7 @@ function showToast(msg, type = 'info') {
 <!-- 印刷用スタイル -->
 <style>
 @media print {
-  .page-header, .toolbar, .tabs, #warning-panel, #overlay, #toast, #dropdown { display: none !important; }
+  .page-header, .toolbar, .tabs, #pattern-panel, #warning-panel, #overlay, #toast, #dropdown { display: none !important; }
   body { overflow: visible; height: auto; }
   .shift-wrapper { overflow: visible; padding: 0; }
   .shift-table { font-size: 0.65rem; }
