@@ -315,26 +315,24 @@
 
     /* ==================== 右端集計カラム ==================== */
     /* 3列を右端に sticky 固定する。right 値は列幅(3.5rem)の積み上げで計算する */
-    .col-total, .col-kyukyu, .col-yukyu {
-      width: 3.5rem;
+    .col-day, .col-night, .col-kyukyu, .col-yukyu {
       font-weight: 700;
-      position: sticky;
-      z-index: 2;
+      width: 3.5rem;
     }
-    /* 勤務日数: 右から3列目 */
-    .col-total  { right: 7rem;    background: #fffbe6; }
-    /* 休み日数: 右から2列目 */
-    .col-kyukyu { right: 3.5rem;  background: #eef2f7; }
-    /* 有休日数: 右端 */
-    .col-yukyu  { right: 0;       background: #eef9f3; }
+    .col-day    { background: #fffbe6; }
+    .col-night  { background: #e6f7ff; }
+    .col-kyukyu { background: #eef2f7; }
+    .col-yukyu  { background: #eef9f3; }
 
-    /* ヘッダー行の右端集計列は top + right 両方 sticky になるため z-index を上げる */
-    .shift-table thead .col-total,
+    /* ヘッダー行 */
+    .shift-table thead .col-day,
+    .shift-table thead .col-night,
     .shift-table thead .col-kyukyu,
     .shift-table thead .col-yukyu  { z-index: 4; background: var(--brown-dark); }
 
-    /* 集計行の右端集計列は背景をはっきり指定してセルが透けないようにする */
-    .shift-table .summary-row .col-total  { background: #f5f0c8 !important; }
+    /* 集計行 */
+    .shift-table .summary-row .col-day    { background: #f5f0c8 !important; }
+    .shift-table .summary-row .col-night  { background: #cceeff !important; }
     .shift-table .summary-row .col-kyukyu { background: #dde4ee !important; }
     .shift-table .summary-row .col-yukyu  { background: #d8f0e3 !important; }
   </style>
@@ -634,8 +632,8 @@ function renderTable() {
     headRow.appendChild(th);
   }
 
-  // 右端の集計列ヘッダー（勤務・休み・有休）
-  [['勤務', 'col-total'], ['休み', 'col-kyukyu'], ['有休', 'col-yukyu']].forEach(([label, cls]) => {
+  // 右端の集計列ヘッダー（日勤・夜勤・休み・有休）
+  [['日勤', 'col-day'], ['夜勤', 'col-night'], ['休み', 'col-kyukyu'], ['有休', 'col-yukyu']].forEach(([label, cls]) => {
     const th = document.createElement('th');
     th.textContent = label;
     th.className = cls;
@@ -716,30 +714,8 @@ function applyStickyStyles(table) {
     if (!el.classList.contains('col-name')) el.style.zIndex = '3';
   });
 
-  // ── 右端: 集計列（col-yukyu / col-kyukyu / col-total）──
-  // offsetWidth で実際の列幅を計測して right 値を積み上げる
-  const headRow = table.querySelector('thead tr');
-  if (!headRow) return;
-
-  const yukyuTh  = headRow.querySelector('.col-yukyu');
-  const kyukyuTh = headRow.querySelector('.col-kyukyu');
-  const totalTh  = headRow.querySelector('.col-total');
-  if (!yukyuTh) return;
-
-  const wYukyu  = yukyuTh.offsetWidth;
-  const wKyukyu = kyukyuTh ? kyukyuTh.offsetWidth : 0;
-
-  const applyRight = (cls, rightPx, isHead) => {
-    table.querySelectorAll(cls).forEach(el => {
-      el.style.position = 'sticky';
-      el.style.right    = rightPx + 'px';
-      el.style.zIndex   = el.closest('thead') ? '4' : '2';
-    });
-  };
-
-  applyRight('.col-yukyu',  0,                    false);
-  applyRight('.col-kyukyu', wYukyu,               false);
-  applyRight('.col-total',  wYukyu + wKyukyu,     false);
+  // ── 右端: 集計列（スクロール時固定は解除）──
+  // 右端の集計列はスクロール時に固定しない仕様に変更
 }
 
 // ============================================================
@@ -753,8 +729,8 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
     tdName.className = 'col-name';
     tdName.textContent = staff.name;
 
-    // 右端集計カウンター（勤務・公休系・有休）
-    let workDays = 0, kyukuDays = 0, yukuDays = 0;
+    // 右端集計カウンター
+    let dayDays = 0, nightDays = 0, kyukuDays = 0, yukuDays = 0;
 
     for (const { str, dow } of dates) {
       const td  = row.insertCell();
@@ -768,7 +744,8 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (dow === 6) td.className = 'sat';
 
       if (!isOtherShop) {
-        if (['日勤', '日勤(16)', '日勤(18)', '夜勤'].includes(typ)) workDays++;
+        if (['日勤', '日勤(16)', '日勤(18)'].includes(typ)) dayDays++;
+        else if (typ === '夜勤') nightDays++;
         else if (['公休', '公休(希)', '定休'].includes(typ)) kyukuDays++;
         else if (typ === '有休') yukuDays++;
       }
@@ -808,10 +785,14 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       }
     }
 
-    // 右端に勤務・公休・有休の合計セルを追加
-    const tdWork = row.insertCell();
-    tdWork.className = 'col-total';
-    tdWork.textContent = workDays;
+    // 右端に集計セルを追加
+    const tdDay = row.insertCell();
+    tdDay.className = 'col-day';
+    tdDay.textContent = dayDays || '－';
+
+    const tdNight = row.insertCell();
+    tdNight.className = 'col-night';
+    tdNight.textContent = nightDays || '－';
 
     const tdKyuku = row.insertCell();
     tdKyuku.className = 'col-kyukyu';
@@ -848,9 +829,11 @@ function appendSummaryRows(tbody, shopStaff, dates, shiftMap) {
       if (cnt === 0) td.style.color = '#e63946';
     }
 
-    // 右端集計列（集計行には per-staff の公休・有休数は非該当のため空欄）
-    const tdTotal = row.insertCell();
-    tdTotal.className = 'col-total';
+    // 右端集計列（空欄）
+    const tdD = row.insertCell();
+    tdD.className = 'col-day';
+    const tdN = row.insertCell();
+    tdN.className = 'col-night';
     const tdKS = row.insertCell();
     tdKS.className = 'col-kyukyu';
     const tdYS = row.insertCell();
