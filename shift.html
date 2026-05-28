@@ -743,19 +743,18 @@ function appendStaffRows(tbody, shopStaff, dates, shiftMap, shop) {
       if (dow === 0) td.className = 'sun';
       if (dow === 6) td.className = 'sat';
 
-      if (!isOtherShop) {
-        if (['日勤', '日勤(16)', '日勤(18)'].includes(typ)) dayDays++;
-        else if (typ === '夜勤') nightDays++;
-        else if (['公休', '公休(希)', '定休'].includes(typ)) kyukuDays++;
-        else if (typ === '有休') yukuDays++;
-      }
+      const realTyp = s?.shiftType || '';
+      if (['日勤', '日勤(16)', '日勤(18)'].includes(realTyp)) dayDays++;
+      else if (realTyp === '夜勤') nightDays++;
+      else if (['公休', '公休(希)', '定休'].includes(realTyp)) kyukuDays++;
+      else if (realTyp === '有休') yukuDays++;
 
       const badge = document.createElement('span');
       badge.className = 'shift-badge';
       badge.textContent = typ || '－';
       if (isOtherShop) {
-        badge.style.background = '#d0d0d0';
-        badge.style.color = '#888';
+        badge.style.background = '#f4a261';
+        badge.style.color = '#fff';
         badge.title = `${s.shop}で勤務（${s.shiftType}）`;
       } else {
         badge.style.background = BADGE_COLOR[typ] || '#eee';
