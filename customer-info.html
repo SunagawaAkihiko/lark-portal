@@ -601,7 +601,7 @@
     // 選択中利用者の氏名を保持する（新規レコード作成時に使用する）
     const cust = allCustomers.find(c => c.recordId === activeRecordId);
     activeCustomerName = cust
-      ? (`${cust.lastName} ${cust.firstName}`.trim() || cust.name)
+      ? (`${cust.lastName}${cust.firstName}`.trim() || cust.name)
       : '';
     renderBasic(data.customer);
     renderHistory(data.history);
