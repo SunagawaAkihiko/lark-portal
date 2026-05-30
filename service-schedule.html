@@ -864,9 +864,10 @@
       font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem;
       border-radius: 20px;
     }
-    .status-active  { background: #d1fae5; color: #065f46; }
-    .status-paused  { background: #fee2e2; color: #991b1b; }
-    .status-waiting { background: #fff3cd; color: #7a5700; }
+    .status-active    { background: #d1fae5; color: #065f46; }
+    .status-paused    { background: #fee2e2; color: #991b1b; }
+    .status-waiting   { background: #fff3cd; color: #7a5700; }
+    .status-scheduled { background: #dbeafe; color: #1e40af; }
     .pause-date-info { font-size: 0.78rem; color: var(--text-muted); }
     .bulk-op-card {
       background: white; border: 1px solid var(--border-color);
@@ -3090,6 +3091,11 @@ function fmtPauseDate(ms) {
   const days = ['日','月','火','水','木','金','土'];
   return `${jst.getUTCFullYear()}/${String(jst.getUTCMonth()+1).padStart(2,'0')}/${String(jst.getUTCDate()).padStart(2,'0')} (${days[jst.getUTCDay()]})`;
 }
+function fmtShortDate(ms) {
+  if (!ms) return '';
+  const jst = new Date(ms + 9 * 60 * 60 * 1000);
+  return `${jst.getUTCMonth()+1}/${jst.getUTCDate()}`;
+}
 
 let pauseRecords = []; // 一時停止管理用の顧客別作業設定キャッシュ
 let bulkAction   = 'pause'; // 現在の操作（'pause' or 'resume'）
@@ -3164,12 +3170,14 @@ function renderPauseList(records) {
 
     items.forEach(item => {
       const now = Date.now();
-      const isPaused  = item.終了日 && item.終了日 < now;
-      const isWaiting = item.終了日 && item.終了日 >= now;
+      const isPaused    = item.終了日 && item.終了日 < now;
+      const isWillStop  = item.終了日 && item.終了日 >= now;
+      const isScheduled = !isPaused && !isWillStop && item.開始日 && item.開始日 > now;
       let statusLabel, statusClass;
-      if (isPaused)       { statusLabel = '停止中';   statusClass = 'status-paused'; }
-      else if (isWaiting) { statusLabel = '停止予定'; statusClass = 'status-waiting'; }
-      else                { statusLabel = '稼働中';   statusClass = 'status-active'; }
+      if (isPaused)         { statusLabel = '停止中';                                  statusClass = 'status-paused'; }
+      else if (isWillStop)  { statusLabel = `停止予定 ${fmtShortDate(item.終了日)}`;   statusClass = 'status-waiting'; }
+      else if (isScheduled) { statusLabel = `稼働予定 ${fmtShortDate(item.開始日)}`;   statusClass = 'status-scheduled'; }
+      else                  { statusLabel = '稼働中';                                  statusClass = 'status-active'; }
 
       const kinmuShort = (item.勤務区分 || '').replace('夜勤担当①','夜勤①').replace('夜勤担当②','夜勤②');
       const yobi  = item.提供曜日 ? `${item.提供曜日}曜日` : '';
@@ -3222,11 +3230,13 @@ function onBulkCustomerChange() {
     const yobi  = svc.提供曜日 ? `${svc.提供曜日}曜日` : '';
     const jikan = svc.提供時間 ? ` ${svc.提供時間}` : '';
     const now   = Date.now();
-    const isPaused  = svc.終了日 && svc.終了日 < now;
-    const isWaiting = svc.終了日 && svc.終了日 >= now;
+    const isPaused    = svc.終了日 && svc.終了日 < now;
+    const isWillStop  = svc.終了日 && svc.終了日 >= now;
+    const isScheduled = !isPaused && !isWillStop && svc.開始日 && svc.開始日 > now;
     let stLabel = '稼働中', stClass = 'status-active';
-    if (isPaused)       { stLabel = '停止中';   stClass = 'status-paused'; }
-    else if (isWaiting) { stLabel = '停止予定'; stClass = 'status-waiting'; }
+    if (isPaused)         { stLabel = '停止中';                                  stClass = 'status-paused'; }
+    else if (isWillStop)  { stLabel = `停止予定 ${fmtShortDate(svc.終了日)}`;   stClass = 'status-waiting'; }
+    else if (isScheduled) { stLabel = `稼働予定 ${fmtShortDate(svc.開始日)}`;   stClass = 'status-scheduled'; }
 
     const item = document.createElement('label');
     item.className = 'bulk-svc-item';
