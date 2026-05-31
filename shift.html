@@ -966,34 +966,19 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, sh
 
 // 生成結果の共通後処理
 function _applyGenerateResult(d, phaseLabel) {
-  currentPatterns      = d.patterns ?? [];
+  // APIは { shifts, warnings } を返す（patterns形式は廃止）
+  currentPatterns      = [];
   selectedPatternIndex = 0;
+  document.getElementById('pattern-panel').classList.add('hidden');
 
-  // パターン選択UIを構築
-  const patPanel = document.getElementById('pattern-panel');
-  const patOpts  = document.getElementById('pattern-options');
-  if (currentPatterns.length > 1) {
-    patOpts.innerHTML = currentPatterns.map((p, i) => {
-      const warnText = p.warnings.length === 0 ? '警告なし' : `警告${p.warnings.length}件`;
-      return `<label class="pattern-option${i === 0 ? ' selected' : ''}" id="pat-opt-${i}">
-        <input type="radio" name="pattern" value="${i}" ${i === 0 ? 'checked' : ''} onchange="onSelectPattern(${i})">
-        パターン${i + 1}（${warnText}）
-      </label>`;
-    }).join('');
-    patPanel.classList.remove('hidden');
-  } else {
-    patPanel.classList.add('hidden');
-  }
-
-  // 最良パターン（警告最少）を適用
-  const best = currentPatterns[0] ?? { shifts: [], warnings: [] };
-  shifts = best.shifts;
+  shifts = d.shifts ?? [];
   dirty  = true;
   document.getElementById('btn-save').disabled = false;
 
-  _updateWarningPanel(best.warnings);
+  _updateWarningPanel(d.warnings ?? []);
   renderTable();
-  showToast(`${phaseLabel}が完了しました（${currentPatterns.length}パターン生成）`);
+  const warnCount = (d.warnings ?? []).length;
+  showToast(`${phaseLabel}が完了しました${warnCount > 0 ? `（警告${warnCount}件）` : ''}`);
 }
 
 // 警告パネルを更新するヘルパー
