@@ -926,6 +926,7 @@ document.addEventListener('click', closeDropdown);
 function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, shopName) {
   if (currentShift) {
     currentShift.shiftType = newType;
+    currentShift.shop      = shopName; // クリックした行の事業所で上書きする
     currentShift._dirty    = true;
   } else {
     const staff = staffList.find(s => s.name === staffName);
@@ -941,11 +942,6 @@ function applyShiftChange(staffName, dateStr, newType, currentShift, badgeEl, sh
       _isNew:      true,
     });
   }
-
-  badgeEl.textContent      = newType;
-  badgeEl.style.background = BADGE_COLOR[newType] || '#eee';
-  badgeEl.style.color      = BADGE_COLOR[newType] ? '#fff' : '#999';
-  badgeEl.style.border     = BADGE_COLOR[newType] ? 'none' : '1px dashed #ccc';
 
   dirty = true;
   document.getElementById('btn-save').disabled = false;
