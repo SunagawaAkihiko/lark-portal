@@ -563,7 +563,11 @@ async function loadShiftResult() {
     const res = await fetch(`${API}/api/shift/result?year=${currentYear}&month=${currentMonth}`);
     const d   = await res.json();
     if (d.ok) {
-      shifts = d.shifts;
+      // 新方式でAPIからopenIdのみ返るようになったため、マスタからstaffNameを補完する
+      shifts = d.shifts.map(s => {
+        const staff = staffList.find(st => st.openId === s.openId);
+        return { ...s, staffName: staff ? staff.name : '不明' };
+      });
       dirty  = false;
       document.getElementById('btn-save').disabled = true;
     }
