@@ -1596,9 +1596,9 @@ async function renderToPdf(element, filename) {
   for (let i = 0; i < numPages; i++) {
     if (i > 0) pdf.addPage();
 
-    // このページで切り取るキャンバス領域（scale:2座標系）
-    const srcX = Math.round(i * pageW_px * 2);
-    const srcW = Math.round(Math.min(pageW_px, csW - i * pageW_px) * 2);
+    // このページで切り取るキャンバス領域（scale:1.5座標系）
+    const srcX = Math.round(i * pageW_px * 1.5);
+    const srcW = Math.round(Math.min(pageW_px, csW - i * pageW_px) * 1.5);
 
     // スライスキャンバスを作成してPDFへ追加
     const slice = document.createElement('canvas');
@@ -1607,7 +1607,7 @@ async function renderToPdf(element, filename) {
     slice.getContext('2d').drawImage(canvas, srcX, 0, srcW, canvas.height, 0, 0, srcW, canvas.height);
 
     // スライス幅に対応するmm幅（最終ページは短くなる）
-    const imgW = (srcW / 2) * finalScale;
+    const imgW = (srcW / 1.5) * finalScale;
     const imgH = csH * finalScale;
     // JPEG形式（quality:0.92）でPNG比70%前後ファイルサイズを削減
     pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
