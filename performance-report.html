@@ -1126,9 +1126,7 @@
         const rawTask = (r['作業項目'] || '').trim();
         const dayStr  = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
         const stopKey = rawTask + '_' + dayStr;
-        const rawReason = stopReasonMap.has(stopKey)
-          ? stopReasonMap.get(stopKey)
-          : (r['記録内容'] || '').replace(/サービス中止理由[：:]/g, '').replace(/中止理由[：:]/g, '').trim();
+        const rawReason = stopReasonMap.has(stopKey) ? stopReasonMap.get(stopKey) : '';
         stopRows += `
           <tr>
             <td>${escHtml(rawTask)}</td>
@@ -1151,9 +1149,7 @@
         const rawTask   = (r['作業項目'] || '').trim();
         const dayStr    = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
         const changeKey = rawTask + '_' + dayStr;
-        const rawReason = changeReasonMap.has(changeKey)
-          ? changeReasonMap.get(changeKey)
-          : (r['記録内容'] || '').trim();
+        const rawReason = changeReasonMap.has(changeKey) ? changeReasonMap.get(changeKey) : '';
         changeRows += `
           <tr>
             <td>${escHtml(rawTask)}</td>
