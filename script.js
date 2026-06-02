@@ -115,6 +115,13 @@ const portalLinks = [
         adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
     },
     {
+        title: "実績報告書",
+        description: "利用者毎・作業項目別・記録分類別の月次集計とPDF出力",
+        icon: "fa-chart-pie",
+        url: "performance-report.html",
+        adminOnly: true  // 管理者専用（admin.htmlでのみ表示）
+    },
+    {
         title: "シフト管理",
         description: "月次シフトの自動作成・手動調整・PDF出力",
         icon: "fa-calendar-alt",

@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>実績報告書</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* ==================== 変数・リセット ==================== */
+    :root {
+      --bg:          #fdf6ec;
+      --text:        #4a3f35;
+      --muted:       #8c7c6b;
+      --primary:     #e76f51;
+      --primary-lt:  #fcece8;
+      --card-bg:     #fff0e3;
+      --border:      #dcbfa6;
+      --brown-dark:  #4a3f35;
+      --brown-mid:   #6b4f3a;
+      --green:       #2a9d8f;
+      --green-lt:    #e6f7f5;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 5rem;
+    }
+    button { cursor: pointer; font-family: inherit; }
+    input, select { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* ==================== ページヘッダー ==================== */
+    .page-header {
+      background: var(--brown-dark);
+      color: white;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .page-header i { font-size: 1.2rem; color: #f4a261; }
+    .page-header .title   { font-size: 1.05rem; font-weight: 700; flex: 1; }
+    .page-header .subtitle { font-size: 0.75rem; opacity: 0.7; }
+
+    /* ==================== コントロールバー ==================== */
+    .ctrl-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .ctrl-bar label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .ctrl-bar input[type="month"],
+    .ctrl-bar select {
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.9rem;
+      background: white;
+      color: var(--text);
+    }
+    .ctrl-bar input[type="month"]:focus,
+    .ctrl-bar select:focus {
+      outline: 2px solid var(--primary);
+      border-color: var(--primary);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+    .btn-secondary {
+      background: white;
+      color: var(--brown-mid);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: #f0e8e0; }
+    .btn-secondary:disabled { opacity: 0.5; cursor: default; }
+
+    /* ==================== ローディング / 空状態 ==================== */
+    .state-box {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .state-box i { font-size: 2rem; display: block; margin-bottom: 0.6rem; color: var(--border); }
+    .spinner {
+      display: inline-block;
+      width: 2rem; height: 2rem;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 0.6rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ==================== 集計結果エリア ==================== */
+    .result-area {
+      padding: 1rem;
+    }
+
+    /* PDF出力時のみ表示するヘッダー */
+    .pdf-header {
+      display: none;
+      text-align: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--brown-dark);
+    }
+    .pdf-header h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--brown-dark);
+    }
+    .pdf-header p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* 利用者ごとのカード */
+    .user-section {
+      margin-bottom: 1.5rem;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(139,115,95,0.08);
+    }
+    .user-section-header {
+      background: var(--brown-dark);
+      color: white;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .user-section-header i { color: #f4a261; font-size: 0.85rem; }
+    .user-total-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* 集計テーブル */
+    .summary-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .summary-table th,
+    .summary-table td {
+      border: 1px solid #e4d5c5;
+      padding: 0.35rem 0.6rem;
+      white-space: nowrap;
+    }
+    .summary-table thead tr {
+      background: var(--card-bg);
+    }
+    .summary-table thead th {
+      font-weight: 700;
+      color: var(--brown-mid);
+      text-align: center;
+    }
+    .summary-table thead th:first-child {
+      text-align: left;
+    }
+    .summary-table tbody td:first-child {
+      font-weight: 600;
+      color: var(--text);
+      background: #faf5ef;
+    }
+    .summary-table tbody td {
+      text-align: center;
+      color: var(--muted);
+    }
+    .summary-table tbody td.has-count {
+      color: var(--text);
+      font-weight: 600;
+    }
+    /* 合計行 */
+    .summary-table tfoot tr {
+      background: var(--primary-lt);
+    }
+    .summary-table tfoot td {
+      font-weight: 700;
+      color: var(--primary);
+      text-align: center;
+      border-top: 2px solid var(--primary);
+    }
+    .summary-table tfoot td:first-child {
+      text-align: left;
+      color: var(--brown-dark);
+    }
+    /* 合計列 */
+    .summary-table .col-total {
+      background: #fef3ee;
+      font-weight: 700;
+      color: var(--primary) !important;
+      border-left: 2px solid var(--primary);
+    }
+    .summary-table tfoot .col-total {
+      background: var(--primary);
+      color: white !important;
+    }
+
+    /* ==================== 月合計サマリー ==================== */
+    .monthly-summary {
+      margin-bottom: 1.5rem;
+      background: var(--green-lt);
+      border: 1.5px solid #b2dfdb;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .monthly-summary-header {
+      background: var(--green);
+      color: white;
+      padding: 0.5rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .monthly-summary-body {
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .summary-chip {
+      background: white;
+      border: 1px solid #b2dfdb;
+      border-radius: 20px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1a7a70;
+      white-space: nowrap;
+    }
+    .summary-chip span {
+      color: var(--green);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ページヘッダー -->
+<header class="page-header">
+  <i class="fa-solid fa-chart-pie"></i>
+  <span class="title">実績報告書</span>
+  <span class="subtitle">合同会社 GLAD Life Create</span>
+</header>
+
+<!-- コントロールバー -->
+<div class="ctrl-bar">
+  <label for="target-month">対象月</label>
+  <input type="month" id="target-month">
+
+  <label for="office-filter">事業所</label>
+  <select id="office-filter">
+    <option value="">全事業所</option>
+  </select>
+
+  <button class="btn-primary" id="load-btn" onclick="loadReport()">
+    <i class="fa-solid fa-rotate"></i> 表示
+  </button>
+  <button class="btn-secondary hidden" id="pdf-btn" onclick="downloadPdf()">
+    <i class="fa-solid fa-file-pdf"></i> PDF出力
+  </button>
+</div>
+
+<!-- ローディング -->
+<div id="state-loading" class="state-box hidden">
+  <div class="spinner"></div>
+  <p>データを取得中…</p>
+</div>
+
+<!-- 空状態 -->
+<div id="state-empty" class="state-box hidden">
+  <i class="fa-solid fa-inbox"></i>
+  <p>該当するデータが見つかりませんでした。</p>
+</div>
+
+<!-- 集計結果 -->
+<div id="result-area" class="result-area hidden">
+  <!-- PDF出力時のみ表示されるヘッダー -->
+  <div class="pdf-header" id="pdf-header">
+    <h2 id="pdf-title"></h2>
+    <p id="pdf-subtitle"></p>
+  </div>
+  <!-- 月合計サマリー -->
+  <div id="monthly-summary"></div>
+  <!-- 利用者別テーブル群 -->
+  <div id="user-tables"></div>
+</div>
+
+<script>
+  /* =====================================================
+   * 設定
+   * ===================================================== */
+  const isLocal = location.hostname === 'localhost';
+  const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // 今月を初期値にセット
+  (function () {
+    const now = new Date();
+    document.getElementById('target-month').value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  /* =====================================================
+   * 初期化：事業所リストを取得
+   * ===================================================== */
+  async function init() {
+    try {
+      const res  = await fetch(`${API_BASE}/api/helper/meta`);
+      const data = await res.json();
+      if (data.ok && data.officeList) {
+        const sel = document.getElementById('office-filter');
+        data.officeList.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o;
+          opt.textContent = o;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (e) { /* 事業所取得失敗は無視して続行 */ }
+  }
+
+  /* =====================================================
+   * データ取得・集計・描画
+   * ===================================================== */
+  async function loadReport() {
+    const monthVal = document.getElementById('target-month').value;
+    if (!monthVal) { alert('対象月を選択してください。'); return; }
+
+    const [year, month] = monthVal.split('-');
+    const officeFilter  = document.getElementById('office-filter').value;
+
+    // UI状態を更新
+    setView('loading');
+    document.getElementById('load-btn').disabled = true;
+
+    try {
+      const params = new URLSearchParams({ year, month });
+      if (officeFilter) params.set('office', officeFilter);
+
+      const res  = await fetch(`${API_BASE}/api/helper/records?${params}`);
+      const data = await res.json();
+
+      if (!data.ok) throw new Error(data.error || '取得失敗');
+
+      const records = data.records || [];
+      if (records.length === 0) {
+        setView('empty');
+        return;
+      }
+
+      renderReport(records, monthVal, officeFilter);
+      setView('result');
+      document.getElementById('pdf-btn').classList.remove('hidden');
+    } catch (e) {
+      alert(`データ取得エラー: ${e.message}`);
+      setView('none');
+    } finally {
+      document.getElementById('load-btn').disabled = false;
+    }
+  }
+
+  /* =====================================================
+   * 集計ロジック
+   * ===================================================== */
+  function aggregate(records) {
+    // byUser: Map<氏名, Map<作業項目, Map<記録分類, count>>>
+    const byUser = new Map();
+    // 全体の記録分類セット（列見出し用）
+    const allKlassSet = new Set();
+    // 全体の作業項目セット（行見出し用）
+    const allTaskSet  = new Set();
+
+    for (const r of records) {
+      const user  = r['氏名']   || '（氏名なし）';
+      const task  = r['作業項目'] || '（未分類）';
+      const klass = r['記録分類'] || '（未分類）';
+
+      allKlassSet.add(klass);
+      allTaskSet.add(task);
+
+      if (!byUser.has(user)) byUser.set(user, new Map());
+      const byTask = byUser.get(user);
+      if (!byTask.has(task)) byTask.set(task, new Map());
+      const byKlass = byTask.get(task);
+      byKlass.set(klass, (byKlass.get(klass) || 0) + 1);
+    }
+
+    return {
+      byUser,
+      allKlass: [...allKlassSet].sort(),
+      allTask:  [...allTaskSet].sort(),
+    };
+  }
+
+  /* =====================================================
+   * 描画
+   * ===================================================== */
+  function renderReport(records, monthVal, officeFilter) {
+    const { byUser, allKlass } = aggregate(records);
+
+    // PDF用ヘッダーテキスト更新
+    const [y, m]  = monthVal.split('-');
+    const label   = `${y}年${parseInt(m, 10)}月`;
+    const officeLabel = officeFilter ? `【${officeFilter}】` : '【全事業所】';
+    document.getElementById('pdf-title').textContent    = `${label} 実績報告書 ${officeLabel}`;
+    document.getElementById('pdf-subtitle').textContent = `出力日: ${formatDate(new Date())}　総件数: ${records.length}件`;
+
+    // 月合計サマリー（記録分類ごとの件数）
+    renderMonthlySummary(records, label, officeLabel);
+
+    // 利用者別テーブル
+    const container = document.getElementById('user-tables');
+    container.innerHTML = '';
+
+    for (const [userName, byTask] of [...byUser.entries()].sort()) {
+      container.appendChild(buildUserSection(userName, byTask, allKlass));
+    }
+  }
+
+  function renderMonthlySummary(records, label, officeLabel) {
+    // 記録分類ごとの合計
+    const klassCounts = new Map();
+    for (const r of records) {
+      const k = r['記録分類'] || '（未分類）';
+      klassCounts.set(k, (klassCounts.get(k) || 0) + 1);
+    }
+
+    const div = document.getElementById('monthly-summary');
+    let html = `
+      <div class="monthly-summary">
+        <div class="monthly-summary-header">
+          <i class="fa-solid fa-chart-bar"></i>
+          ${label} ${officeLabel} 月間集計サマリー　合計 ${records.length} 件
+        </div>
+        <div class="monthly-summary-body">
+    `;
+    for (const [k, cnt] of [...klassCounts.entries()].sort()) {
+      html += `<div class="summary-chip">${k}：<span>${cnt}</span> 件</div>`;
+    }
+    html += '</div></div>';
+    div.innerHTML = html;
+  }
+
+  function buildUserSection(userName, byTask, allKlass) {
+    // この利用者の合計件数
+    let userTotal = 0;
+    for (const byKlass of byTask.values()) {
+      for (const cnt of byKlass.values()) userTotal += cnt;
+    }
+
+    // セクションヘッダー
+    const section = document.createElement('div');
+    section.className = 'user-section';
+
+    const header = document.createElement('div');
+    header.className = 'user-section-header';
+    header.innerHTML = `
+      <i class="fa-solid fa-user"></i>
+      ${escHtml(userName)}
+      <span class="user-total-badge">合計 ${userTotal} 件</span>
+    `;
+    section.appendChild(header);
+
+    // テーブル
+    const wrap = document.createElement('div');
+    wrap.className = 'summary-table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'summary-table';
+
+    // 作業項目と列（記録分類）を収集
+    const userTasks = [...byTask.keys()].sort();
+
+    // ── thead ──
+    let thead = '<thead><tr>';
+    thead += '<th>作業項目</th>';
+    for (const k of allKlass) thead += `<th>${escHtml(k)}</th>`;
+    thead += '<th class="col-total">合計</th>';
+    thead += '</tr></thead>';
+
+    // ── tbody ──
+    let tbody = '<tbody>';
+    for (const task of userTasks) {
+      const byKlass = byTask.get(task);
+      let rowTotal = 0;
+      let row = `<tr><td>${escHtml(task)}</td>`;
+      for (const k of allKlass) {
+        const cnt = byKlass.get(k) || 0;
+        rowTotal += cnt;
+        row += `<td class="${cnt > 0 ? 'has-count' : ''}">${cnt > 0 ? cnt : '－'}</td>`;
+      }
+      row += `<td class="col-total">${rowTotal}</td>`;
+      row += '</tr>';
+      tbody += row;
+    }
+    tbody += '</tbody>';
+
+    // ── tfoot（列合計行） ──
+    let tfoot = '<tfoot><tr><td>合　計</td>';
+    for (const k of allKlass) {
+      let colTotal = 0;
+      for (const byKlass of byTask.values()) colTotal += byKlass.get(k) || 0;
+      tfoot += `<td>${colTotal}</td>`;
+    }
+    tfoot += `<td class="col-total">${userTotal}</td>`;
+    tfoot += '</tr></tfoot>';
+
+    table.innerHTML = thead + tbody + tfoot;
+    wrap.appendChild(table);
+    section.appendChild(wrap);
+
+    return section;
+  }
+
+  /* =====================================================
+   * PDF出力（html2canvas + jsPDF）
+   * ===================================================== */
+  async function downloadPdf() {
+    const btn        = document.getElementById('pdf-btn');
+    const resultArea = document.getElementById('result-area');
+    const pdfHeader  = document.getElementById('pdf-header');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
+
+    // PDF用ヘッダーを表示してキャプチャ
+    pdfHeader.style.display = 'block';
+
+    try {
+      const canvas = await html2canvas(resultArea, {
+        scale: 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      // A4縦・余白8mm後の利用可能寸法（mm）
+      const PAGE_W = 194; // 210 - 8*2
+      const PAGE_H = 277; // 297 - 10*2
+      const MARGIN = 8;
+
+      const csW = canvas.width  / 1.5;
+      const csH = canvas.height / 1.5;
+
+      // 幅に合わせたスケール
+      const scaleW     = PAGE_W / csW;
+      const finalScale = csH * scaleW > PAGE_H ? PAGE_H / csH : scaleW;
+
+      // 1ページあたりの高さ（CSSピクセル）
+      const pageH_px = PAGE_H / finalScale;
+      const numPages  = Math.ceil(csH / pageH_px);
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+      for (let i = 0; i < numPages; i++) {
+        if (i > 0) pdf.addPage();
+
+        const srcY = Math.round(i * pageH_px * 1.5);
+        const srcH = Math.round(Math.min(pageH_px, csH - i * pageH_px) * 1.5);
+
+        const slice = document.createElement('canvas');
+        slice.width  = canvas.width;
+        slice.height = srcH;
+        slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+        const imgW = csW * finalScale;
+        const imgH = (srcH / 1.5) * finalScale;
+        pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
+      }
+
+      // ファイル名：YYYY年MM月_実績報告書.pdf
+      const monthVal = document.getElementById('target-month').value;
+      const [y, m]   = monthVal.split('-');
+      pdf.save(`${y}年${m}月_実績報告書.pdf`);
+    } catch (e) {
+      alert(`PDF生成エラー: ${e.message}`);
+    } finally {
+      pdfHeader.style.display = 'none';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF出力';
+    }
+  }
+
+  /* =====================================================
+   * ユーティリティ
+   * ===================================================== */
+  function setView(state) {
+    document.getElementById('state-loading').classList.toggle('hidden', state !== 'loading');
+    document.getElementById('state-empty').classList.toggle('hidden',   state !== 'empty');
+    document.getElementById('result-area').classList.toggle('hidden',   state !== 'result');
+    if (state !== 'result') {
+      document.getElementById('pdf-btn').classList.add('hidden');
+    }
+  }
+
+  function formatDate(d) {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* =====================================================
+   * 起動
+   * ===================================================== */
+  init();
+</script>
+</body>
+</html>
