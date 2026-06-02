@@ -805,7 +805,7 @@
   /* =====================================================
    * 報告書プレビューを開く
    * ===================================================== */
-  function openReportPreview(userName) {
+  async function openReportPreview(userName) {
     if (!_activeMonthVal) {
       alert('先に「表示」ボタンでデータを読み込んでください。');
       return;
@@ -815,10 +815,29 @@
     const records = _allRecords.filter(r => r['氏名'] === userName);
     const [y, m]  = _activeMonthVal.split('-');
 
+    // ローディング表示でオーバーレイを開く
     const container = document.getElementById('service-report-print');
-    container.innerHTML = buildServiceReportHTML(userName, records, y, m);
+    container.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;font-size:1.1rem;gap:0.75rem;">' +
+      '<i class="fa-solid fa-spinner fa-spin"></i>前月データを取得中…</div>';
     container.classList.add('preview-active');
     document.body.style.overflow = 'hidden';
+
+    // 前月の年月を計算（1月→前年12月 も正しく処理）
+    const prevDate = new Date(parseInt(y, 10), parseInt(m, 10) - 2, 1);
+    const prevY = String(prevDate.getFullYear());
+    const prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
+
+    // 前月の記録を取得（失敗時は空配列で続行）
+    let prevRecords = [];
+    try {
+      const params = new URLSearchParams({ year: prevY, month: prevM, name: userName });
+      const res  = await fetch(`${API_BASE}/api/helper/records?${params}`);
+      const data = await res.json();
+      if (data.ok) prevRecords = data.records || [];
+    } catch (_) { /* 前月データ取得失敗は無視してデフォルト文言を使用 */ }
+
+    container.innerHTML = buildServiceReportHTML(userName, records, y, m, prevRecords);
   }
 
   /* =====================================================
@@ -917,7 +936,7 @@
   /* =====================================================
    * サービス実施報告書 HTML 生成
    * ===================================================== */
-  function buildServiceReportHTML(userName, records, y, m) {
+  function buildServiceReportHTML(userName, records, y, m, prevRecords = []) {
     const mInt    = parseInt(m, 10);
     const yInt    = parseInt(y, 10);
     const lastDay = new Date(yInt, mInt, 0).getDate();
@@ -934,16 +953,36 @@
       }
     }
 
+    // 前月の「サービス実施時の様子」候補を作業項目ごとにマッピング
+    // 中止・変更記録を除外し、最新実施日のレコードの記録内容を優先する
+    const SKIP_CLASSES = new Set(['サービス中止', '時間変更記録', '振替記録']);
+    const prevYosuByTask = new Map(); // task → { text, date }
+    for (const r of prevRecords) {
+      if (SKIP_CLASSES.has(r['記録分類'])) continue;
+      const task    = (r['作業項目'] || '').trim();
+      const content = (r['記録内容'] || '').trim();
+      if (!content) continue;
+      const dateMs = Number(r['実施日']) || 0;
+      const cur = prevYosuByTask.get(task);
+      if (!cur || dateMs > cur.date) {
+        prevYosuByTask.set(task, { text: content, date: dateMs });
+      }
+    }
+
+    const DEFAULT_YOSU = '介助にて問題なく実施できております。';
+
     let serviceRows = '';
     for (const [task, datesSet] of [...taskMap.entries()].sort()) {
       const sortedDates = [...datesSet].sort((a, b) => a - b);
       const datesStr    = sortedDates.length > 0 ? sortedDates.join(', ') + '日' : '－';
+      const prevEntry   = prevYosuByTask.get(task.trim());
+      const initialText = escHtml(prevEntry ? prevEntry.text : DEFAULT_YOSU);
       serviceRows += `
         <tr>
           <td>${escHtml(task)}</td>
           <td style="white-space:pre-wrap">${escHtml(datesStr)}</td>
           <td>
-            <textarea class="edit-area" rows="2">介助にて問題なく実施できております。</textarea>
+            <textarea class="edit-area" rows="2">${initialText}</textarea>
             <div class="print-text"></div>
           </td>
         </tr>`;
