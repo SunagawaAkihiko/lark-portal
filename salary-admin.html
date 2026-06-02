@@ -3291,9 +3291,11 @@ async function loadBonus() {
       const r = await fetch(`${API_BASE}/api/salary/staff-list?month=${bonusMonth}`);
       const j = await r.json();
       if (!j.ok) throw new Error(j.error);
-      bonusStaffList = sortedBonusStaff(j.list.map(s => s.staffName));
+      const activeForBonus = j.list.filter(s => !s.retirementDate || date < s.retirementDate);
+      bonusStaffList = sortedBonusStaff(activeForBonus.map(s => s.staffName));
     } else {
-      bonusStaffList = sortedBonusStaff(staffList.map(s => s.staffName));
+      const activeForBonus = staffList.filter(s => !s.retirementDate || date < s.retirementDate);
+      bonusStaffList = sortedBonusStaff(activeForBonus.map(s => s.staffName));
     }
 
     // Lark から保存済みデータを取得する
