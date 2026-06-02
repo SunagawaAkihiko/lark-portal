@@ -71,7 +71,6 @@
       white-space: nowrap;
     }
     .ctrl-bar input[type="month"],
-    .ctrl-bar input[type="text"],
     .ctrl-bar select {
       border: 1.5px solid var(--border);
       border-radius: 6px;
@@ -80,9 +79,7 @@
       background: white;
       color: var(--text);
     }
-    .ctrl-bar input[type="text"] { width: 8em; }
     .ctrl-bar input[type="month"]:focus,
-    .ctrl-bar input[type="text"]:focus,
     .ctrl-bar select:focus {
       outline: 2px solid var(--primary);
       border-color: var(--primary);
@@ -196,6 +193,27 @@
       transition: opacity 0.15s;
     }
     .btn-report-pdf:hover { opacity: 0.82; }
+
+    /* 利用者カード下部の目立つ「報告書PDF」ボタン */
+    .btn-report-prominent {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.65rem 1.2rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border-top: 1px solid rgba(231,111,81,0.3);
+      letter-spacing: 0.03em;
+    }
+    .btn-report-prominent:hover { opacity: 0.85; }
 
     /* 集計テーブル */
     .summary-table-wrap {
@@ -423,9 +441,6 @@
     <option value="">全事業所</option>
   </select>
 
-  <label for="reporter-name">報告者</label>
-  <input type="text" id="reporter-name" placeholder="スタッフ名">
-
   <button class="btn-primary" id="load-btn" onclick="loadReport()">
     <i class="fa-solid fa-rotate"></i> 表示
   </button>
@@ -631,14 +646,6 @@
       <span class="user-total-badge">合計 ${userTotal} 件</span>
     `;
 
-    // 「報告書PDF」ボタンをヘッダーに追加（集計PDF取得時は非表示クラスで除外）
-    const reportBtn = document.createElement('button');
-    reportBtn.className = 'btn-report-pdf no-summary-pdf';
-    reportBtn.innerHTML = '<i class="fa-solid fa-print"></i> 報告書';
-    reportBtn.title = `${escHtml(userName)} の実施報告書を印刷`;
-    reportBtn.addEventListener('click', () => printServiceReport(userName));
-    header.appendChild(reportBtn);
-
     section.appendChild(header);
 
     // ── 集計テーブル ──
@@ -693,6 +700,14 @@
 
     wrap.appendChild(table);
     section.appendChild(wrap);
+
+    // カード下部に目立つ「報告書PDF出力」ボタンを配置する
+    const prominentBtn = document.createElement('button');
+    prominentBtn.className = 'btn-report-prominent no-summary-pdf';
+    prominentBtn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${escHtml(userName)} の実施報告書PDFを出力する`;
+    prominentBtn.addEventListener('click', () => printServiceReport(userName));
+    section.appendChild(prominentBtn);
+
     return section;
   }
 
@@ -777,7 +792,7 @@
     }
 
     const records      = _allRecords.filter(r => r['氏名'] === userName);
-    const reporterName = document.getElementById('reporter-name').value.trim() || '　　　　';
+    const reporterName = '砂川　明彦';
     const [y, m]       = _activeMonthVal.split('-');
 
     const container = document.getElementById('service-report-print');
