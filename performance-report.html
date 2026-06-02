@@ -338,6 +338,23 @@
     }
     .btn-preview-pdf:hover { opacity: 0.85; }
     .btn-preview-pdf:disabled { opacity: 0.5; cursor: default; }
+    .btn-preview-save {
+      background: #2a9d8f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.42rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: opacity 0.15s;
+      font-family: inherit;
+    }
+    .btn-preview-save:hover { opacity: 0.85; }
+    .btn-preview-save:disabled { opacity: 0.5; cursor: default; }
     .btn-preview-close {
       background: rgba(255,255,255,0.15);
       color: white;
@@ -823,21 +840,30 @@
     container.classList.add('preview-active');
     document.body.style.overflow = 'hidden';
 
-    // 前月の年月を計算（1月→前年12月 も正しく処理）
-    const prevDate = new Date(parseInt(y, 10), parseInt(m, 10) - 2, 1);
-    const prevY = String(prevDate.getFullYear());
-    const prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
-
-    // 前月の記録を取得（失敗時は空配列で続行）
-    let prevRecords = [];
+    // 当月の保存済み報告書を優先取得。なければ前月分を引き継ぎ用に取得する
+    let currentReport = null;
+    let prevReport    = null;
     try {
-      const params = new URLSearchParams({ year: prevY, month: prevM, name: userName });
-      const res  = await fetch(`${API_BASE}/api/helper/records?${params}`);
-      const data = await res.json();
-      if (data.ok) prevRecords = data.records || [];
-    } catch (_) { /* 前月データ取得失敗は無視してデフォルト文言を使用 */ }
+      const curParams = new URLSearchParams({ year: y, month: m, name: userName });
+      const curRes  = await fetch(`${API_BASE}/api/service-report?${curParams}`);
+      const curData = await curRes.json();
+      if (curData.ok) currentReport = curData.report;
+    } catch (_) {}
 
-    container.innerHTML = buildServiceReportHTML(userName, records, y, m, prevRecords);
+    if (!currentReport) {
+      // 前月年月を計算（1月→前年12月 も正しく処理）
+      const prevDate = new Date(parseInt(y, 10), parseInt(m, 10) - 2, 1);
+      const prevY = String(prevDate.getFullYear());
+      const prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
+      try {
+        const prevParams = new URLSearchParams({ year: prevY, month: prevM, name: userName });
+        const prevRes  = await fetch(`${API_BASE}/api/service-report?${prevParams}`);
+        const prevData = await prevRes.json();
+        if (prevData.ok) prevReport = prevData.report;
+      } catch (_) {}
+    }
+
+    container.innerHTML = buildServiceReportHTML(userName, records, y, m, currentReport, prevReport);
   }
 
   /* =====================================================
@@ -849,6 +875,55 @@
     container.innerHTML = '';
     document.body.style.overflow = '';
     _currentUser = '';
+  }
+
+  /* =====================================================
+   * 報告書データを Lark Bitable に保存する
+   * サービス実施時の様子（作業項目ごと）を1レコードとして保存する
+   * ===================================================== */
+  async function saveReportData() {
+    if (!_currentUser || !_activeMonthVal) return;
+    const container = document.getElementById('service-report-print');
+    const reportDoc = container.querySelector('.report-doc');
+    if (!reportDoc) return;
+
+    const [y, m] = _activeMonthVal.split('-');
+    const serviceRows = [];
+    reportDoc.querySelectorAll('.service-table tbody tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 3) return;
+      const task = cells[0].textContent.trim();
+      const area = cells[2].querySelector('.edit-area');
+      if (task && task !== '実施記録なし') serviceRows.push({ task, yosu: area ? area.value : '' });
+    });
+
+    const btn = document.getElementById('preview-save-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/service-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: y, month: m, name: _currentUser, serviceRows }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
+        }, 2000);
+      } else {
+        alert(`保存エラー: ${data.error}`);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
+      }
+    } catch (e) {
+      alert(`保存エラー: ${e.message}`);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
+    }
   }
 
   /* =====================================================
@@ -936,13 +1011,15 @@
   /* =====================================================
    * サービス実施報告書 HTML 生成
    * ===================================================== */
-  function buildServiceReportHTML(userName, records, y, m, prevRecords = []) {
+  // currentReport: 当月の保存済み報告書 { serviceRows:[{task,yosu}] } | null
+  // prevReport:    前月の保存済み報告書（当月未保存時の引き継ぎ用）| null
+  function buildServiceReportHTML(userName, records, y, m, currentReport = null, prevReport = null) {
     const mInt    = parseInt(m, 10);
     const yInt    = parseInt(y, 10);
     const lastDay = new Date(yInt, mInt, 0).getDate();
     const period  = `${yInt}年${mInt}月1日 〜 ${yInt}年${mInt}月${lastDay}日`;
 
-    // 作業項目ごとに実施日を集計（特記事項は手動入力に変更）
+    // 作業項目ごとに実施日を集計
     const taskMap = new Map();
     for (const r of records) {
       const task = r['作業項目'] || '（未分類）';
@@ -953,19 +1030,18 @@
       }
     }
 
-    // 前月の「サービス実施時の様子」候補を作業項目ごとにマッピング
-    // 中止・変更記録を除外し、最新実施日のレコードの記録内容を優先する
-    const SKIP_CLASSES = new Set(['サービス中止', '時間変更記録', '振替記録']);
-    const prevYosuByTask = new Map(); // task → { text, date }
-    for (const r of prevRecords) {
-      if (SKIP_CLASSES.has(r['記録分類'])) continue;
-      const task    = (r['作業項目'] || '').trim();
-      const content = (r['記録内容'] || '').trim();
-      if (!content) continue;
-      const dateMs = Number(r['実施日']) || 0;
-      const cur = prevYosuByTask.get(task);
-      if (!cur || dateMs > cur.date) {
-        prevYosuByTask.set(task, { text: content, date: dateMs });
+    // 「サービス実施時の様子」の初期値マップを構築する
+    // 優先順位: ①当月保存済み → ②前月保存済み → ③デフォルト文言
+    const currentYosuByTask = new Map();
+    if (currentReport && Array.isArray(currentReport.serviceRows)) {
+      for (const row of currentReport.serviceRows) {
+        if (row.task) currentYosuByTask.set(row.task.trim(), row.yosu || '');
+      }
+    }
+    const prevYosuByTask = new Map();
+    if (prevReport && Array.isArray(prevReport.serviceRows)) {
+      for (const row of prevReport.serviceRows) {
+        if (row.task) prevYosuByTask.set(row.task.trim(), row.yosu || '');
       }
     }
 
@@ -975,8 +1051,8 @@
     for (const [task, datesSet] of [...taskMap.entries()].sort()) {
       const sortedDates = [...datesSet].sort((a, b) => a - b);
       const datesStr    = sortedDates.length > 0 ? sortedDates.join(', ') + '日' : '－';
-      const prevEntry   = prevYosuByTask.get(task.trim());
-      const initialText = escHtml(prevEntry ? prevEntry.text : DEFAULT_YOSU);
+      const savedYosu   = currentYosuByTask.get(task.trim()) ?? prevYosuByTask.get(task.trim());
+      const initialText = escHtml(savedYosu !== undefined ? savedYosu : DEFAULT_YOSU);
       serviceRows += `
         <tr>
           <td>${escHtml(task)}</td>
@@ -1048,6 +1124,9 @@
   </span>
   <button class="btn-preview-pdf" id="preview-pdf-btn" onclick="generateReportPdf()">
     <i class="fa-solid fa-file-pdf"></i> PDF出力（A4 1ページ）
+  </button>
+  <button class="btn-preview-save" id="preview-save-btn" onclick="saveReportData()">
+    <i class="fa-solid fa-floppy-disk"></i> 保存
   </button>
   <button class="btn-preview-close" onclick="closePreview()">
     <i class="fa-solid fa-xmark"></i> 閉じる
