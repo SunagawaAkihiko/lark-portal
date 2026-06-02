@@ -1836,7 +1836,7 @@
     async function loadRecords() {
       const [year, month] = (document.getElementById('filterMonth').value || '').split('-');
       // URLパラメータの利用者名をフォールバックとして使用する（セレクトが未選択の場合）
-      const name  = document.getElementById('filterName').value || _urlUser;
+      const name  = (document.getElementById('filterName').value || _urlUser).trim();
       const kinmu = document.getElementById('filterKinmu').value;
 
       const list = document.getElementById('recordsList');
@@ -1857,8 +1857,10 @@
         currentRecords = data.records || [];
 
         // URLパラメータの作業項目で表示側を絞り込む（APIは作業項目フィルタ非対応のためクライアント処理）
-        const displayRecords = _urlItem
-          ? currentRecords.filter(r => (r['作業項目'] || '') === _urlItem)
+        // 両辺を .trim() してから比較し、見えないスペース等による不一致を防ぐ
+        const urlItemTrimmed = _urlItem.trim();
+        const displayRecords = urlItemTrimmed
+          ? currentRecords.filter(r => (r['作業項目'] || '').trim() === urlItemTrimmed)
           : currentRecords;
 
         document.getElementById('recordCount').textContent = _urlItem
@@ -1974,7 +1976,7 @@
         sel.appendChild(opt);
       });
       // 選択値を復元する（URLパラメータの利用者名をフォールバックとして使用する）
-      sel.value = currentVal || _urlUser;
+      sel.value = (currentVal || _urlUser).trim();
     }
 
     // タイムスタンプを "M/D(曜)" の短縮形式に変換する（一覧行用）
