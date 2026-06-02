@@ -1642,15 +1642,24 @@
     let selectedRecordId  = null; // 下部アクションバーで操作対象の記録ID
 
     // ============================================================
+    // URLパラメータ（実績報告書からのジャンプ連携）
+    // ============================================================
+
+    const _urlParams = new URLSearchParams(location.search);
+    const _urlUser   = _urlParams.get('user')  || '';
+    const _urlMonth  = _urlParams.get('month') || '';
+    const _urlItem   = _urlParams.get('item')  || '';
+
+    // ============================================================
     // 初期化
     // ============================================================
 
-    // 今月をデフォルト値としてセットする
+    // 今月をデフォルト値としてセットする（URLパラメータの月があればそれを優先する）
     (function initDefaultMonth() {
       const now = new Date();
       const y = now.getFullYear();
       const m = String(now.getMonth() + 1).padStart(2, '0');
-      document.getElementById('filterMonth').value = `${y}-${m}`;
+      document.getElementById('filterMonth').value = _urlMonth || `${y}-${m}`;
       // 記録作成の実施日は今日をデフォルトにする
       const today = `${y}-${m}-${String(now.getDate()).padStart(2,'0')}`;
       document.getElementById('createDate').value = today;
@@ -1826,7 +1835,8 @@
 
     async function loadRecords() {
       const [year, month] = (document.getElementById('filterMonth').value || '').split('-');
-      const name  = document.getElementById('filterName').value;
+      // URLパラメータの利用者名をフォールバックとして使用する（セレクトが未選択の場合）
+      const name  = document.getElementById('filterName').value || _urlUser;
       const kinmu = document.getElementById('filterKinmu').value;
 
       const list = document.getElementById('recordsList');
@@ -1845,8 +1855,16 @@
         if (!data.ok) throw new Error(data.error);
 
         currentRecords = data.records || [];
-        document.getElementById('recordCount').textContent = `${currentRecords.length} 件`;
-        renderRecords(currentRecords, data.isArchived);
+
+        // URLパラメータの作業項目で表示側を絞り込む（APIは作業項目フィルタ非対応のためクライアント処理）
+        const displayRecords = _urlItem
+          ? currentRecords.filter(r => (r['作業項目'] || '') === _urlItem)
+          : currentRecords;
+
+        document.getElementById('recordCount').textContent = _urlItem
+          ? `${displayRecords.length} 件（作業項目「${_urlItem}」で絞り込み中）`
+          : `${currentRecords.length} 件`;
+        renderRecords(displayRecords, data.isArchived);
         updateArchiveBar(data.isArchived, year, month);
         // 氏名フィルターなし時のみ全員リストを更新する
         // フィルターあり時は filtered 結果しか返らないためキャッシュを上書きしない
@@ -1955,7 +1973,8 @@
         opt.value = opt.textContent = n;
         sel.appendChild(opt);
       });
-      sel.value = currentVal; // 選択値を復元する
+      // 選択値を復元する（URLパラメータの利用者名をフォールバックとして使用する）
+      sel.value = currentVal || _urlUser;
     }
 
     // タイムスタンプを "M/D(曜)" の短縮形式に変換する（一覧行用）
@@ -3702,6 +3721,27 @@
     initOfficeTabs();
     // スタッフ・利用者リストはバックグラウンドで非同期取得する
     loadMeta();
+
+    // URLパラメータによる絞り込み中バナーを表示する
+    if (_urlUser || _urlItem) {
+      const banner = document.createElement('div');
+      banner.id = 'url-filter-banner';
+      banner.style.cssText = [
+        'display:flex', 'align-items:center', 'gap:0.4rem', 'flex-wrap:wrap',
+        'padding:0.4rem 0.75rem', 'margin-bottom:0.4rem',
+        'background:#e8f4fd', 'border:1.5px solid #90caf9',
+        'border-radius:8px', 'font-size:0.82rem', 'color:#1565c0',
+      ].join(';');
+      let chips = '<i class="fa-solid fa-filter" style="color:#1976d2"></i><span style="font-weight:700">絞り込み中：</span>';
+      if (_urlUser)  chips += `<span style="background:#bbdefb;border-radius:12px;padding:0.1rem 0.55rem;font-weight:600">利用者：${escHtml(_urlUser)}</span>`;
+      if (_urlItem)  chips += `<span style="background:#bbdefb;border-radius:12px;padding:0.1rem 0.55rem;font-weight:600">作業項目：${escHtml(_urlItem)}</span>`;
+      if (_urlMonth) chips += `<span style="background:#bbdefb;border-radius:12px;padding:0.1rem 0.55rem;font-weight:600">対象月：${escHtml(_urlMonth)}</span>`;
+      chips += '<span style="margin-left:auto;color:#777;font-size:0.78rem">（実績報告書から遷移）</span>';
+      banner.innerHTML = chips;
+      // recordCountの直前に挿入する
+      const refEl = document.getElementById('recordCount');
+      if (refEl) refEl.parentNode.insertBefore(banner, refEl);
+    }
 
     // 勤務区分変更時にスタッフセレクトを再絞り込みし、夜勤2人目行の表示を切り替える
     document.getElementById('createKinmu').addEventListener('change', () => {

@@ -22,6 +22,8 @@
       --brown-mid:   #6b4f3a;
       --green:       #2a9d8f;
       --green-lt:    #e6f7f5;
+      --blue:        #457b9d;
+      --blue-lt:     #edf3f8;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -209,13 +211,22 @@
       color: var(--brown-mid);
       text-align: center;
     }
-    .summary-table thead th:first-child {
-      text-align: left;
-    }
     .summary-table tbody td:first-child {
       font-weight: 600;
       color: var(--text);
       background: #faf5ef;
+      text-align: center;
+    }
+    /* 作業項目セル：クリック可能スタイル */
+    .task-cell {
+      cursor: pointer;
+      color: var(--blue) !important;
+      text-decoration: underline;
+      text-decoration-style: dashed;
+      text-underline-offset: 2px;
+    }
+    .task-cell:hover {
+      background: var(--blue-lt) !important;
     }
     .summary-table tbody td {
       text-align: center;
@@ -470,7 +481,7 @@
     container.innerHTML = '';
 
     for (const [userName, byTask] of [...byUser.entries()].sort()) {
-      container.appendChild(buildUserSection(userName, byTask, allKlass));
+      container.appendChild(buildUserSection(userName, byTask, allKlass, monthVal));
     }
   }
 
@@ -498,7 +509,7 @@
     div.innerHTML = html;
   }
 
-  function buildUserSection(userName, byTask, allKlass) {
+  function buildUserSection(userName, byTask, allKlass, monthVal) {
     // この利用者の合計件数
     let userTotal = 0;
     for (const byKlass of byTask.values()) {
@@ -540,7 +551,7 @@
     for (const task of userTasks) {
       const byKlass = byTask.get(task);
       let rowTotal = 0;
-      let row = `<tr><td>${escHtml(task)}</td>`;
+      let row = `<tr><td class="task-cell" data-user="${escHtml(userName)}" data-month="${escHtml(monthVal || '')}" data-item="${escHtml(task)}">${escHtml(task)}</td>`;
       for (const k of allKlass) {
         const cnt = byKlass.get(k) || 0;
         rowTotal += cnt;
@@ -563,6 +574,19 @@
     tfoot += '</tr></tfoot>';
 
     table.innerHTML = thead + tbody + tfoot;
+
+    // 作業項目セルのクリックで helper-record.html を別タブで開く
+    table.querySelectorAll('.task-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const params = new URLSearchParams({
+          user:  cell.dataset.user,
+          month: cell.dataset.month,
+          item:  cell.dataset.item,
+        });
+        window.open(`helper-record.html?${params}`, '_blank');
+      });
+    });
+
     wrap.appendChild(table);
     section.appendChild(wrap);
 
