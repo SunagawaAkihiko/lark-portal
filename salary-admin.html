@@ -735,7 +735,7 @@
      * 各セル行高さ = 32px(header) + 16px(value) = 48px
      * 8行 × 48px = 384px + ヘッダー等88px ≈ 472px（ページ上部60%に収める完成形準拠）
      */
-    #slip-print-area {
+    #slip-print-area, #bonus-slip-print-area {
       position: fixed; left: -9999px; top: 0;
       width: 1122px; height: 794px; overflow: hidden;
       background: white;
@@ -3687,8 +3687,15 @@ function openBonusSlipModal(mode = 'pdf') {
     return;
   }
   bonusSlipModalMode = mode;
+
+  // 支給合計が0円（ブランク）のスタッフを除外する
+  const activeStaffs = bonusStaffList.filter(name => {
+    const el = document.querySelector(`.bonus-calc-cell[data-staff="${name}"][data-calc="支給合計"]`);
+    return el && parseInt(el.dataset.numval || 0, 10) > 0;
+  });
+
   const list = document.getElementById('bonus-slip-staff-list');
-  list.innerHTML = bonusStaffList.map(name =>
+  list.innerHTML = activeStaffs.map(name =>
     `<label style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0">` +
     `<input type="checkbox" class="bonus-slip-staff-cb" value="${name}" checked> ${name}</label>`
   ).join('');
