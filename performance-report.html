@@ -888,6 +888,8 @@
     if (!reportDoc) return;
 
     const [y, m] = _activeMonthVal.split('-');
+
+    // 実施したサービス（様子テキスト）
     const serviceRows = [];
     reportDoc.querySelectorAll('.service-table tbody tr').forEach(row => {
       const cells = row.querySelectorAll('td');
@@ -897,6 +899,35 @@
       if (task && task !== '実施記録なし') serviceRows.push({ task, yosu: area ? area.value : '' });
     });
 
+    // 中止・変更テーブル（stop-table クラスが共通: 0番目=中止 / 1番目=変更）
+    const stopTables = reportDoc.querySelectorAll('.stop-table');
+    const stopRows = [];
+    if (stopTables[0]) {
+      stopTables[0].querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 3) return;
+        const task = cells[0].textContent.trim();
+        const day  = cells[1].textContent.trim();
+        const area = cells[2].querySelector('.edit-area');
+        if (task && task !== 'なし') stopRows.push({ task, day, reason: area ? area.value : '' });
+      });
+    }
+    const changeRows = [];
+    if (stopTables[1]) {
+      stopTables[1].querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 3) return;
+        const task = cells[0].textContent.trim();
+        const day  = cells[1].textContent.trim();
+        const area = cells[2].querySelector('.edit-area');
+        if (task && task !== 'なし') changeRows.push({ task, day, reason: area ? area.value : '' });
+      });
+    }
+
+    // 連絡事項
+    const noticeArea = reportDoc.querySelector('.report-notes-box .edit-area');
+    const notice = noticeArea ? noticeArea.value : '';
+
     const btn = document.getElementById('preview-save-btn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…';
@@ -905,7 +936,7 @@
       const res = await fetch(`${API_BASE}/api/service-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: y, month: m, name: _currentUser, serviceRows }),
+        body: JSON.stringify({ year: y, month: m, name: _currentUser, serviceRows, stopRows, changeRows, notice }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -1045,6 +1076,23 @@
       }
     }
 
+    // 当月保存済みデータから中止・変更理由と連絡事項の復元マップを構築する
+    // キー: "作業項目_日" (例: "入浴介助_5日") でユーザー編集済み理由を優先する
+    const stopReasonMap   = new Map();
+    const changeReasonMap = new Map();
+    let savedNotice = null;
+    if (currentReport) {
+      for (const row of (currentReport.stopRows || [])) {
+        if (row.task) stopReasonMap.set(row.task.trim() + '_' + (row.day || '').trim(), row.reason || '');
+      }
+      for (const row of (currentReport.changeRows || [])) {
+        if (row.task) changeReasonMap.set(row.task.trim() + '_' + (row.day || '').trim(), row.reason || '');
+      }
+      if (currentReport.notice !== null && currentReport.notice !== undefined) {
+        savedNotice = currentReport.notice;
+      }
+    }
+
     const DEFAULT_YOSU = '介助にて問題なく実施できております。';
 
     let serviceRows = '';
@@ -1068,26 +1116,25 @@
     }
 
     // 「記録分類 = サービス中止」のレコードを抽出して行HTML生成
+    // 保存済みの理由があればユーザー編集内容を優先し、なければLark記録内容から自動取得する
     const stopRecords = records.filter(r => r['記録分類'] === 'サービス中止');
     let stopRows = '';
     if (stopRecords.length === 0) {
       stopRows = '<tr><td>なし</td><td></td><td><textarea class="edit-area" rows="2"></textarea><div class="print-text"></div></td></tr>';
     } else {
       for (const r of stopRecords) {
-        const task   = escHtml(r['作業項目'] || '');
-        const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
-        const reason = escHtml(
-          (r['記録内容'] || '')
-            .replace(/サービス中止理由[：:]/g, '')
-            .replace(/中止理由[：:]/g, '')
-            .trim()
-        );
+        const rawTask = (r['作業項目'] || '').trim();
+        const dayStr  = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        const stopKey = rawTask + '_' + dayStr;
+        const rawReason = stopReasonMap.has(stopKey)
+          ? stopReasonMap.get(stopKey)
+          : (r['記録内容'] || '').replace(/サービス中止理由[：:]/g, '').replace(/中止理由[：:]/g, '').trim();
         stopRows += `
           <tr>
-            <td>${task}</td>
+            <td>${escHtml(rawTask)}</td>
             <td>${escHtml(dayStr)}</td>
             <td>
-              <textarea class="edit-area" rows="2">${reason}</textarea>
+              <textarea class="edit-area" rows="2">${escHtml(rawReason)}</textarea>
               <div class="print-text"></div>
             </td>
           </tr>`;
@@ -1101,20 +1148,25 @@
       changeRows = '<tr><td>なし</td><td></td><td><textarea class="edit-area" rows="2"></textarea><div class="print-text"></div></td></tr>';
     } else {
       for (const r of changeRecords) {
-        const task   = escHtml(r['作業項目'] || '');
-        const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
-        const reason = escHtml(r['記録内容'] || '');
+        const rawTask   = (r['作業項目'] || '').trim();
+        const dayStr    = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        const changeKey = rawTask + '_' + dayStr;
+        const rawReason = changeReasonMap.has(changeKey)
+          ? changeReasonMap.get(changeKey)
+          : (r['記録内容'] || '').trim();
         changeRows += `
           <tr>
-            <td>${task}</td>
+            <td>${escHtml(rawTask)}</td>
             <td>${escHtml(dayStr)}</td>
             <td>
-              <textarea class="edit-area" rows="2">${reason}</textarea>
+              <textarea class="edit-area" rows="2">${escHtml(rawReason)}</textarea>
               <div class="print-text"></div>
             </td>
           </tr>`;
       }
     }
+
+    const noticeText = escHtml(savedNotice !== null ? savedNotice : '特記事項なし。');
 
     return `
 <div class="preview-toolbar">
@@ -1183,7 +1235,7 @@
   <div class="report-section">
     <h2 class="report-section-title">●連絡事項</h2>
     <div class="report-notes-box">
-      <textarea class="edit-area" rows="3">特記事項なし。</textarea>
+      <textarea class="edit-area" rows="3">${noticeText}</textarea>
       <div class="print-text"></div>
     </div>
   </div>
