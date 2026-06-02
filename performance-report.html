@@ -837,6 +837,15 @@
     // キャプチャモードで編集用点線を消す
     container.classList.add('capture-mode');
 
+    // position:fixed + overflow-y:auto のコンテナが html2canvas のクリップ範囲を
+    // スクロール位置で制限してしまうため、キャプチャ中だけ overflow:visible に変更する
+    const savedOverflow  = container.style.overflow;
+    const savedHeight    = container.style.height;
+    const savedScrollTop = container.scrollTop;
+    container.style.overflow = 'visible';
+    container.style.height   = 'auto';
+    container.scrollTop      = 0;
+
     try {
       const canvas = await html2canvas(reportDoc, {
         scale: 2,
@@ -844,6 +853,19 @@
         useCORS: true,
         allowTaint: true,
         logging: false,
+        onclone: (clonedDoc) => {
+          // html2canvas はクローンDOM を描画するため、contenteditable 属性が残っていると
+          // テキストが反映されないことがある。属性を除去して通常のdivとして描画させる
+          clonedDoc.querySelectorAll('[contenteditable]').forEach(el => {
+            el.removeAttribute('contenteditable');
+          });
+          // クローン側のコンテナも overflow:visible にしてフル描画を保証
+          const clonedContainer = clonedDoc.getElementById('service-report-print');
+          if (clonedContainer) {
+            clonedContainer.style.overflow = 'visible';
+            clonedContainer.style.height   = 'auto';
+          }
+        },
       });
 
       // A4 縦・余白 8mm
@@ -870,6 +892,10 @@
     } catch (e) {
       alert(`PDF生成エラー: ${e.message}`);
     } finally {
+      // コンテナのスタイルを元に戻す
+      container.style.overflow = savedOverflow;
+      container.style.height   = savedHeight;
+      container.scrollTop      = savedScrollTop;
       container.classList.remove('capture-mode');
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF出力（A4 1ページ）';
