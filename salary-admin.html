@@ -3390,7 +3390,7 @@ function renderBonusTable(staffNames, saved, locked) {
         const v = saved[name]?.[def.k] || 0;
         manualTotal += Number(v);
         if (locked) {
-          html += `<td data-staff="${name}" style="padding:1px 4px;text-align:right">${v ? fmtNum(v) : ''}</td>`;
+          html += `<td class="bonus-calc-cell" data-staff="${name}" data-calc="${def.k}" data-numval="${v || 0}" style="padding:1px 4px;text-align:right">${v ? fmtNum(v) : ''}</td>`;
         } else {
           html += `<td data-staff="${name}" style="padding:1px 2px;text-align:right">` +
             `<input type="number" class="bonus-input" min="0" step="1"` +
