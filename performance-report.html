@@ -71,6 +71,7 @@
       white-space: nowrap;
     }
     .ctrl-bar input[type="month"],
+    .ctrl-bar input[type="text"],
     .ctrl-bar select {
       border: 1.5px solid var(--border);
       border-radius: 6px;
@@ -79,7 +80,9 @@
       background: white;
       color: var(--text);
     }
+    .ctrl-bar input[type="text"] { width: 8em; }
     .ctrl-bar input[type="month"]:focus,
+    .ctrl-bar input[type="text"]:focus,
     .ctrl-bar select:focus {
       outline: 2px solid var(--primary);
       border-color: var(--primary);
@@ -135,11 +138,9 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ==================== 集計結果エリア ==================== */
-    .result-area {
-      padding: 1rem;
-    }
+    .result-area { padding: 1rem; }
 
-    /* PDF出力時のみ表示するヘッダー */
+    /* 集計PDF用ヘッダー（html2canvas キャプチャ時のみ表示） */
     .pdf-header {
       display: none;
       text-align: center;
@@ -147,16 +148,8 @@
       padding-bottom: 0.5rem;
       border-bottom: 2px solid var(--brown-dark);
     }
-    .pdf-header h2 {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--brown-dark);
-    }
-    .pdf-header p {
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 0.2rem;
-    }
+    .pdf-header h2 { font-size: 1.2rem; font-weight: 700; color: var(--brown-dark); }
+    .pdf-header p  { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
 
     /* 利用者ごとのカード */
     .user-section {
@@ -186,6 +179,23 @@
       font-size: 0.8rem;
       font-weight: 700;
     }
+    /* 各利用者の「報告書PDF」ボタン */
+    .btn-report-pdf {
+      background: #3a7ca5;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 0.22rem 0.6rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .btn-report-pdf:hover { opacity: 0.82; }
 
     /* 集計テーブル */
     .summary-table-wrap {
@@ -203,9 +213,7 @@
       padding: 0.35rem 0.6rem;
       white-space: nowrap;
     }
-    .summary-table thead tr {
-      background: var(--card-bg);
-    }
+    .summary-table thead tr { background: var(--card-bg); }
     .summary-table thead th {
       font-weight: 700;
       color: var(--brown-mid);
@@ -225,31 +233,18 @@
       text-decoration-style: dashed;
       text-underline-offset: 2px;
     }
-    .task-cell:hover {
-      background: var(--blue-lt) !important;
-    }
-    .summary-table tbody td {
-      text-align: center;
-      color: var(--muted);
-    }
-    .summary-table tbody td.has-count {
-      color: var(--text);
-      font-weight: 600;
-    }
+    .task-cell:hover { background: var(--blue-lt) !important; }
+    .summary-table tbody td { text-align: center; color: var(--muted); }
+    .summary-table tbody td.has-count { color: var(--text); font-weight: 600; }
     /* 合計行 */
-    .summary-table tfoot tr {
-      background: var(--primary-lt);
-    }
+    .summary-table tfoot tr { background: var(--primary-lt); }
     .summary-table tfoot td {
       font-weight: 700;
       color: var(--primary);
       text-align: center;
       border-top: 2px solid var(--primary);
     }
-    .summary-table tfoot td:first-child {
-      text-align: left;
-      color: var(--brown-dark);
-    }
+    .summary-table tfoot td:first-child { text-align: left; color: var(--brown-dark); }
     /* 合計列 */
     .summary-table .col-total {
       background: #fef3ee;
@@ -257,10 +252,7 @@
       color: var(--primary) !important;
       border-left: 2px solid var(--primary);
     }
-    .summary-table tfoot .col-total {
-      background: var(--primary);
-      color: white !important;
-    }
+    .summary-table tfoot .col-total { background: var(--primary); color: white !important; }
 
     /* ==================== 月合計サマリー ==================== */
     .monthly-summary {
@@ -296,9 +288,119 @@
       color: #1a7a70;
       white-space: nowrap;
     }
-    .summary-chip span {
-      color: var(--green);
-      font-weight: 700;
+    .summary-chip span { color: var(--green); font-weight: 700; }
+
+    /* ==================== 印刷用コンテナ（通常は非表示） ==================== */
+    #service-report-print { display: none; }
+
+    /* ==================== @media print ==================== */
+    @media print {
+      /* 印刷時はページUI要素をすべて非表示にして報告書だけ見せる */
+      body > *                  { display: none !important; }
+      #service-report-print     { display: block !important; }
+
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+      }
+
+      /* ── 報告書ドキュメント全体 ── */
+      .report-doc {
+        font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+        font-size: 10pt;
+        color: #000;
+        padding: 8mm 12mm;
+        max-width: 190mm;
+        margin: 0 auto;
+      }
+
+      /* タイトル */
+      .report-title {
+        text-align: center;
+        font-size: 15pt;
+        font-weight: bold;
+        border-bottom: 2px solid #333;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        letter-spacing: 0.05em;
+      }
+
+      /* 基本情報テーブル */
+      .report-info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 14px;
+        font-size: 10pt;
+      }
+      .report-info-table td { padding: 2px 10px; }
+      .report-info-table td:first-child {
+        font-weight: bold;
+        white-space: nowrap;
+        width: 32%;
+        color: #333;
+      }
+
+      /* セクション共通 */
+      .report-section {
+        margin-bottom: 14px;
+        page-break-inside: avoid;
+      }
+      .report-section-title {
+        font-size: 11pt;
+        font-weight: bold;
+        margin-bottom: 4px;
+        padding-left: 6px;
+        border-left: 4px solid #555;
+      }
+
+      /* 報告テーブル */
+      .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        table-layout: fixed;
+      }
+      .report-table th,
+      .report-table td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        vertical-align: top;
+        word-break: break-all;
+        white-space: pre-wrap;
+      }
+      .report-table th {
+        background: #f2f2f2;
+        font-weight: bold;
+        text-align: center;
+        white-space: nowrap;
+        word-break: normal;
+      }
+
+      /* ①実施したサービス：列幅 */
+      .service-table th:nth-child(1),
+      .service-table td:nth-child(1) { width: 22%; }
+      .service-table th:nth-child(2),
+      .service-table td:nth-child(2) { width: 33%; }
+      .service-table th:nth-child(3),
+      .service-table td:nth-child(3) { width: 45%; }
+
+      /* ②③中止・変更：列幅 */
+      .stop-table th:nth-child(1),
+      .stop-table td:nth-child(1) { width: 30%; }
+      .stop-table th:nth-child(2),
+      .stop-table td:nth-child(2) { width: 25%; }
+      .stop-table th:nth-child(3),
+      .stop-table td:nth-child(3) { width: 45%; }
+
+      /* ④連絡事項ボックス */
+      .report-notes-box {
+        border: 1px solid #000;
+        padding: 8px;
+        min-height: 45px;
+        font-size: 9pt;
+        background: #fff;
+      }
     }
   </style>
 </head>
@@ -321,11 +423,14 @@
     <option value="">全事業所</option>
   </select>
 
+  <label for="reporter-name">報告者</label>
+  <input type="text" id="reporter-name" placeholder="スタッフ名">
+
   <button class="btn-primary" id="load-btn" onclick="loadReport()">
     <i class="fa-solid fa-rotate"></i> 表示
   </button>
-  <button class="btn-secondary hidden" id="pdf-btn" onclick="downloadPdf()">
-    <i class="fa-solid fa-file-pdf"></i> PDF出力
+  <button class="btn-secondary hidden" id="pdf-btn" onclick="downloadSummaryPdf()">
+    <i class="fa-solid fa-file-pdf"></i> 集計PDF
   </button>
 </div>
 
@@ -343,7 +448,7 @@
 
 <!-- 集計結果 -->
 <div id="result-area" class="result-area hidden">
-  <!-- PDF出力時のみ表示されるヘッダー -->
+  <!-- 集計PDF用ヘッダー（html2canvas キャプチャ時のみ表示） -->
   <div class="pdf-header" id="pdf-header">
     <h2 id="pdf-title"></h2>
     <p id="pdf-subtitle"></p>
@@ -354,12 +459,22 @@
   <div id="user-tables"></div>
 </div>
 
+<!-- ============================================================
+     サービス実施報告書 印刷コンテナ（通常は非表示）
+     window.print() 時にのみ @media print で表示される
+     ============================================================ -->
+<div id="service-report-print"></div>
+
 <script>
   /* =====================================================
    * 設定
    * ===================================================== */
   const isLocal = location.hostname === 'localhost';
   const API_BASE = isLocal ? 'http://localhost:3000' : 'https://attendance-app-irf1.onrender.com';
+
+  // 全レコードとアクティブ年月を保持（報告書PDF生成に使用）
+  let _allRecords    = [];
+  let _activeMonthVal = '';
 
   // 今月を初期値にセット
   (function () {
@@ -397,7 +512,6 @@
     const [year, month] = monthVal.split('-');
     const officeFilter  = document.getElementById('office-filter').value;
 
-    // UI状態を更新
     setView('loading');
     document.getElementById('load-btn').disabled = true;
 
@@ -416,6 +530,10 @@
         return;
       }
 
+      // 報告書PDF用にグローバル保持
+      _allRecords     = records;
+      _activeMonthVal = monthVal;
+
       renderReport(records, monthVal, officeFilter);
       setView('result');
       document.getElementById('pdf-btn').classList.remove('hidden');
@@ -428,23 +546,18 @@
   }
 
   /* =====================================================
-   * 集計ロジック
+   * 集計ロジック（集計表用）
    * ===================================================== */
   function aggregate(records) {
-    // byUser: Map<氏名, Map<作業項目, Map<記録分類, count>>>
-    const byUser = new Map();
-    // 全体の記録分類セット（列見出し用）
+    const byUser    = new Map();
     const allKlassSet = new Set();
-    // 全体の作業項目セット（行見出し用）
-    const allTaskSet  = new Set();
 
     for (const r of records) {
-      const user  = r['氏名']   || '（氏名なし）';
+      const user  = r['氏名']     || '（氏名なし）';
       const task  = r['作業項目'] || '（未分類）';
       const klass = r['記録分類'] || '（未分類）';
 
       allKlassSet.add(klass);
-      allTaskSet.add(task);
 
       if (!byUser.has(user)) byUser.set(user, new Map());
       const byTask = byUser.get(user);
@@ -453,11 +566,7 @@
       byKlass.set(klass, (byKlass.get(klass) || 0) + 1);
     }
 
-    return {
-      byUser,
-      allKlass: [...allKlassSet].sort(),
-      allTask:  [...allTaskSet].sort(),
-    };
+    return { byUser, allKlass: [...allKlassSet].sort() };
   }
 
   /* =====================================================
@@ -466,34 +575,29 @@
   function renderReport(records, monthVal, officeFilter) {
     const { byUser, allKlass } = aggregate(records);
 
-    // PDF用ヘッダーテキスト更新
-    const [y, m]  = monthVal.split('-');
-    const label   = `${y}年${parseInt(m, 10)}月`;
+    const [y, m]      = monthVal.split('-');
+    const label       = `${y}年${parseInt(m, 10)}月`;
     const officeLabel = officeFilter ? `【${officeFilter}】` : '【全事業所】';
+
     document.getElementById('pdf-title').textContent    = `${label} 実績報告書 ${officeLabel}`;
     document.getElementById('pdf-subtitle').textContent = `出力日: ${formatDate(new Date())}　総件数: ${records.length}件`;
 
-    // 月合計サマリー（記録分類ごとの件数）
     renderMonthlySummary(records, label, officeLabel);
 
-    // 利用者別テーブル
     const container = document.getElementById('user-tables');
     container.innerHTML = '';
-
     for (const [userName, byTask] of [...byUser.entries()].sort()) {
       container.appendChild(buildUserSection(userName, byTask, allKlass, monthVal));
     }
   }
 
   function renderMonthlySummary(records, label, officeLabel) {
-    // 記録分類ごとの合計
     const klassCounts = new Map();
     for (const r of records) {
       const k = r['記録分類'] || '（未分類）';
       klassCounts.set(k, (klassCounts.get(k) || 0) + 1);
     }
 
-    const div = document.getElementById('monthly-summary');
     let html = `
       <div class="monthly-summary">
         <div class="monthly-summary-header">
@@ -503,23 +607,22 @@
         <div class="monthly-summary-body">
     `;
     for (const [k, cnt] of [...klassCounts.entries()].sort()) {
-      html += `<div class="summary-chip">${k}：<span>${cnt}</span> 件</div>`;
+      html += `<div class="summary-chip">${escHtml(k)}：<span>${cnt}</span> 件</div>`;
     }
     html += '</div></div>';
-    div.innerHTML = html;
+    document.getElementById('monthly-summary').innerHTML = html;
   }
 
   function buildUserSection(userName, byTask, allKlass, monthVal) {
-    // この利用者の合計件数
     let userTotal = 0;
     for (const byKlass of byTask.values()) {
       for (const cnt of byKlass.values()) userTotal += cnt;
     }
 
-    // セクションヘッダー
     const section = document.createElement('div');
     section.className = 'user-section';
 
+    // ── ヘッダー ──
     const header = document.createElement('div');
     header.className = 'user-section-header';
     header.innerHTML = `
@@ -527,55 +630,56 @@
       ${escHtml(userName)}
       <span class="user-total-badge">合計 ${userTotal} 件</span>
     `;
+
+    // 「報告書PDF」ボタンをヘッダーに追加（集計PDF取得時は非表示クラスで除外）
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'btn-report-pdf no-summary-pdf';
+    reportBtn.innerHTML = '<i class="fa-solid fa-print"></i> 報告書';
+    reportBtn.title = `${escHtml(userName)} の実施報告書を印刷`;
+    reportBtn.addEventListener('click', () => printServiceReport(userName));
+    header.appendChild(reportBtn);
+
     section.appendChild(header);
 
-    // テーブル
-    const wrap = document.createElement('div');
+    // ── 集計テーブル ──
+    const wrap  = document.createElement('div');
     wrap.className = 'summary-table-wrap';
 
     const table = document.createElement('table');
     table.className = 'summary-table';
 
-    // 作業項目と列（記録分類）を収集
     const userTasks = [...byTask.keys()].sort();
 
-    // ── thead ──
-    let thead = '<thead><tr>';
-    thead += '<th>作業項目</th>';
+    let thead = '<thead><tr><th>作業項目</th>';
     for (const k of allKlass) thead += `<th>${escHtml(k)}</th>`;
-    thead += '<th class="col-total">合計</th>';
-    thead += '</tr></thead>';
+    thead += '<th class="col-total">合計</th></tr></thead>';
 
-    // ── tbody ──
     let tbody = '<tbody>';
     for (const task of userTasks) {
       const byKlass = byTask.get(task);
-      let rowTotal = 0;
+      let rowTotal  = 0;
       let row = `<tr><td class="task-cell" data-user="${escHtml(userName)}" data-month="${escHtml(monthVal || '')}" data-item="${escHtml(task)}">${escHtml(task)}</td>`;
       for (const k of allKlass) {
         const cnt = byKlass.get(k) || 0;
         rowTotal += cnt;
         row += `<td class="${cnt > 0 ? 'has-count' : ''}">${cnt > 0 ? cnt : '－'}</td>`;
       }
-      row += `<td class="col-total">${rowTotal}</td>`;
-      row += '</tr>';
+      row += `<td class="col-total">${rowTotal}</td></tr>`;
       tbody += row;
     }
     tbody += '</tbody>';
 
-    // ── tfoot（列合計行） ──
     let tfoot = '<tfoot><tr><td>合　計</td>';
     for (const k of allKlass) {
       let colTotal = 0;
       for (const byKlass of byTask.values()) colTotal += byKlass.get(k) || 0;
       tfoot += `<td>${colTotal}</td>`;
     }
-    tfoot += `<td class="col-total">${userTotal}</td>`;
-    tfoot += '</tr></tfoot>';
+    tfoot += `<td class="col-total">${userTotal}</td></tr></tfoot>`;
 
     table.innerHTML = thead + tbody + tfoot;
 
-    // 作業項目セルのクリックで helper-record.html を別タブで開く
+    // 作業項目セル → helper-record.html を別タブで開く
     table.querySelectorAll('.task-cell').forEach(cell => {
       cell.addEventListener('click', () => {
         const params = new URLSearchParams({
@@ -589,14 +693,13 @@
 
     wrap.appendChild(table);
     section.appendChild(wrap);
-
     return section;
   }
 
   /* =====================================================
-   * PDF出力（html2canvas + jsPDF）
+   * 集計 PDF 出力（html2canvas + jsPDF）
    * ===================================================== */
-  async function downloadPdf() {
+  async function downloadSummaryPdf() {
     const btn        = document.getElementById('pdf-btn');
     const resultArea = document.getElementById('result-area');
     const pdfHeader  = document.getElementById('pdf-header');
@@ -604,7 +707,10 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-    // PDF用ヘッダーを表示してキャプチャ
+    // 報告書ボタンをキャプチャから除外（visibility で非表示化）
+    const reportBtns = document.querySelectorAll('.no-summary-pdf');
+    reportBtns.forEach(b => { b.style.visibility = 'hidden'; });
+
     pdfHeader.style.display = 'block';
 
     try {
@@ -615,19 +721,17 @@
         logging: false,
       });
 
-      // A4縦・余白8mm後の利用可能寸法（mm）
-      const PAGE_W = 194; // 210 - 8*2
-      const PAGE_H = 277; // 297 - 10*2
+      // A4縦・余白8mm
+      const PAGE_W = 194;
+      const PAGE_H = 277;
       const MARGIN = 8;
 
       const csW = canvas.width  / 1.5;
       const csH = canvas.height / 1.5;
 
-      // 幅に合わせたスケール
       const scaleW     = PAGE_W / csW;
       const finalScale = csH * scaleW > PAGE_H ? PAGE_H / csH : scaleW;
 
-      // 1ページあたりの高さ（CSSピクセル）
       const pageH_px = PAGE_H / finalScale;
       const numPages  = Math.ceil(csH / pageH_px);
 
@@ -650,17 +754,154 @@
         pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
       }
 
-      // ファイル名：YYYY年MM月_実績報告書.pdf
-      const monthVal = document.getElementById('target-month').value;
-      const [y, m]   = monthVal.split('-');
+      const monthVal  = document.getElementById('target-month').value;
+      const [y, m]    = monthVal.split('-');
       pdf.save(`${y}年${m}月_実績報告書.pdf`);
     } catch (e) {
       alert(`PDF生成エラー: ${e.message}`);
     } finally {
       pdfHeader.style.display = 'none';
+      reportBtns.forEach(b => { b.style.visibility = ''; });
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF出力';
+      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> 集計PDF';
     }
+  }
+
+  /* =====================================================
+   * サービス実施報告書 印刷（window.print）
+   * ===================================================== */
+  function printServiceReport(userName) {
+    if (!_activeMonthVal) {
+      alert('先に「表示」ボタンでデータを読み込んでください。');
+      return;
+    }
+
+    const records      = _allRecords.filter(r => r['氏名'] === userName);
+    const reporterName = document.getElementById('reporter-name').value.trim() || '　　　　';
+    const [y, m]       = _activeMonthVal.split('-');
+
+    const container = document.getElementById('service-report-print');
+    container.innerHTML = buildServiceReportHTML(userName, records, y, m, reporterName);
+    window.print();
+  }
+
+  /* =====================================================
+   * サービス実施報告書 HTML 生成
+   * ===================================================== */
+  function buildServiceReportHTML(userName, records, y, m, reporterName) {
+    const mInt   = parseInt(m, 10);
+    const yInt   = parseInt(y, 10);
+    const lastDay = new Date(yInt, mInt, 0).getDate(); // 月の末日
+    const period  = `${yInt}年${mInt}月1日 〜 ${yInt}年${mInt}月${lastDay}日`;
+
+    // ── ①実施したサービス：作業項目ごとに集計 ──────────────────
+    // taskMap: Map<作業項目, { dates: Set<number>, notes: string[] }>
+    const taskMap = new Map();
+    for (const r of records) {
+      const task = r['作業項目'] || '（未分類）';
+      if (!taskMap.has(task)) taskMap.set(task, { dates: new Set(), notes: [] });
+      const entry = taskMap.get(task);
+
+      // 実施日（ミリ秒）→ JST の日付け番号を取得
+      if (r['実施日']) {
+        const ms  = Number(r['実施日']);
+        const jst = new Date(ms + 9 * 60 * 60 * 1000);
+        entry.dates.add(jst.getUTCDate());
+      }
+
+      // 記録内容（特記事項）
+      const note = (r['記録内容'] || '').trim();
+      if (note) entry.notes.push(note);
+    }
+
+    // 作業項目行 HTML を生成
+    let serviceRows = '';
+    for (const [task, entry] of [...taskMap.entries()].sort()) {
+      // 実施日を昇順・カンマ区切り
+      const sortedDates = [...entry.dates].sort((a, b) => a - b);
+      const datesStr    = sortedDates.length > 0
+        ? sortedDates.join(', ') + '日'
+        : '－';
+
+      // 特記事項：重複を排除して改行結合、なければ定型文
+      const uniqueNotes = [...new Set(entry.notes)];
+      const notesStr    = uniqueNotes.length > 0
+        ? uniqueNotes.join('\n')
+        : '介助にて問題なく実施できております。';
+
+      serviceRows += `
+        <tr>
+          <td>${escHtml(task)}</td>
+          <td>${escHtml(datesStr)}</td>
+          <td>${escHtml(notesStr)}</td>
+        </tr>`;
+    }
+    if (!serviceRows) {
+      serviceRows = '<tr><td colspan="3" style="text-align:center">実施記録なし</td></tr>';
+    }
+
+    // ── HTML 組み立て ─────────────────────────────────────────────
+    return `
+<div class="report-doc">
+  <h1 class="report-title">訪問介護快護屋　サービス実施報告書</h1>
+
+  <table class="report-info-table">
+    <tr><td>報 告 者</td><td>${escHtml(reporterName)}</td></tr>
+    <tr><td>利用者氏名</td><td>${escHtml(userName)} 様</td></tr>
+    <tr><td>サービス提供期間</td><td>${escHtml(period)}</td></tr>
+  </table>
+
+  <div class="report-section">
+    <h2 class="report-section-title">●実施したサービス</h2>
+    <table class="report-table service-table">
+      <thead>
+        <tr>
+          <th>実施サービス内容</th>
+          <th>サービス実施日</th>
+          <th>サービス実施時の様子</th>
+        </tr>
+      </thead>
+      <tbody>${serviceRows}</tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <h2 class="report-section-title">●サービスの中止</h2>
+    <table class="report-table stop-table">
+      <thead>
+        <tr>
+          <th>サービス内容</th>
+          <th>中止日</th>
+          <th>中止理由</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>なし</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <h2 class="report-section-title">●サービスの変更</h2>
+    <table class="report-table stop-table">
+      <thead>
+        <tr>
+          <th>サービス内容</th>
+          <th>変更日</th>
+          <th>変更理由</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>なし</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <h2 class="report-section-title">●連絡事項</h2>
+    <div class="report-notes-box">特記事項なし。</div>
+  </div>
+</div>`;
   }
 
   /* =====================================================
@@ -670,9 +911,7 @@
     document.getElementById('state-loading').classList.toggle('hidden', state !== 'loading');
     document.getElementById('state-empty').classList.toggle('hidden',   state !== 'empty');
     document.getElementById('result-area').classList.toggle('hidden',   state !== 'result');
-    if (state !== 'result') {
-      document.getElementById('pdf-btn').classList.add('hidden');
-    }
+    if (state !== 'result') document.getElementById('pdf-btn').classList.add('hidden');
   }
 
   function formatDate(d) {
