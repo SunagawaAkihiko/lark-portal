@@ -3877,7 +3877,7 @@ function buildBonusSlipHTML(row, date) {
       <div class="slip-title-text">賞与明細書</div>
       <div class="slip-period-name">${dateLabel}　${row.staffName}　様</div>
     </div>
-    <div class="slip-greeting">今回もご苦労さまでした。</div>
+    <div class="slip-greeting">今後もよろしくお願いします。</div>
   </div>
 
   <!-- 支給セクション -->
@@ -3909,8 +3909,18 @@ function buildBonusSlipHTML(row, date) {
       </tr>
       <tr>
         ${c('食費', f(row['食費']))}
-        ${cb()}${cb()}${cb()}${cb()}${cb()}
-        ${c('控除合計',  f(row['控除合計']))}
+        ${cb()}${cb()}${cb()}${cb()}${cb()}${cb()}
+        ${ch('控除合計',  f(row['控除合計']))}
+      </tr>
+    </table>
+  </div>
+
+  <!-- 記事セクション -->
+  <div class="slip-section">
+    <div class="sec-label"><span>記</span><span>事</span></div>
+    <table class="sec-table">
+      <tr>
+        ${cb()}${cb()}${cb()}${cb()}${cb()}${cb()}${cb()}
         ${ch('差引支給額', f(row['差引支給額']))}
       </tr>
     </table>
