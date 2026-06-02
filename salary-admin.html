@@ -1575,7 +1575,7 @@ async function renderToPdf(element, filename) {
   const MARGIN = 8;
 
   // html2canvas でキャプチャ（scale:1.5 = 印刷品質を保ちつつファイルサイズ削減）
-  const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, logging: false });
+  const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
 
   // CSSピクセル換算（scale:1.5 なので÷1.5）
   const csW = canvas.width  / 1.5;
@@ -1630,6 +1630,7 @@ async function downloadSalary() {
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset';
   tmpStyle.textContent = `
+    .salary-table { width: max-content !important; }
     .salary-table thead th { position: static !important; top: auto !important; }
     .salary-table .col-item { position: static !important; left: auto !important; }
     .table-scroll-wrap { overflow: visible !important; }
@@ -3610,6 +3611,7 @@ async function downloadBonus() {
   const tmpStyle = document.createElement('style');
   tmpStyle.id = 'pdf-sticky-reset-bonus';
   tmpStyle.textContent = `
+    .salary-table { width: max-content !important; }
     .salary-table thead th { position: static !important; top: auto !important; }
     .salary-table .col-item { position: static !important; left: auto !important; }
     .table-scroll-wrap { overflow: visible !important; }
