@@ -3334,12 +3334,13 @@ async function loadBonus() {
     if (savedArray.length > 0) {
       // 保存済みデータがある → 計算フィールドも復元する（API再計算不要）
       const calcKeys = ['健康保険','介護保険','厚生年金','子育て支援金','雇用保険',
-                        '社会保険計','課税対象額','源泉所得税','支給合計'];
+                        '社会保険計','課税対象額','源泉所得税','支給合計','控除合計','差引支給額'];
       savedArray.forEach(row => {
         calcKeys.forEach(k => setBonusCell(row.staffName, k, row[k] || 0));
-        recalcBonusLocals(row.staffName);
+        // ロック時は input 要素が存在しないため、recalcBonusLocals は呼ばない（保存済みデータをそのまま使う）
       });
-      ['賞与支給額','調整手当','食費','支給合計','健康保険','介護保険','厚生年金',
+      // 手動入力フィールド（賞与支給額, 調整手当, 食費）は renderBonusTable 側で合計が計算済みのため再計算から除外
+      ['支給合計','健康保険','介護保険','厚生年金',
        '子育て支援金','雇用保険','社会保険計','課税対象額','源泉所得税','控除合計','差引支給額']
         .forEach(updateBonusColumnTotal);
     }
