@@ -961,12 +961,13 @@
       for (const r of stopRecords) {
         const task   = escHtml(r['作業項目'] || '');
         const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        const reason = escHtml(r['記録内容'] || '');
         stopRows += `
           <tr>
             <td>${task}</td>
             <td>${escHtml(dayStr)}</td>
             <td>
-              <textarea class="edit-area" rows="2"></textarea>
+              <textarea class="edit-area" rows="2">${reason}</textarea>
               <div class="print-text"></div>
             </td>
           </tr>`;
@@ -982,12 +983,13 @@
       for (const r of changeRecords) {
         const task   = escHtml(r['作業項目'] || '');
         const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        const reason = escHtml(r['記録内容'] || '');
         changeRows += `
           <tr>
             <td>${task}</td>
             <td>${escHtml(dayStr)}</td>
             <td>
-              <textarea class="edit-area" rows="2"></textarea>
+              <textarea class="edit-area" rows="2">${reason}</textarea>
               <div class="print-text"></div>
             </td>
           </tr>`;
