@@ -3635,10 +3635,35 @@ async function downloadBonus() {
   scroll.style.flex = 'none'; scroll.style.height = 'auto'; scroll.style.width = 'max-content';
   scroll.style.overflow = 'visible'; scroll.style.maxHeight = 'none';
 
+  // 支給合計が0円（ブランク）のスタッフを特定
+  const blankStaffs = bonusStaffList.filter(staffName => {
+    const el = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="支給合計"]`);
+    return !el || parseInt(el.dataset.numval || 0, 10) === 0;
+  });
+
+  // PDF出力時のみ一時的に列（thとtd）を非表示にする
+  const hiddenEls = [];
+  blankStaffs.forEach(staffName => {
+    Array.from(scroll.querySelectorAll('th.col-staff')).forEach(th => {
+      if (th.textContent === staffName) {
+        hiddenEls.push({ el: th, orig: th.style.display });
+        th.style.display = 'none';
+      }
+    });
+    const tds = scroll.querySelectorAll(`td[data-staff="${staffName}"]`);
+    tds.forEach(td => {
+      hiddenEls.push({ el: td, orig: td.style.display });
+      td.style.display = 'none';
+    });
+  });
+
   const [y, m, d] = bonusCurrentDate.split('-');
   try {
     await renderToPdf(scroll, `${y}${m}${d}_賞与支給控除一覧表.pdf`);
   } finally {
+    // PDF出力が終わったら非表示にしていた列を元に戻す
+    hiddenEls.forEach(item => { item.el.style.display = item.orig; });
+
     document.getElementById('pdf-sticky-reset-bonus')?.remove();
     if (header) header.style.display = '';
     Object.assign(body.style,       { height: sv.bodyH, overflow: sv.bodyOv });
