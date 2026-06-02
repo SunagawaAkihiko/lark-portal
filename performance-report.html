@@ -952,6 +952,48 @@
       serviceRows = '<tr><td colspan="3" style="text-align:center">実施記録なし</td></tr>';
     }
 
+    // 「記録分類 = サービス中止」のレコードを抽出して行HTML生成
+    const stopRecords = records.filter(r => r['記録分類'] === 'サービス中止');
+    let stopRows = '';
+    if (stopRecords.length === 0) {
+      stopRows = '<tr><td>なし</td><td></td><td><textarea class="edit-area" rows="2"></textarea><div class="print-text"></div></td></tr>';
+    } else {
+      for (const r of stopRecords) {
+        const task   = escHtml(r['作業項目'] || '');
+        const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        stopRows += `
+          <tr>
+            <td>${task}</td>
+            <td>${escHtml(dayStr)}</td>
+            <td>
+              <textarea class="edit-area" rows="2"></textarea>
+              <div class="print-text"></div>
+            </td>
+          </tr>`;
+      }
+    }
+
+    // 「記録分類 = 時間変更記録 or 振替記録」のレコードを抽出して行HTML生成
+    const changeRecords = records.filter(r => r['記録分類'] === '時間変更記録' || r['記録分類'] === '振替記録');
+    let changeRows = '';
+    if (changeRecords.length === 0) {
+      changeRows = '<tr><td>なし</td><td></td><td><textarea class="edit-area" rows="2"></textarea><div class="print-text"></div></td></tr>';
+    } else {
+      for (const r of changeRecords) {
+        const task   = escHtml(r['作業項目'] || '');
+        const dayStr = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
+        changeRows += `
+          <tr>
+            <td>${task}</td>
+            <td>${escHtml(dayStr)}</td>
+            <td>
+              <textarea class="edit-area" rows="2"></textarea>
+              <div class="print-text"></div>
+            </td>
+          </tr>`;
+      }
+    }
+
     return `
 <div class="preview-toolbar">
   <span class="toolbar-title">
@@ -999,16 +1041,7 @@
       <thead>
         <tr><th>サービス内容</th><th>中止日</th><th>中止理由</th></tr>
       </thead>
-      <tbody>
-        <tr>
-          <td>なし</td>
-          <td></td>
-          <td>
-            <textarea class="edit-area" rows="2"></textarea>
-            <div class="print-text"></div>
-          </td>
-        </tr>
-      </tbody>
+      <tbody>${stopRows}</tbody>
     </table>
   </div>
 
@@ -1018,16 +1051,7 @@
       <thead>
         <tr><th>サービス内容</th><th>変更日</th><th>変更理由</th></tr>
       </thead>
-      <tbody>
-        <tr>
-          <td>なし</td>
-          <td></td>
-          <td>
-            <textarea class="edit-area" rows="2"></textarea>
-            <div class="print-text"></div>
-          </td>
-        </tr>
-      </tbody>
+      <tbody>${changeRows}</tbody>
     </table>
   </div>
 
