@@ -438,30 +438,40 @@
       font-size: 8.5pt;
     }
 
-    /* ==================== 編集可能セル ==================== */
-    .editable-cell {
-      min-height: 1.4em;
+    /* ==================== テキスト入力欄（編集時）・印刷用テキスト ==================== */
+    /* 編集用テキストエリア：点線枠でユーザーに入力可能を示す */
+    .edit-area {
       width: 100%;
+      min-height: 2em;
+      border: 1.5px dashed #90ade0;
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+      font-size: 8.5pt;
+      color: #000;
+      line-height: 1.35;
+      resize: vertical;
+      background: white;
+      box-sizing: border-box;
       outline: none;
-      word-break: break-all;
-      white-space: pre-wrap;
-      cursor: text;
       display: block;
     }
-    /* 通常モード（プレビュー中）: 点線で編集可能を示す */
-    #service-report-print:not(.capture-mode) .editable-cell {
-      border-bottom: 1.5px dashed #90ade0;
+    .edit-area:focus {
+      border-color: var(--primary);
+      background: rgba(231,111,81,0.03);
     }
-    #service-report-print:not(.capture-mode) .editable-cell:focus {
-      border-bottom-color: var(--primary);
-      background: rgba(231,111,81,0.04);
+    /* 印刷用テキスト：通常は非表示。capture-mode 時のみ表示してPDFに映す */
+    .print-text {
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 1.2em;
+      font-size: 8.5pt;
+      line-height: 1.35;
     }
-    /* キャプチャモード: 枠線・背景を除去してクリーンに見せる */
-    #service-report-print.capture-mode .editable-cell {
-      border: none;
-      background: transparent;
-      cursor: default;
-    }
+    /* キャプチャモード: textarea を隠し print-text を表示に切り替え */
+    .capture-mode .edit-area  { display: none !important; }
+    .capture-mode .print-text { display: block !important; }
   </style>
 </head>
 <body>
@@ -834,11 +844,21 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
 
-    // キャプチャモードで編集用点線を消す
+    // ① textarea の現在値を隣の .print-text div にコピー
+    //    html2canvas はDOMクローンを描画するため textarea.value が消える。
+    //    plain な div にテキストを書き込んでおくことで確実に印字される。
+    reportDoc.querySelectorAll('.edit-area').forEach(area => {
+      const printEl = area.nextElementSibling;
+      if (printEl && printEl.classList.contains('print-text')) {
+        printEl.textContent = area.value;
+      }
+    });
+
+    // ② capture-mode: .edit-area を非表示・.print-text を表示に切り替え
     container.classList.add('capture-mode');
 
-    // position:fixed + overflow-y:auto のコンテナが html2canvas のクリップ範囲を
-    // スクロール位置で制限してしまうため、キャプチャ中だけ overflow:visible に変更する
+    // ③ position:fixed + overflow-y:auto のコンテナが html2canvas のクリップ範囲を
+    //    スクロール位置で制限するため、キャプチャ中だけ overflow:visible に変更する
     const savedOverflow  = container.style.overflow;
     const savedHeight    = container.style.height;
     const savedScrollTop = container.scrollTop;
@@ -854,17 +874,9 @@
         allowTaint: true,
         logging: false,
         onclone: (clonedDoc) => {
-          // html2canvas はクローンDOM を描画するため、contenteditable 属性が残っていると
-          // テキストが反映されないことがある。属性を除去して通常のdivとして描画させる
-          clonedDoc.querySelectorAll('[contenteditable]').forEach(el => {
-            el.removeAttribute('contenteditable');
-          });
           // クローン側のコンテナも overflow:visible にしてフル描画を保証
-          const clonedContainer = clonedDoc.getElementById('service-report-print');
-          if (clonedContainer) {
-            clonedContainer.style.overflow = 'visible';
-            clonedContainer.style.height   = 'auto';
-          }
+          const c = clonedDoc.getElementById('service-report-print');
+          if (c) { c.style.overflow = 'visible'; c.style.height = 'auto'; }
         },
       });
 
@@ -930,7 +942,10 @@
         <tr>
           <td>${escHtml(task)}</td>
           <td style="white-space:pre-wrap">${escHtml(datesStr)}</td>
-          <td><div class="editable-cell" contenteditable="true">介助にて問題なく実施できております。</div></td>
+          <td>
+            <textarea class="edit-area" rows="2">介助にて問題なく実施できております。</textarea>
+            <div class="print-text"></div>
+          </td>
         </tr>`;
     }
     if (!serviceRows) {
@@ -951,7 +966,7 @@
   </button>
   <span class="preview-hint">
     <i class="fa-solid fa-pencil" style="font-size:0.72rem"></i>
-    青い点線のセルは直接タイプして編集できます。入力後に「PDF出力」を押してください。
+    青い点線の枠内にテキストを入力できます（「様子」「中止理由」「変更理由」「連絡事項」）。編集後に「PDF出力」を押してください。
   </span>
 </div>
 
@@ -986,9 +1001,12 @@
       </thead>
       <tbody>
         <tr>
-          <td><div class="editable-cell" contenteditable="true">なし</div></td>
-          <td><div class="editable-cell" contenteditable="true"></div></td>
-          <td><div class="editable-cell" contenteditable="true"></div></td>
+          <td>なし</td>
+          <td></td>
+          <td>
+            <textarea class="edit-area" rows="2"></textarea>
+            <div class="print-text"></div>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -1002,9 +1020,12 @@
       </thead>
       <tbody>
         <tr>
-          <td><div class="editable-cell" contenteditable="true">なし</div></td>
-          <td><div class="editable-cell" contenteditable="true"></div></td>
-          <td><div class="editable-cell" contenteditable="true"></div></td>
+          <td>なし</td>
+          <td></td>
+          <td>
+            <textarea class="edit-area" rows="2"></textarea>
+            <div class="print-text"></div>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -1012,7 +1033,10 @@
 
   <div class="report-section">
     <h2 class="report-section-title">●連絡事項</h2>
-    <div class="report-notes-box editable-cell" contenteditable="true">特記事項なし。</div>
+    <div class="report-notes-box">
+      <textarea class="edit-area" rows="3">特記事項なし。</textarea>
+      <div class="print-text"></div>
+    </div>
   </div>
 </div>`;
   }
