@@ -561,26 +561,6 @@
     .btn-view-pdf:hover { opacity: 0.85; }
     .btn-view-pdf:disabled { opacity: 0.5; cursor: default; }
 
-    /* PDF DLボタン */
-    .btn-pdf-dl {
-      background: #457b9d;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 0.4rem 0.85rem;
-      font-size: 0.85rem;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: opacity 0.15s;
-    }
-    .btn-pdf-dl:hover { opacity: 0.85; }
-
     /* 一括保存プログレスオーバーレイ */
     #bulk-progress-overlay {
       display: none;
@@ -1341,7 +1321,7 @@
       const list = document.createElement('div');
       list.className = 'history-month-list';
 
-      for (const { yearMonth, savedAt, hasPdf } of data.months) {
+      for (const { yearMonth, savedAt } of data.months) {
         const [y, m] = yearMonth.split('-');
         const label  = `${parseInt(y, 10)}年${parseInt(m, 10)}月`;
         const dateStr = savedAt
@@ -1356,14 +1336,6 @@
 
         const btnDiv = document.createElement('div');
         btnDiv.style.cssText = 'display:flex;gap:0.4rem;align-items:center;';
-
-        if (hasPdf) {
-          const dlBtn = document.createElement('button');
-          dlBtn.className = 'btn-pdf-dl';
-          dlBtn.innerHTML = '<i class="fa-solid fa-download"></i> PDF DL';
-          dlBtn.addEventListener('click', () => downloadSavedPdf(name, yearMonth));
-          btnDiv.appendChild(dlBtn);
-        }
 
         const openBtn = document.createElement('button');
         openBtn.className = 'btn-open-report';
@@ -1477,21 +1449,6 @@
 
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-eye"></i> 確認';
-  }
-
-  /* =====================================================
-   * 過去実績：保存済みPDFをダウンロードする
-   * ===================================================== */
-  function downloadSavedPdf(name, yearMonth) {
-    const [y, m] = yearMonth.split('-');
-    const url = `${API_BASE}/api/service-report/pdf-download?${new URLSearchParams({ year: y, month: m, name })}`;
-    const a   = document.createElement('a');
-    a.href    = url;
-    a.download = `${y}年${m}月_${name}_実施報告書.pdf`;
-    a.target  = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   }
 
   /* =====================================================
