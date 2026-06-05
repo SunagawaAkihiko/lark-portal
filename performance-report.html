@@ -421,32 +421,30 @@
     .capture-mode .print-text { display: block !important; }
 
     /* ==================== タブバー ==================== */
-    .tab-bar {
+    .tabs {
       display: flex;
-      background: var(--brown-mid);
-      border-bottom: 3px solid var(--primary);
+      background: var(--card-bg);
+      border-bottom: 2px solid var(--border);
+      flex-shrink: 0;
     }
-    .tab-btn {
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -3px;
-      color: rgba(255,255,255,0.6);
-      padding: 0.65rem 1.2rem;
+    .tab {
+      padding: 0.6rem 1.5rem;
       font-size: 0.9rem;
       font-weight: 700;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
       font-family: inherit;
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
     }
-    .tab-btn:hover { color: white; }
-    .tab-btn.active {
-      color: white;
+    .tab.active {
+      color: var(--primary);
       border-bottom-color: var(--primary);
-      background: rgba(255,255,255,0.08);
     }
 
     /* ==================== 過去実績タブ ==================== */
@@ -609,11 +607,11 @@
 </header>
 
 <!-- タブバー -->
-<div class="tab-bar">
-  <button class="tab-btn active" id="tab-btn-new" onclick="switchTab('new')">
+<div class="tabs">
+  <button class="tab active" id="tab-btn-new" onclick="switchTab('new')">
     <i class="fa-solid fa-plus-circle"></i> 新規作成
   </button>
-  <button class="tab-btn" id="tab-btn-history" onclick="switchTab('history')">
+  <button class="tab" id="tab-btn-history" onclick="switchTab('history')">
     <i class="fa-solid fa-clock-rotate-left"></i> 過去実績
   </button>
 </div>
