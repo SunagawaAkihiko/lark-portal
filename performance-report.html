@@ -184,7 +184,7 @@
       gap: 0.5rem;
       width: 100%;
       padding: 0.65rem 1.2rem;
-      background: var(--primary);
+      background: var(--green);
       color: white;
       border: none;
       font-family: inherit;
@@ -192,7 +192,7 @@
       font-weight: 700;
       cursor: pointer;
       transition: opacity 0.15s;
-      border-top: 1px solid rgba(231,111,81,0.3);
+      border-top: 1px solid rgba(42,157,143,0.3);
       letter-spacing: 0.03em;
     }
     .btn-report-prominent:hover { opacity: 0.85; }
@@ -944,7 +944,7 @@
 
     const prominentBtn = document.createElement('button');
     prominentBtn.className = 'btn-report-prominent no-summary-pdf';
-    prominentBtn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${escHtml(userName)} の実施報告書PDFを出力する`;
+    prominentBtn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${escHtml(userName)} の実績報告書PDFを編集`;
     prominentBtn.addEventListener('click', () => openReportPreview(userName));
     section.appendChild(prominentBtn);
 
