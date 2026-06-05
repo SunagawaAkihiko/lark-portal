@@ -1387,7 +1387,7 @@
       const list = document.createElement('div');
       list.className = 'history-month-list';
 
-      for (const { yearMonth, savedAt } of data.months) {
+      for (const { yearMonth, savedAt, hasPdf } of data.months) {
         const [y, m] = yearMonth.split('-');
         const label  = `${parseInt(y, 10)}年${parseInt(m, 10)}月`;
         const dateStr = savedAt
