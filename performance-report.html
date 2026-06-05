@@ -1194,14 +1194,12 @@
       'position:fixed;left:-9999px;top:0;width:794px;background:white;overflow:visible;z-index:-1;';
     document.body.appendChild(tempWrap);
 
-    let successCount = 0;
-    let failCount    = 0;
-
+    // フェーズ1: 全利用者のPDFを生成してデータを収集する
+    const allUsersData = [];
     for (let i = 0; i < users.length; i++) {
       const userName = users[i];
-      const pct      = Math.round((i / users.length) * 100);
-      bar.style.width  = pct + '%';
-      label.textContent = `${i + 1} / ${users.length}人 … ${userName}`;
+      bar.style.width   = Math.round((i / users.length) * 90) + '%';
+      label.textContent = `PDF生成中 ${i + 1} / ${users.length}人 … ${userName}`;
 
       try {
         // 当月の保存済みデータを取得する（なければ null）
@@ -1260,31 +1258,39 @@
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN, MARGIN, cw * sc, ch * sc);
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
-        // データ保存とPDFアップロードを1回のAPI呼び出しで原子的に実行する（重複レコード防止）
-        const saveRes = await fetch(`${API_BASE}/api/service-report/save-all`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ year: y, month: m, name: userName, serviceRows, stopRows, changeRows, notice, pdfBase64 }),
-        }).then(r => r.json());
-
-        if (saveRes.ok) {
-          successCount++;
-        } else {
-          console.warn(`[bulkSave] ${userName}: error=${saveRes.error}`);
-          failCount++;
-        }
+        allUsersData.push({ name: userName, serviceRows, stopRows, changeRows, notice, pdfBase64 });
       } catch (e) {
-        console.error(`[bulkSave] ${userName} エラー:`, e);
-        failCount++;
+        console.error(`[bulkSave] ${userName} PDF生成エラー:`, e);
+        allUsersData.push({ name: userName, serviceRows: [], stopRows: [], changeRows: [], notice: '' });
       }
     }
 
     document.body.removeChild(tempWrap);
+
+    // フェーズ2: 全利用者データを1リクエストで送信し、月単位の1レコードにまとめて保存する
+    bar.style.width   = '95%';
+    label.textContent = 'Lark に保存中…';
+
+    let succeeded = false;
+    try {
+      const saveRes = await fetch(`${API_BASE}/api/service-report/save-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: y, month: m, users: allUsersData }),
+      }).then(r => r.json());
+      succeeded = saveRes.ok;
+      if (!succeeded) console.warn('[bulkSave] 保存エラー:', saveRes.error);
+    } catch (e) {
+      console.error('[bulkSave] 通信エラー:', e);
+    }
+
     overlay.classList.remove('active');
     bulkBtn.disabled = false;
     bar.style.width  = '100%';
 
-    alert(`一括保存完了\n成功: ${successCount}件 / 失敗: ${failCount}件`);
+    alert(succeeded
+      ? `一括保存完了\n${allUsersData.length}名分を1レコードにまとめて保存しました。`
+      : '一括保存に失敗しました。コンソールを確認してください。');
 
     // 過去実績タブのユーザーリストをリセットして次回取得時に再ロードさせる
     const sel = document.getElementById('history-user-sel');
