@@ -542,7 +542,7 @@
     .btn-bulk-save:hover { opacity: 0.85; }
     .btn-bulk-save:disabled { opacity: 0.5; cursor: default; }
 
-    /* PDF表示ボタン */
+    /* 確認ボタン */
     .btn-view-pdf {
       background: #c0392b;
       color: white;
@@ -653,7 +653,7 @@
     <i class="fa-solid fa-floppy-disk"></i> 一括保存
   </button>
   <button class="btn-view-pdf hidden" id="view-pdf-btn" onclick="viewMergedPdf()">
-    <i class="fa-solid fa-file-pdf"></i> PDF表示
+    <i class="fa-solid fa-eye"></i> 確認
   </button>
 </div>
 
@@ -1464,7 +1464,7 @@
       alert('PDF取得中にエラーが発生しました: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF表示';
+      btn.innerHTML = '<i class="fa-solid fa-eye"></i> 確認';
     }
   }
 
