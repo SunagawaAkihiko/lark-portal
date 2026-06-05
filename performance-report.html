@@ -1580,24 +1580,17 @@
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN, MARGIN, cw * sc, ch * sc);
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
-        // データ保存とPDFアップロードを並列実行する
-        const [saveRes, uploadRes] = await Promise.all([
-          fetch(`${API_BASE}/api/service-report`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ year: y, month: m, name: userName, serviceRows, stopRows, changeRows, notice }),
-          }).then(r => r.json()),
-          fetch(`${API_BASE}/api/service-report/upload-pdf`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ year: y, month: m, name: userName, pdfBase64 }),
-          }).then(r => r.json()),
-        ]);
+        // データ保存とPDFアップロードを1回のAPI呼び出しで原子的に実行する（重複レコード防止）
+        const saveRes = await fetch(`${API_BASE}/api/service-report/save-all`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ year: y, month: m, name: userName, serviceRows, stopRows, changeRows, notice, pdfBase64 }),
+        }).then(r => r.json());
 
-        if (saveRes.ok && uploadRes.ok) {
+        if (saveRes.ok) {
           successCount++;
         } else {
-          console.warn(`[bulkSave] ${userName}: saveRes=${saveRes.ok} uploadRes=${uploadRes.ok}`);
+          console.warn(`[bulkSave] ${userName}: error=${saveRes.error}`);
           failCount++;
         }
       } catch (e) {
