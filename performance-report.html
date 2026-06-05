@@ -1071,7 +1071,7 @@
       for (const r of stopRecords) {
         const rawTask = (r['作業項目'] || '').trim();
         const dayStr  = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
-        const rawReason = r['記録内容'] || '';
+        const rawReason = (r['記録内容'] || '').replace(/^サービス中止理由[：:]\s*/, '');
         stopRows += `
           <tr>
             <td>${escHtml(rawTask)}</td>
