@@ -542,6 +542,25 @@
     .btn-bulk-save:hover { opacity: 0.85; }
     .btn-bulk-save:disabled { opacity: 0.5; cursor: default; }
 
+    /* PDF表示ボタン */
+    .btn-view-pdf {
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-view-pdf:hover { opacity: 0.85; }
+    .btn-view-pdf:disabled { opacity: 0.5; cursor: default; }
+
     /* PDF DLボタン */
     .btn-pdf-dl {
       background: #457b9d;
@@ -632,6 +651,9 @@
   </button>
   <button class="btn-bulk-save hidden" id="bulk-save-btn" onclick="bulkSaveAll()">
     <i class="fa-solid fa-floppy-disk"></i> 一括保存
+  </button>
+  <button class="btn-view-pdf hidden" id="view-pdf-btn" onclick="viewMergedPdf()">
+    <i class="fa-solid fa-file-pdf"></i> PDF表示
   </button>
 </div>
 
@@ -763,6 +785,7 @@
       renderReport(records, monthVal, officeFilter);
       setView('result');
       document.getElementById('bulk-save-btn').classList.remove('hidden');
+      document.getElementById('view-pdf-btn').classList.remove('hidden');
     } catch (e) {
       alert(`データ取得エラー: ${e.message}`);
       setView('none');
@@ -1415,6 +1438,33 @@
     } catch (e) {
       loading.classList.add('hidden');
       area.innerHTML = `<div class="history-empty">エラー: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  /* =====================================================
+   * 全利用者分の保存済みPDFを結合して別タブで開く
+   * ===================================================== */
+  async function viewMergedPdf() {
+    const [y, m] = _activeMonthVal.split('-');
+    if (!y || !m) { alert('先に対象月のデータを表示してください。'); return; }
+    const btn = document.getElementById('view-pdf-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 取得中…';
+    try {
+      const res = await fetch(`${API_BASE}/api/service-report/merged-pdf?year=${y}&month=${m}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'PDFの取得に失敗しました。');
+        return;
+      }
+      const blob   = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      window.open(objUrl, '_blank');
+    } catch (e) {
+      alert('PDF取得中にエラーが発生しました: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF表示';
     }
   }
 
