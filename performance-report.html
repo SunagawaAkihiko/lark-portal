@@ -1396,22 +1396,29 @@
 
         const item = document.createElement('div');
         item.className = 'history-month-item';
-        const dlBtn = hasPdf
-          ? `<button class="btn-pdf-dl" onclick="downloadSavedPdf(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
-               <i class="fa-solid fa-download"></i> PDF DL
-             </button>`
-          : '';
-        item.innerHTML = `
-          <div>
-            <div class="ym">${label}</div>
-            ${dateStr ? `<div class="saved-at">保存日: ${dateStr}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:0.4rem;align-items:center;">
-            ${dlBtn}
-            <button class="btn-open-report" onclick="openHistoryPreview(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
-              <i class="fa-solid fa-eye"></i> 閲覧・再生成
-            </button>
-          </div>`;
+
+        const metaDiv = document.createElement('div');
+        metaDiv.innerHTML = `<div class="ym">${label}</div>${dateStr ? `<div class="saved-at">保存日: ${dateStr}</div>` : ''}`;
+
+        const btnDiv = document.createElement('div');
+        btnDiv.style.cssText = 'display:flex;gap:0.4rem;align-items:center;';
+
+        if (hasPdf) {
+          const dlBtn = document.createElement('button');
+          dlBtn.className = 'btn-pdf-dl';
+          dlBtn.innerHTML = '<i class="fa-solid fa-download"></i> PDF DL';
+          dlBtn.addEventListener('click', () => downloadSavedPdf(name, yearMonth));
+          btnDiv.appendChild(dlBtn);
+        }
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'btn-open-report';
+        openBtn.innerHTML = '<i class="fa-solid fa-eye"></i> 閲覧・再生成';
+        openBtn.addEventListener('click', () => openHistoryPreview(name, yearMonth));
+        btnDiv.appendChild(openBtn);
+
+        item.appendChild(metaDiv);
+        item.appendChild(btnDiv);
         list.appendChild(item);
       }
 
