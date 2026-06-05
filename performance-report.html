@@ -321,40 +321,6 @@
       align-items: center;
       gap: 0.4rem;
     }
-    .btn-preview-pdf {
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 0.42rem 0.9rem;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      transition: opacity 0.15s;
-      font-family: inherit;
-    }
-    .btn-preview-pdf:hover { opacity: 0.85; }
-    .btn-preview-pdf:disabled { opacity: 0.5; cursor: default; }
-    .btn-preview-save {
-      background: #2a9d8f;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 0.42rem 0.9rem;
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      transition: opacity 0.15s;
-      font-family: inherit;
-    }
-    .btn-preview-save:hover { opacity: 0.85; }
-    .btn-preview-save:disabled { opacity: 0.5; cursor: default; }
     .btn-preview-close {
       background: rgba(255,255,255,0.15);
       color: white;
@@ -704,9 +670,6 @@
   <button class="btn-primary" id="load-btn" onclick="loadReport()">
     <i class="fa-solid fa-rotate"></i> 表示
   </button>
-  <button class="btn-secondary hidden" id="pdf-btn" onclick="downloadSummaryPdf()">
-    <i class="fa-solid fa-file-pdf"></i> 集計PDF
-  </button>
   <button class="btn-bulk-save hidden" id="bulk-save-btn" onclick="bulkSaveAll()">
     <i class="fa-solid fa-floppy-disk"></i> 一括保存
   </button>
@@ -840,7 +803,6 @@
 
       renderReport(records, monthVal, officeFilter);
       setView('result');
-      document.getElementById('pdf-btn').classList.remove('hidden');
       document.getElementById('bulk-save-btn').classList.remove('hidden');
     } catch (e) {
       alert(`データ取得エラー: ${e.message}`);
@@ -990,63 +952,6 @@
   }
 
   /* =====================================================
-   * 集計 PDF（html2canvas + jsPDF）
-   * ===================================================== */
-  async function downloadSummaryPdf() {
-    const btn        = document.getElementById('pdf-btn');
-    const resultArea = document.getElementById('result-area');
-    const pdfHeader  = document.getElementById('pdf-header');
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
-
-    const reportBtns = document.querySelectorAll('.no-summary-pdf');
-    reportBtns.forEach(b => { b.style.visibility = 'hidden'; });
-    pdfHeader.style.display = 'block';
-
-    try {
-      const canvas = await html2canvas(resultArea, {
-        scale: 1.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      const PAGE_W = 194, PAGE_H = 277, MARGIN = 8;
-      const csW = canvas.width / 1.5, csH = canvas.height / 1.5;
-      const scaleW     = PAGE_W / csW;
-      const finalScale = csH * scaleW > PAGE_H ? PAGE_H / csH : scaleW;
-      const pageH_px   = PAGE_H / finalScale;
-      const numPages   = Math.ceil(csH / pageH_px);
-
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-
-      for (let i = 0; i < numPages; i++) {
-        if (i > 0) pdf.addPage();
-        const srcY = Math.round(i * pageH_px * 1.5);
-        const srcH = Math.round(Math.min(pageH_px, csH - i * pageH_px) * 1.5);
-        const slice = document.createElement('canvas');
-        slice.width  = canvas.width;
-        slice.height = srcH;
-        slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-        pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, csW * finalScale, (srcH / 1.5) * finalScale);
-      }
-
-      const monthVal = document.getElementById('target-month').value;
-      const [y, m]   = monthVal.split('-');
-      pdf.save(`${y}年${m}月_実績報告書.pdf`);
-    } catch (e) {
-      alert(`PDF生成エラー: ${e.message}`);
-    } finally {
-      pdfHeader.style.display = 'none';
-      reportBtns.forEach(b => { b.style.visibility = ''; });
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> 集計PDF';
-    }
-  }
-
-  /* =====================================================
    * 報告書プレビューを開く
    * ===================================================== */
   async function openReportPreview(userName) {
@@ -1102,168 +1007,6 @@
     container.innerHTML = '';
     document.body.style.overflow = '';
     _currentUser = '';
-  }
-
-  /* =====================================================
-   * 報告書データを Lark Bitable に保存する
-   * サービス実施時の様子（作業項目ごと）を1レコードとして保存する
-   * ===================================================== */
-  async function saveReportData() {
-    if (!_currentUser || !_activeMonthVal) return;
-    const container = document.getElementById('service-report-print');
-    const reportDoc = container.querySelector('.report-doc');
-    if (!reportDoc) return;
-
-    const [y, m] = _activeMonthVal.split('-');
-
-    // 実施したサービス（様子テキスト）
-    const serviceRows = [];
-    reportDoc.querySelectorAll('.service-table tbody tr').forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 3) return;
-      const task = cells[0].textContent.trim();
-      const area = cells[2].querySelector('.edit-area');
-      if (task && task !== '実施記録なし') serviceRows.push({ task, yosu: area ? area.value : '' });
-    });
-
-    // 中止・変更テーブル（stop-table クラスが共通: 0番目=中止 / 1番目=変更）
-    const stopTables = reportDoc.querySelectorAll('.stop-table');
-    const stopRows = [];
-    if (stopTables[0]) {
-      stopTables[0].querySelectorAll('tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 3) return;
-        const task = cells[0].textContent.trim();
-        const day  = cells[1].textContent.trim();
-        const area = cells[2].querySelector('.edit-area');
-        if (task && task !== 'なし') stopRows.push({ task, day, reason: area ? area.value : '' });
-      });
-    }
-    const changeRows = [];
-    if (stopTables[1]) {
-      stopTables[1].querySelectorAll('tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 3) return;
-        const task = cells[0].textContent.trim();
-        const day  = cells[1].textContent.trim();
-        const area = cells[2].querySelector('.edit-area');
-        if (task && task !== 'なし') changeRows.push({ task, day, reason: area ? area.value : '' });
-      });
-    }
-
-    // 連絡事項
-    const noticeArea = reportDoc.querySelector('.report-notes-box .edit-area');
-    const notice = noticeArea ? noticeArea.value : '';
-
-    const btn = document.getElementById('preview-save-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…';
-
-    try {
-      const res = await fetch(`${API_BASE}/api/service-report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: y, month: m, name: _currentUser, serviceRows, stopRows, changeRows, notice }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
-        }, 2000);
-      } else {
-        alert(`保存エラー: ${data.error}`);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
-      }
-    } catch (e) {
-      alert(`保存エラー: ${e.message}`);
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
-    }
-  }
-
-  /* =====================================================
-   * 報告書 PDF 生成（A4 1ページに必ず収める）
-   * ===================================================== */
-  async function generateReportPdf() {
-    const container = document.getElementById('service-report-print');
-    const reportDoc = container.querySelector('.report-doc');
-    if (!reportDoc) return;
-
-    const btn = document.getElementById('preview-pdf-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中…';
-
-    // ① textarea の現在値を隣の .print-text div にコピー
-    //    html2canvas はDOMクローンを描画するため textarea.value が消える。
-    //    plain な div にテキストを書き込んでおくことで確実に印字される。
-    reportDoc.querySelectorAll('.edit-area').forEach(area => {
-      const printEl = area.nextElementSibling;
-      if (printEl && printEl.classList.contains('print-text')) {
-        printEl.textContent = area.value;
-      }
-    });
-
-    // ② capture-mode: .edit-area を非表示・.print-text を表示に切り替え
-    container.classList.add('capture-mode');
-
-    // ③ position:fixed + overflow-y:auto のコンテナが html2canvas のクリップ範囲を
-    //    スクロール位置で制限するため、キャプチャ中だけ overflow:visible に変更する
-    const savedOverflow  = container.style.overflow;
-    const savedHeight    = container.style.height;
-    const savedScrollTop = container.scrollTop;
-    container.style.overflow = 'visible';
-    container.style.height   = 'auto';
-    container.scrollTop      = 0;
-
-    try {
-      const canvas = await html2canvas(reportDoc, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          // クローン側のコンテナも overflow:visible にしてフル描画を保証
-          const c = clonedDoc.getElementById('service-report-print');
-          if (c) { c.style.overflow = 'visible'; c.style.height = 'auto'; }
-        },
-      });
-
-      // A4 縦・余白 8mm
-      const MARGIN_MM  = 8;
-      const CONTENT_W  = 210 - MARGIN_MM * 2; // 194mm
-      const CONTENT_H  = 297 - MARGIN_MM * 2; // 281mm
-
-      const csW = canvas.width  / 2; // CSS px（scale=2 分を戻す）
-      const csH = canvas.height / 2;
-
-      // 幅に合わせてスケール計算。高さが溢れる場合は高さ優先に切り替え
-      const scaleByW   = CONTENT_W / csW;
-      const finalScale = csH * scaleByW > CONTENT_H ? CONTENT_H / csH : scaleByW;
-
-      const imgW = csW * finalScale;
-      const imgH = csH * finalScale;
-
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN_MM, MARGIN_MM, imgW, imgH);
-
-      const [y, m] = _activeMonthVal.split('-');
-      pdf.save(`${y}年${m}月_${_currentUser}_実施報告書.pdf`);
-    } catch (e) {
-      alert(`PDF生成エラー: ${e.message}`);
-    } finally {
-      // コンテナのスタイルを元に戻す
-      container.style.overflow = savedOverflow;
-      container.style.height   = savedHeight;
-      container.scrollTop      = savedScrollTop;
-      container.classList.remove('capture-mode');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> PDF出力（A4 1ページ）';
-    }
   }
 
   /* =====================================================
@@ -1397,18 +1140,12 @@
     <i class="fa-solid fa-file-pdf" style="color:#f4a261"></i>
     ${escHtml(userName)} 様 ・ サービス実施報告書（${yInt}年${mInt}月）
   </span>
-  <button class="btn-preview-pdf" id="preview-pdf-btn" onclick="generateReportPdf()">
-    <i class="fa-solid fa-file-pdf"></i> PDF出力（A4 1ページ）
-  </button>
-  <button class="btn-preview-save" id="preview-save-btn" onclick="saveReportData()">
-    <i class="fa-solid fa-floppy-disk"></i> 保存
-  </button>
   <button class="btn-preview-close" onclick="closePreview()">
     <i class="fa-solid fa-xmark"></i> 閉じる
   </button>
   <span class="preview-hint">
     <i class="fa-solid fa-pencil" style="font-size:0.72rem"></i>
-    青い点線の枠内にテキストを入力できます（「様子」「中止理由」「変更理由」「連絡事項」）。編集後に「PDF出力」を押してください。
+    青い点線の枠内にテキストを入力できます（「様子」「中止理由」「変更理由」「連絡事項」）。入力後は「一括保存」ボタンで全員分まとめて保存されます。
   </span>
 </div>
 
@@ -1472,7 +1209,6 @@
     document.getElementById('state-loading').classList.toggle('hidden', state !== 'loading');
     document.getElementById('state-empty').classList.toggle('hidden',   state !== 'empty');
     document.getElementById('result-area').classList.toggle('hidden',   state !== 'result');
-    if (state !== 'result') document.getElementById('pdf-btn').classList.add('hidden');
   }
 
   function formatDate(d) {
