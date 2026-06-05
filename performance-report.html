@@ -1199,85 +1199,27 @@
     overlay.classList.add('active');
     bulkBtn.disabled = true;
 
-    // PDFを生成するための非表示コンテナ
-    const tempWrap = document.createElement('div');
-    tempWrap.id = '__bulk-render-wrap__';
-    tempWrap.style.cssText =
-      'position:fixed;left:-9999px;top:0;width:794px;background:white;overflow:visible;z-index:-1;';
-    document.body.appendChild(tempWrap);
-
-    // フェーズ1: 全利用者のPDFを生成してデータを収集する
+    // フェーズ1: 全利用者の保存済みデータをサーバーから収集する（PDF生成は不要）
     const allUsersData = [];
     for (let i = 0; i < users.length; i++) {
       const userName = users[i];
       bar.style.width   = Math.round((i / users.length) * 90) + '%';
-      label.textContent = `PDF生成中 ${i + 1} / ${users.length}人 … ${userName}`;
+      label.textContent = `データ収集中 ${i + 1} / ${users.length}人 … ${userName}`;
 
+      let currentReport = null;
       try {
-        // 当月の保存済みデータを取得する（なければ null）
-        let currentReport = null;
-        try {
-          const rr = await fetch(`${API_BASE}/api/service-report?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json());
-          if (rr.ok) currentReport = rr.report;
-        } catch (_) {}
+        const rr = await fetch(`${API_BASE}/api/service-report?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json());
+        if (rr.ok) currentReport = rr.report;
+      } catch (_) {}
 
-        const records = _allRecords.filter(r => r['氏名'] === userName);
-
-        // 報告書HTMLをオフスクリーンコンテナに挿入する
-        tempWrap.innerHTML = buildServiceReportHTML(userName, records, y, m, currentReport, null);
-        const reportDoc = tempWrap.querySelector('.report-doc');
-        if (!reportDoc) throw new Error('report-doc not found');
-
-        // データをtextareaから収集する（capture-mode前に実施）
-        const serviceRows = _collectServiceRows(tempWrap);
-        const stopRows    = _collectStopChangeRows(tempWrap, 0);
-        const changeRows  = _collectStopChangeRows(tempWrap, 1);
-        const notice      = tempWrap.querySelector('.report-notes-box .edit-area')?.value || '';
-
-        // textarea値をprint-textにコピーしてcapture-modeに切り替える
-        tempWrap.querySelectorAll('.edit-area').forEach(area => {
-          const next = area.nextElementSibling;
-          if (next?.classList.contains('print-text')) next.textContent = area.value;
-        });
-        tempWrap.classList.add('capture-mode');
-
-        // レイアウト確定を待つ
-        await new Promise(r => requestAnimationFrame(r));
-        await new Promise(r => requestAnimationFrame(r));
-
-        // html2canvas でキャプチャする
-        const canvas = await html2canvas(reportDoc, {
-          scale: 2,
-          backgroundColor: '#ffffff',
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          onclone: (clonedDoc) => {
-            const c = clonedDoc.getElementById('__bulk-render-wrap__');
-            if (c) { c.style.overflow = 'visible'; c.style.position = 'absolute'; }
-          },
-        });
-
-        tempWrap.classList.remove('capture-mode');
-
-        // jsPDF でA4 1ページPDFを生成する
-        const MARGIN = 8, CW = 194, CH = 281;
-        const cw = canvas.width / 2, ch = canvas.height / 2;
-        const scaleByW = CW / cw;
-        const sc = ch * scaleByW > CH ? CH / ch : scaleByW;
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN, MARGIN, cw * sc, ch * sc);
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
-        allUsersData.push({ name: userName, serviceRows, stopRows, changeRows, notice, pdfBase64 });
-      } catch (e) {
-        console.error(`[bulkSave] ${userName} PDF生成エラー:`, e);
-        allUsersData.push({ name: userName, serviceRows: [], stopRows: [], changeRows: [], notice: '' });
-      }
+      allUsersData.push({
+        name:        userName,
+        serviceRows: currentReport?.serviceRows || [],
+        stopRows:    currentReport?.stopRows    || [],
+        changeRows:  currentReport?.changeRows  || [],
+        notice:      currentReport?.notice      || '',
+      });
     }
-
-    document.body.removeChild(tempWrap);
 
     // フェーズ2: 全利用者データを1リクエストで送信し、月単位の1レコードにまとめて保存する
     bar.style.width   = '95%';
@@ -1447,25 +1389,94 @@
   async function viewMergedPdf() {
     const [y, m] = _activeMonthVal.split('-');
     if (!y || !m) { alert('先に対象月のデータを表示してください。'); return; }
-    const btn = document.getElementById('view-pdf-btn');
+
+    const btn   = document.getElementById('view-pdf-btn');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 取得中…';
-    try {
-      const res = await fetch(`${API_BASE}/api/service-report/merged-pdf?year=${y}&month=${m}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || 'PDFの取得に失敗しました。');
-        return;
-      }
-      const blob   = await res.blob();
-      const objUrl = URL.createObjectURL(blob);
-      window.open(objUrl, '_blank');
-    } catch (e) {
-      alert('PDF取得中にエラーが発生しました: ' + e.message);
-    } finally {
+
+    const users = [...new Set(_allRecords.map(r => r['氏名']).filter(Boolean))];
+    if (users.length === 0) {
+      alert('利用者データがありません。先に「表示」ボタンでデータを読み込んでください。');
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-eye"></i> 確認';
+      return;
     }
+
+    const tempWrap = document.createElement('div');
+    tempWrap.id = '__view-pdf-wrap__';
+    tempWrap.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:794px;background:white;overflow:visible;z-index:-1;';
+    document.body.appendChild(tempWrap);
+
+    const { jsPDF } = window.jspdf;
+    const MARGIN = 8, CW = 194, CH = 281;
+    let pdf   = null;
+    let count = 0;
+
+    for (let i = 0; i < users.length; i++) {
+      const userName = users[i];
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 生成中 ${i + 1}/${users.length}`;
+
+      try {
+        let currentReport = null;
+        try {
+          const rr = await fetch(`${API_BASE}/api/service-report?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json());
+          if (rr.ok) currentReport = rr.report;
+        } catch (_) {}
+
+        const records = _allRecords.filter(r => r['氏名'] === userName);
+        tempWrap.innerHTML = buildServiceReportHTML(userName, records, y, m, currentReport, null);
+        const reportDoc = tempWrap.querySelector('.report-doc');
+        if (!reportDoc) continue;
+
+        tempWrap.querySelectorAll('.edit-area').forEach(area => {
+          const next = area.nextElementSibling;
+          if (next?.classList.contains('print-text')) next.textContent = area.value;
+        });
+        tempWrap.classList.add('capture-mode');
+
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r));
+
+        const canvas = await html2canvas(reportDoc, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            const c = clonedDoc.getElementById('__view-pdf-wrap__');
+            if (c) { c.style.overflow = 'visible'; c.style.position = 'absolute'; }
+          },
+        });
+
+        tempWrap.classList.remove('capture-mode');
+
+        const cw = canvas.width / 2, ch = canvas.height / 2;
+        const scaleByW = CW / cw;
+        const sc = ch * scaleByW > CH ? CH / ch : scaleByW;
+
+        if (pdf === null) {
+          pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        } else {
+          pdf.addPage();
+        }
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, cw * sc, ch * sc);
+        count++;
+      } catch (e) {
+        console.warn(`[viewMergedPdf] ${userName} スキップ:`, e);
+      }
+    }
+
+    document.body.removeChild(tempWrap);
+
+    if (!pdf || count === 0) {
+      alert('PDFの生成に失敗しました。コンソールを確認してください。');
+    } else {
+      window.open(URL.createObjectURL(pdf.output('blob')), '_blank');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-eye"></i> 確認';
   }
 
   /* =====================================================
