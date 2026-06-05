@@ -1972,13 +1972,24 @@ function renderKintaiTable(records, month, staffName) {
 
   if (staffName) {
     // ── 1人の日別一覧（1テーブル：日付列 + 勤怠列を同一行に並べる） ──
-    // 個別表示時は本人確認バーを非表示にする（確認状態は全員表示のヘッダー行にのみ表示）
-    document.getElementById('kintai-confirm-bar').style.display = 'none';
-
     const byDate = {};
     records.forEach(r => { byDate[r.date] = r; });
     // openId は records 内の任意レコードから取得する（日付レコードがない日の編集でも使用）
     const staffOpenId = records[0]?.openId || '';
+
+    // 個別表示時: 本人確認バーをタップで切り替え可能な形で表示する
+    const confirmBar = document.getElementById('kintai-confirm-bar');
+    confirmBar.style.display = 'block';
+    confirmBar.innerHTML = '<span style="color:#aaa;font-size:0.8rem">確認状態を取得中…</span>';
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/attendance/confirm-status?openId=${encodeURIComponent(staffOpenId)}&yearMonth=${month}`);
+        const j = await r.json();
+        renderConfirmBar(confirmBar, j.confirmed, j.confirmedAt, staffOpenId, staffName, month);
+      } catch(e) {
+        confirmBar.innerHTML = '<span style="color:#bbb;font-size:0.8rem">確認状態の取得に失敗しました</span>';
+      }
+    })();
 
     let html = `<thead><tr>
       <th class="kintai-date">日付</th>
@@ -2101,7 +2112,7 @@ function renderKintaiTable(records, month, staffName) {
     let html = '<thead>';
     // 確認状態行（初期は「…」。非同期で取得後に更新する）
     html += '<tr><th class="kintai-date" style="font-size:0.7rem;font-weight:400;color:#888">本人確認</th>';
-    names.forEach((n, i) => { html += `<th id="kintai-confirm-th-${i}" style="font-size:0.7rem;font-weight:400;color:#aaa">…</th>`; });
+    names.forEach((n, i) => { html += `<th id="kintai-confirm-th-${i}" style="font-size:0.7rem;font-weight:400;color:#aaa;cursor:pointer" title="タップで確認済み/未確認を切り替え">…</th>`; });
     html += '</tr>';
     // スタッフ氏名行
     html += '<tr><th class="kintai-date">日付</th>';
@@ -2123,15 +2134,15 @@ function renderKintaiTable(records, month, staffName) {
           if (!th) return;
           const info = openId ? confirmMap[openId] : null;
           if (info) {
-            // 確認済み: 緑チェックアイコン + 確認完了テキスト
             th.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#2e7d32"></i><br>確認済';
             th.style.color = '#2e7d32';
-            th.title = `確認日時: ${new Date(info.confirmedAt).toLocaleString('ja-JP')}`;
+            th.title = `タップで取り消し（確認日時: ${new Date(info.confirmedAt).toLocaleString('ja-JP')}）`;
           } else {
-            // 未確認: グレーテキスト
             th.innerHTML = '未確認';
             th.style.color = '#bbb';
+            th.title = 'タップで確認済みにする';
           }
+          th.onclick = () => toggleConfirmMatrix(openId, n, month, th);
         });
       } catch(e) {
         // 取得失敗時は全員「未確認」表示のままにする
@@ -2174,6 +2185,95 @@ function renderKintaiTable(records, month, staffName) {
 
     tbl.innerHTML = html;
   }
+}
+
+// ============================================================
+// 本人確認 トグル
+// ============================================================
+
+// 個別表示の confirm-bar を描画する（タップで確認済み⇔未確認を切り替え）
+function renderConfirmBar(el, confirmed, confirmedAt, openId, staffName, month) {
+  if (confirmed) {
+    const dt = confirmedAt ? new Date(confirmedAt).toLocaleString('ja-JP') : '';
+    el.innerHTML = `<div class="confirm-bar-confirmed" style="cursor:pointer" title="タップで未確認に戻す" onclick="toggleConfirm('${openId}','${staffName.replace(/'/g,"\\'")}','${month}',this.parentElement)">
+      <i class="fa-solid fa-circle-check"></i> 確認済み
+      <span class="confirm-bar-date">${dt}</span>
+      <span style="font-size:0.75rem;color:#388e3c;margin-left:auto">タップで取り消し</span>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="confirm-bar-unconfirmed" style="cursor:pointer" title="タップで確認済みにする" onclick="toggleConfirm('${openId}','${staffName.replace(/'/g,"\\'")}','${month}',this.parentElement)">
+      <i class="fa-regular fa-circle"></i> 未確認
+      <span style="font-size:0.75rem;color:#e65100;margin-left:auto">タップで確認済みにする</span>
+    </div>`;
+  }
+}
+
+// 個別表示: 本人確認をトグルする
+async function toggleConfirm(openId, staffName, month, el) {
+  if (!openId) { alert('openId が取得できません'); return; }
+  const currentlyConfirmed = el.querySelector('.confirm-bar-confirmed') !== null;
+  el.innerHTML = '<span style="color:#aaa;font-size:0.8rem">更新中…</span>';
+  try {
+    if (currentlyConfirmed) {
+      const r = await fetch(`${API_BASE}/api/attendance/confirm`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openId, yearMonth: month }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      renderConfirmBar(el, false, null, openId, staffName, month);
+    } else {
+      const r = await fetch(`${API_BASE}/api/attendance/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openId, yearMonth: month, staffName }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      renderConfirmBar(el, true, j.confirmedAt, openId, staffName, month);
+    }
+  } catch(e) {
+    el.innerHTML = `<span style="color:#c62828;font-size:0.8rem">エラー: ${e.message}</span>`;
+  }
+}
+
+// 全員マトリクス: ヘッダーセルをタップして本人確認をトグルする
+async function toggleConfirmMatrix(openId, staffName, month, th) {
+  if (!openId) { alert('openId が取得できません'); return; }
+  const currentlyConfirmed = th.style.color === 'rgb(46, 125, 50)';
+  th.style.color = '#aaa';
+  th.innerHTML = '更新中…';
+  th.onclick = null;
+  try {
+    if (currentlyConfirmed) {
+      const r = await fetch(`${API_BASE}/api/attendance/confirm`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openId, yearMonth: month }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      th.innerHTML = '未確認';
+      th.style.color = '#bbb';
+      th.title = 'タップで確認済みにする';
+    } else {
+      const r = await fetch(`${API_BASE}/api/attendance/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openId, yearMonth: month, staffName }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error);
+      th.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#2e7d32"></i><br>確認済';
+      th.style.color = '#2e7d32';
+      th.title = `タップで取り消し（確認日時: ${new Date(j.confirmedAt).toLocaleString('ja-JP')}）`;
+    }
+  } catch(e) {
+    th.innerHTML = 'エラー';
+    th.style.color = '#c62828';
+  }
+  th.onclick = () => toggleConfirmMatrix(openId, staffName, month, th);
 }
 
 // ============================================================
