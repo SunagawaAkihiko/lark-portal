@@ -939,6 +939,42 @@
   }
 
   /* =====================================================
+   * 報告書プレビューの内容をサーバーに保存する
+   * ===================================================== */
+  async function saveCurrentReport() {
+    const container = document.getElementById('service-report-print');
+    if (!container || !_currentUser || !_activeMonthVal) {
+      alert('保存できません。プレビューを再度開いてください。');
+      return;
+    }
+    const [y, m] = _activeMonthVal.split('-');
+    const serviceRows = _collectServiceRows(container);
+    const stopRows    = _collectStopChangeRows(container, 0);
+    const changeRows  = _collectStopChangeRows(container, 1);
+    const notice      = container.querySelector('.report-notes-box .edit-area')?.value ?? '';
+
+    const btn = document.getElementById('preview-save-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 保存中…'; }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/service-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: y, month: m, name: _currentUser, serviceRows, stopRows, changeRows, notice }),
+      }).then(r => r.json());
+      if (res.ok) {
+        alert(`${_currentUser} の報告書を保存しました。`);
+      } else {
+        alert(`保存失敗: ${res.error}`);
+      }
+    } catch (e) {
+      alert(`保存エラー: ${e.message}`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; }
+    }
+  }
+
+  /* =====================================================
    * 報告書プレビューを閉じる（グローバル参照）
    * ===================================================== */
   function closePreview() {
@@ -1080,6 +1116,9 @@
     <i class="fa-solid fa-file-pdf" style="color:#f4a261"></i>
     ${escHtml(userName)} 様 ・ サービス実施報告書（${yInt}年${mInt}月）
   </span>
+  <button class="btn-preview-close" id="preview-save-btn" onclick="saveCurrentReport()" style="background:rgba(42,157,143,0.5);">
+    <i class="fa-solid fa-floppy-disk"></i> 保存
+  </button>
   <button class="btn-preview-close" onclick="closePreview()">
     <i class="fa-solid fa-xmark"></i> 閉じる
   </button>
