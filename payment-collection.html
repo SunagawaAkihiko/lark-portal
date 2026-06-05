@@ -585,20 +585,16 @@
       const subStr    = esc(record.month || '―') + (record.office ? ' ／ ' + esc(record.office) : '');
 
       if (activeStatus === 'sent') {
-        // 送信済カード（選択不可・バッジ表示）
-        const sentDateStr = formatNyukinDate(record.nyukinDate);
-        const sentDateHtml = sentDateStr
-          ? `<div class="card-sub" style="color:var(--green)"><i class="fa-solid fa-calendar-check" style="font-size:.65rem"></i> 入金日：${sentDateStr}</div>`
-          : '';
+        // 送信済カード（1行コンパクト表示）
+        const sentDateStr  = formatNyukinDate(record.nyukinDate);
+        const sentMonthSub = esc(record.month || '―') + (sentDateStr ? `　入金日：${sentDateStr}` : '');
         card.className = 'payment-card card-sent';
         card.innerHTML = `
-          <div class="payment-card-body">
+          <div class="payment-card-body payment-card-body--compact">
             <span class="sent-badge"><i class="fa-solid fa-circle-check"></i> 送信済</span>
-            <div class="card-info">
-              <div class="card-name">${esc(record.name)}</div>
-              <div class="card-sub">${subStr}</div>
-              ${sentDateHtml}
-              <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
+            <div class="card-compact-info">
+              <span class="card-compact-name">${esc(record.name)}</span>
+              <span class="card-month">${sentMonthSub}</span>
             </div>
             <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
           </div>`;
@@ -639,21 +635,17 @@
               <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
             </div>`;
         } else {
-          // 入金済未送信カード：氏名・月・入金日・メール・金額・送信ボタン
-          const unsentDateStr = formatNyukinDate(record.nyukinDate);
-          const unsentDateHtml = unsentDateStr
-            ? `<div class="card-sub" style="color:var(--green)"><i class="fa-solid fa-calendar-check" style="font-size:.65rem"></i> 入金日：${unsentDateStr}</div>`
-            : '';
+          // 入金済未送信カード（1行コンパクト表示）
+          const unsentDateStr  = formatNyukinDate(record.nyukinDate);
+          const unsentMonthSub = esc(record.month || '―') + (unsentDateStr ? `　入金日：${unsentDateStr}` : '');
           card.innerHTML = `
-            <div class="payment-card-body">
+            <div class="payment-card-body payment-card-body--compact">
               <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
                 <i class="fa-solid fa-check"></i>
               </div>
-              <div class="card-info">
-                <div class="card-name">${esc(record.name)}</div>
-                <div class="card-sub">${subStr}</div>
-                ${unsentDateHtml}
-                <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
+              <div class="card-compact-info">
+                <span class="card-compact-name">${esc(record.name)}</span>
+                <span class="card-month">${unsentMonthSub}</span>
               </div>
               <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
               ${sendBtn}
