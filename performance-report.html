@@ -489,6 +489,109 @@
     /* キャプチャモード: textarea を隠し print-text を表示に切り替え */
     .capture-mode .edit-area  { display: none !important; }
     .capture-mode .print-text { display: block !important; }
+
+    /* ==================== タブバー ==================== */
+    .tab-bar {
+      display: flex;
+      background: var(--brown-mid);
+      border-bottom: 3px solid var(--primary);
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -3px;
+      color: rgba(255,255,255,0.6);
+      padding: 0.65rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: white; }
+    .tab-btn.active {
+      color: white;
+      border-bottom-color: var(--primary);
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* ==================== 過去実績タブ ==================== */
+    .history-ctrl {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.75rem 1rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .history-ctrl label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .history-ctrl select {
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.9rem;
+      background: white;
+      color: var(--text);
+      font-family: inherit;
+    }
+    #history-months-area { padding: 1rem; }
+    .history-empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 3rem 1rem;
+      font-size: 0.95rem;
+    }
+    .history-empty i { font-size: 2rem; display: block; margin-bottom: 0.6rem; color: var(--border); }
+    .history-month-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 640px;
+    }
+    .history-month-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .history-month-item:hover {
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(231,111,81,0.15);
+    }
+    .history-month-item .ym { font-weight: 700; font-size: 1rem; color: var(--text); }
+    .history-month-item .saved-at { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+    .btn-open-report {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .btn-open-report:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -499,6 +602,19 @@
   <span class="title">実績報告書</span>
   <span class="subtitle">合同会社 GLAD Life Create</span>
 </header>
+
+<!-- タブバー -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-btn-new" onclick="switchTab('new')">
+    <i class="fa-solid fa-plus-circle"></i> 新規作成
+  </button>
+  <button class="tab-btn" id="tab-btn-history" onclick="switchTab('history')">
+    <i class="fa-solid fa-clock-rotate-left"></i> 過去実績
+  </button>
+</div>
+
+<!-- 新規作成タブ -->
+<div id="tab-content-new">
 
 <!-- コントロールバー -->
 <div class="ctrl-bar">
@@ -538,6 +654,27 @@
   </div>
   <div id="monthly-summary"></div>
   <div id="user-tables"></div>
+</div>
+
+</div><!-- /#tab-content-new -->
+
+<!-- 過去実績タブ -->
+<div id="tab-content-history" class="hidden">
+  <div class="history-ctrl">
+    <label for="history-user-sel">利用者</label>
+    <select id="history-user-sel" onchange="loadHistoryMonths()">
+      <option value="">選択してください</option>
+    </select>
+    <span id="history-loading" class="hidden" style="font-size:0.85rem;color:var(--muted);display:flex;align-items:center;gap:0.35rem;">
+      <i class="fa-solid fa-spinner fa-spin"></i> 読み込み中…
+    </span>
+  </div>
+  <div id="history-months-area">
+    <div class="history-empty">
+      <i class="fa-solid fa-user-clock"></i>
+      利用者を選択すると、保存済みの実績報告書一覧が表示されます
+    </div>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -1258,6 +1395,127 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  /* =====================================================
+   * タブ切り替え
+   * ===================================================== */
+  function switchTab(tab) {
+    ['new', 'history'].forEach(t => {
+      document.getElementById(`tab-content-${t}`).classList.toggle('hidden', t !== tab);
+      document.getElementById(`tab-btn-${t}`).classList.toggle('active', t === tab);
+    });
+    if (tab === 'history') loadHistoryUsers();
+  }
+
+  /* =====================================================
+   * 過去実績：利用者一覧を取得してセレクトに反映
+   * ===================================================== */
+  async function loadHistoryUsers() {
+    const sel = document.getElementById('history-user-sel');
+    if (sel.options.length > 1) return; // 既に読み込み済み
+    const loading = document.getElementById('history-loading');
+    loading.classList.remove('hidden');
+    try {
+      const res  = await fetch(`${API_BASE}/api/service-report/users`);
+      const data = await res.json();
+      if (data.ok) {
+        data.users.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (_) {}
+    loading.classList.add('hidden');
+  }
+
+  /* =====================================================
+   * 過去実績：選択利用者の保存月一覧を取得・表示
+   * ===================================================== */
+  async function loadHistoryMonths() {
+    const name    = document.getElementById('history-user-sel').value;
+    const area    = document.getElementById('history-months-area');
+    const loading = document.getElementById('history-loading');
+
+    if (!name) {
+      area.innerHTML = '<div class="history-empty"><i class="fa-solid fa-user-clock"></i>利用者を選択すると、保存済みの実績報告書一覧が表示されます</div>';
+      return;
+    }
+
+    loading.classList.remove('hidden');
+    area.innerHTML = '';
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/service-report/months?${new URLSearchParams({ name })}`);
+      const data = await res.json();
+      loading.classList.add('hidden');
+
+      if (!data.ok || data.months.length === 0) {
+        area.innerHTML = '<div class="history-empty"><i class="fa-solid fa-box-open"></i>保存された実績報告書がありません</div>';
+        return;
+      }
+
+      const list = document.createElement('div');
+      list.className = 'history-month-list';
+
+      for (const { yearMonth, savedAt } of data.months) {
+        const [y, m] = yearMonth.split('-');
+        const label  = `${parseInt(y, 10)}年${parseInt(m, 10)}月`;
+        const dateStr = savedAt
+          ? new Date(savedAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })
+          : '';
+
+        const item = document.createElement('div');
+        item.className = 'history-month-item';
+        item.innerHTML = `
+          <div>
+            <div class="ym">${label}</div>
+            ${dateStr ? `<div class="saved-at">保存日: ${dateStr}</div>` : ''}
+          </div>
+          <button class="btn-open-report" onclick="openHistoryPreview(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
+            <i class="fa-solid fa-file-pdf"></i> 開く・PDF
+          </button>`;
+        list.appendChild(item);
+      }
+
+      area.appendChild(list);
+    } catch (e) {
+      loading.classList.add('hidden');
+      area.innerHTML = `<div class="history-empty">エラー: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  /* =====================================================
+   * 過去実績：指定月の報告書プレビューを開く
+   * ===================================================== */
+  async function openHistoryPreview(userName, yearMonth) {
+    const [y, m] = yearMonth.split('-');
+    const container = document.getElementById('service-report-print');
+    container.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;font-size:1.1rem;gap:0.75rem;">' +
+      '<i class="fa-solid fa-spinner fa-spin"></i>データを取得中…</div>';
+    container.classList.add('preview-active');
+    document.body.style.overflow = 'hidden';
+
+    // PDF生成・保存で参照されるグローバル変数を設定する
+    _currentUser    = userName;
+    _activeMonthVal = yearMonth;
+
+    try {
+      const [recordsRes, reportRes] = await Promise.all([
+        fetch(`${API_BASE}/api/helper/records?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json()),
+        fetch(`${API_BASE}/api/service-report?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json()),
+      ]);
+
+      const records     = (recordsRes.ok ? recordsRes.records || [] : []).filter(r => r['氏名'] === userName);
+      const savedReport = reportRes.ok ? reportRes.report : null;
+      container.innerHTML = buildServiceReportHTML(userName, records, y, m, savedReport, null);
+    } catch (e) {
+      container.innerHTML =
+        `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:white;font-size:1rem;padding:2rem;">${escHtml(e.message)}</div>`;
+    }
   }
 
   /* =====================================================
