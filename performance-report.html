@@ -251,42 +251,6 @@
     }
     .summary-table tfoot .col-total { background: var(--primary); color: white !important; }
 
-    /* ==================== 月合計サマリー ==================== */
-    .monthly-summary {
-      margin-bottom: 1.5rem;
-      background: var(--green-lt);
-      border: 1.5px solid #b2dfdb;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .monthly-summary-header {
-      background: var(--green);
-      color: white;
-      padding: 0.5rem 1rem;
-      font-size: 0.95rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .monthly-summary-body {
-      padding: 0.75rem 1rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .summary-chip {
-      background: white;
-      border: 1px solid #b2dfdb;
-      border-radius: 20px;
-      padding: 0.25rem 0.7rem;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #1a7a70;
-      white-space: nowrap;
-    }
-    .summary-chip span { color: var(--green); font-weight: 700; }
-
     /* ==================== 報告書プレビューオーバーレイ ==================== */
     #service-report-print {
       display: none;
@@ -704,7 +668,6 @@
     <h2 id="pdf-title"></h2>
     <p id="pdf-subtitle"></p>
   </div>
-  <div id="monthly-summary"></div>
   <div id="user-tables"></div>
 </div>
 
@@ -847,33 +810,11 @@
     document.getElementById('pdf-title').textContent    = `${label} 実績報告書 ${officeLabel}`;
     document.getElementById('pdf-subtitle').textContent = `出力日: ${formatDate(new Date())}　総件数: ${records.length}件`;
 
-    renderMonthlySummary(records, label, officeLabel);
-
     const container = document.getElementById('user-tables');
     container.innerHTML = '';
     for (const [userName, byTask] of [...byUser.entries()].sort()) {
       container.appendChild(buildUserSection(userName, byTask, allKlass, monthVal));
     }
-  }
-
-  function renderMonthlySummary(records, label, officeLabel) {
-    const klassCounts = new Map();
-    for (const r of records) {
-      const k = r['記録分類'] || '（未分類）';
-      klassCounts.set(k, (klassCounts.get(k) || 0) + 1);
-    }
-    let html = `
-      <div class="monthly-summary">
-        <div class="monthly-summary-header">
-          <i class="fa-solid fa-chart-bar"></i>
-          ${label} ${officeLabel} 月間集計サマリー　合計 ${records.length} 件
-        </div>
-        <div class="monthly-summary-body">`;
-    for (const [k, cnt] of [...klassCounts.entries()].sort()) {
-      html += `<div class="summary-chip">${escHtml(k)}：<span>${cnt}</span> 件</div>`;
-    }
-    html += '</div></div>';
-    document.getElementById('monthly-summary').innerHTML = html;
   }
 
   function buildUserSection(userName, byTask, allKlass, monthVal) {
