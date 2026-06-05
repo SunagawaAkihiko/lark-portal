@@ -592,6 +592,81 @@
       transition: opacity 0.15s;
     }
     .btn-open-report:hover { opacity: 0.85; }
+
+    /* 一括保存ボタン */
+    .btn-bulk-save {
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-bulk-save:hover { opacity: 0.85; }
+    .btn-bulk-save:disabled { opacity: 0.5; cursor: default; }
+
+    /* PDF DLボタン */
+    .btn-pdf-dl {
+      background: #457b9d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .btn-pdf-dl:hover { opacity: 0.85; }
+
+    /* 一括保存プログレスオーバーレイ */
+    #bulk-progress-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 900;
+      align-items: center;
+      justify-content: center;
+    }
+    #bulk-progress-overlay.active { display: flex; }
+    .bulk-progress-box {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem 2.5rem;
+      min-width: 320px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .bulk-progress-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text); }
+    .bulk-progress-bar-wrap {
+      background: #eee;
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .bulk-progress-bar {
+      height: 100%;
+      background: var(--green);
+      border-radius: 999px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+    .bulk-progress-label { font-size: 0.85rem; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -632,6 +707,20 @@
   <button class="btn-secondary hidden" id="pdf-btn" onclick="downloadSummaryPdf()">
     <i class="fa-solid fa-file-pdf"></i> 集計PDF
   </button>
+  <button class="btn-bulk-save hidden" id="bulk-save-btn" onclick="bulkSaveAll()">
+    <i class="fa-solid fa-floppy-disk"></i> 一括保存
+  </button>
+</div>
+
+<!-- 一括保存プログレスオーバーレイ -->
+<div id="bulk-progress-overlay">
+  <div class="bulk-progress-box">
+    <h3><i class="fa-solid fa-floppy-disk" style="color:var(--green)"></i> 一括保存中…</h3>
+    <div class="bulk-progress-bar-wrap">
+      <div class="bulk-progress-bar" id="bulk-bar"></div>
+    </div>
+    <div class="bulk-progress-label" id="bulk-label">準備中…</div>
+  </div>
 </div>
 
 <!-- ローディング -->
@@ -752,6 +841,7 @@
       renderReport(records, monthVal, officeFilter);
       setView('result');
       document.getElementById('pdf-btn').classList.remove('hidden');
+      document.getElementById('bulk-save-btn').classList.remove('hidden');
     } catch (e) {
       alert(`データ取得エラー: ${e.message}`);
       setView('none');
@@ -1398,6 +1488,164 @@
   }
 
   /* =====================================================
+   * 一括保存：全利用者の報告書データ+PDFを一括生成・保存
+   * ===================================================== */
+  async function bulkSaveAll() {
+    if (!_activeMonthVal || _allRecords.length === 0) {
+      alert('先に「表示」ボタンでデータを読み込んでください。');
+      return;
+    }
+
+    const [y, m] = _activeMonthVal.split('-');
+    const users  = [...new Set(_allRecords.map(r => r['氏名']).filter(Boolean))];
+
+    // プログレスオーバーレイを表示する
+    const overlay   = document.getElementById('bulk-progress-overlay');
+    const bar       = document.getElementById('bulk-bar');
+    const label     = document.getElementById('bulk-label');
+    const bulkBtn   = document.getElementById('bulk-save-btn');
+    overlay.classList.add('active');
+    bulkBtn.disabled = true;
+
+    // PDFを生成するための非表示コンテナ
+    const tempWrap = document.createElement('div');
+    tempWrap.id = '__bulk-render-wrap__';
+    tempWrap.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:794px;background:white;overflow:visible;z-index:-1;';
+    document.body.appendChild(tempWrap);
+
+    let successCount = 0;
+    let failCount    = 0;
+
+    for (let i = 0; i < users.length; i++) {
+      const userName = users[i];
+      const pct      = Math.round((i / users.length) * 100);
+      bar.style.width  = pct + '%';
+      label.textContent = `${i + 1} / ${users.length}人 … ${userName}`;
+
+      try {
+        // 当月の保存済みデータを取得する（なければ null）
+        let currentReport = null;
+        try {
+          const rr = await fetch(`${API_BASE}/api/service-report?${new URLSearchParams({ year: y, month: m, name: userName })}`).then(r => r.json());
+          if (rr.ok) currentReport = rr.report;
+        } catch (_) {}
+
+        const records = _allRecords.filter(r => r['氏名'] === userName);
+
+        // 報告書HTMLをオフスクリーンコンテナに挿入する
+        tempWrap.innerHTML = buildServiceReportHTML(userName, records, y, m, currentReport, null);
+        const reportDoc = tempWrap.querySelector('.report-doc');
+        if (!reportDoc) throw new Error('report-doc not found');
+
+        // データをtextareaから収集する（capture-mode前に実施）
+        const serviceRows = _collectServiceRows(tempWrap);
+        const stopRows    = _collectStopChangeRows(tempWrap, 0);
+        const changeRows  = _collectStopChangeRows(tempWrap, 1);
+        const notice      = tempWrap.querySelector('.report-notes-box .edit-area')?.value || '';
+
+        // textarea値をprint-textにコピーしてcapture-modeに切り替える
+        tempWrap.querySelectorAll('.edit-area').forEach(area => {
+          const next = area.nextElementSibling;
+          if (next?.classList.contains('print-text')) next.textContent = area.value;
+        });
+        tempWrap.classList.add('capture-mode');
+
+        // レイアウト確定を待つ
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r));
+
+        // html2canvas でキャプチャする
+        const canvas = await html2canvas(reportDoc, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            const c = clonedDoc.getElementById('__bulk-render-wrap__');
+            if (c) { c.style.overflow = 'visible'; c.style.position = 'absolute'; }
+          },
+        });
+
+        tempWrap.classList.remove('capture-mode');
+
+        // jsPDF でA4 1ページPDFを生成する
+        const MARGIN = 8, CW = 194, CH = 281;
+        const cw = canvas.width / 2, ch = canvas.height / 2;
+        const scaleByW = CW / cw;
+        const sc = ch * scaleByW > CH ? CH / ch : scaleByW;
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', MARGIN, MARGIN, cw * sc, ch * sc);
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+        // データ保存とPDFアップロードを並列実行する
+        const [saveRes, uploadRes] = await Promise.all([
+          fetch(`${API_BASE}/api/service-report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ year: y, month: m, name: userName, serviceRows, stopRows, changeRows, notice }),
+          }).then(r => r.json()),
+          fetch(`${API_BASE}/api/service-report/upload-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ year: y, month: m, name: userName, pdfBase64 }),
+          }).then(r => r.json()),
+        ]);
+
+        if (saveRes.ok && uploadRes.ok) {
+          successCount++;
+        } else {
+          console.warn(`[bulkSave] ${userName}: saveRes=${saveRes.ok} uploadRes=${uploadRes.ok}`);
+          failCount++;
+        }
+      } catch (e) {
+        console.error(`[bulkSave] ${userName} エラー:`, e);
+        failCount++;
+      }
+    }
+
+    document.body.removeChild(tempWrap);
+    overlay.classList.remove('active');
+    bulkBtn.disabled = false;
+    bar.style.width  = '100%';
+
+    alert(`一括保存完了\n成功: ${successCount}件 / 失敗: ${failCount}件`);
+
+    // 過去実績タブのユーザーリストをリセットして次回取得時に再ロードさせる
+    const sel = document.getElementById('history-user-sel');
+    while (sel.options.length > 1) sel.remove(1);
+  }
+
+  function _collectServiceRows(container) {
+    const rows = [];
+    container.querySelectorAll('.service-table tbody tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 3) return;
+      const task = cells[0].textContent.trim();
+      const area = cells[2].querySelector('.edit-area');
+      if (task && task !== '実施記録なし') rows.push({ task, yosu: area?.value || '' });
+    });
+    return rows;
+  }
+
+  function _collectStopChangeRows(container, tableIdx) {
+    const tables = container.querySelectorAll('.stop-table');
+    const rows = [];
+    if (!tables[tableIdx]) return rows;
+    tables[tableIdx].querySelectorAll('tbody tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 3) return;
+      const task = cells[0].textContent.trim();
+      const day  = cells[1].textContent.trim();
+      const area = cells[2].querySelector('.edit-area');
+      if (task && task !== 'なし') rows.push({ task, day, reason: area?.value || '' });
+    });
+    return rows;
+  }
+
+  /* =====================================================
    * タブ切り替え
    * ===================================================== */
   function switchTab(tab) {
@@ -1469,14 +1717,22 @@
 
         const item = document.createElement('div');
         item.className = 'history-month-item';
+        const dlBtn = hasPdf
+          ? `<button class="btn-pdf-dl" onclick="downloadSavedPdf(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
+               <i class="fa-solid fa-download"></i> PDF DL
+             </button>`
+          : '';
         item.innerHTML = `
           <div>
             <div class="ym">${label}</div>
             ${dateStr ? `<div class="saved-at">保存日: ${dateStr}</div>` : ''}
           </div>
-          <button class="btn-open-report" onclick="openHistoryPreview(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
-            <i class="fa-solid fa-file-pdf"></i> 開く・PDF
-          </button>`;
+          <div style="display:flex;gap:0.4rem;align-items:center;">
+            ${dlBtn}
+            <button class="btn-open-report" onclick="openHistoryPreview(${JSON.stringify(name)}, ${JSON.stringify(yearMonth)})">
+              <i class="fa-solid fa-eye"></i> 閲覧・再生成
+            </button>
+          </div>`;
         list.appendChild(item);
       }
 
@@ -1485,6 +1741,21 @@
       loading.classList.add('hidden');
       area.innerHTML = `<div class="history-empty">エラー: ${escHtml(e.message)}</div>`;
     }
+  }
+
+  /* =====================================================
+   * 過去実績：保存済みPDFをダウンロードする
+   * ===================================================== */
+  function downloadSavedPdf(name, yearMonth) {
+    const [y, m] = yearMonth.split('-');
+    const url = `${API_BASE}/api/service-report/pdf-download?${new URLSearchParams({ year: y, month: m, name })}`;
+    const a   = document.createElement('a');
+    a.href    = url;
+    a.download = `${y}年${m}月_${name}_実施報告書.pdf`;
+    a.target  = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   /* =====================================================
