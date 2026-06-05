@@ -455,6 +455,16 @@
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
   }
 
+  // LarkのnyukinDate（ms数値 or 配列 or null）を表示用文字列（YYYY/M/D）に変換する
+  // 日付がない場合は null を返す
+  function formatNyukinDate(val) {
+    if (!val) return null;
+    const ms = typeof val === 'number' ? val : (Array.isArray(val) ? val[0] : null);
+    if (!ms) return null;
+    const d = new Date(ms);
+    return `${d.getUTCFullYear()}/${d.getUTCMonth()+1}/${d.getUTCDate()}`;
+  }
+
   // ===== 初期化 =====
   async function init() {
     try {
@@ -576,6 +586,10 @@
 
       if (activeStatus === 'sent') {
         // 送信済カード（選択不可・バッジ表示）
+        const sentDateStr = formatNyukinDate(record.nyukinDate);
+        const sentDateHtml = sentDateStr
+          ? `<div class="card-sub" style="color:var(--green)"><i class="fa-solid fa-calendar-check" style="font-size:.65rem"></i> 入金日：${sentDateStr}</div>`
+          : '';
         card.className = 'payment-card card-sent';
         card.innerHTML = `
           <div class="payment-card-body">
@@ -583,6 +597,7 @@
             <div class="card-info">
               <div class="card-name">${esc(record.name)}</div>
               <div class="card-sub">${subStr}</div>
+              ${sentDateHtml}
               <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
             </div>
             <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
@@ -624,7 +639,11 @@
               <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
             </div>`;
         } else {
-          // 入金済未送信カード：氏名・月・メール・金額・送信ボタン
+          // 入金済未送信カード：氏名・月・入金日・メール・金額・送信ボタン
+          const unsentDateStr = formatNyukinDate(record.nyukinDate);
+          const unsentDateHtml = unsentDateStr
+            ? `<div class="card-sub" style="color:var(--green)"><i class="fa-solid fa-calendar-check" style="font-size:.65rem"></i> 入金日：${unsentDateStr}</div>`
+            : '';
           card.innerHTML = `
             <div class="payment-card-body">
               <div class="card-check ${isChecked ? 'checked' : ''}" data-rid="${esc(record.recordId)}">
@@ -633,6 +652,7 @@
               <div class="card-info">
                 <div class="card-name">${esc(record.name)}</div>
                 <div class="card-sub">${subStr}</div>
+                ${unsentDateHtml}
                 <div class="card-email"><i class="fa-solid fa-envelope" style="font-size:.65rem"></i> ${emailStr}</div>
               </div>
               <div class="card-amount"><div class="card-amount-value">${amtStr}</div></div>
