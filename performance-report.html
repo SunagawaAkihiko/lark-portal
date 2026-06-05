@@ -1071,8 +1071,7 @@
       for (const r of stopRecords) {
         const rawTask = (r['作業項目'] || '').trim();
         const dayStr  = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
-        const stopKey = rawTask + '_' + dayStr;
-        const rawReason = stopReasonMap.has(stopKey) ? stopReasonMap.get(stopKey) : '';
+        const rawReason = r['記録内容'] || '';
         stopRows += `
           <tr>
             <td>${escHtml(rawTask)}</td>
@@ -1094,8 +1093,7 @@
       for (const r of changeRecords) {
         const rawTask   = (r['作業項目'] || '').trim();
         const dayStr    = r['実施日'] ? new Date(Number(r['実施日']) + 9 * 60 * 60 * 1000).getUTCDate() + '日' : '';
-        const changeKey = rawTask + '_' + dayStr;
-        const rawReason = changeReasonMap.has(changeKey) ? changeReasonMap.get(changeKey) : '';
+        const rawReason = r['記録内容'] || '';
         changeRows += `
           <tr>
             <td>${escHtml(rawTask)}</td>
@@ -1116,9 +1114,6 @@
     <i class="fa-solid fa-file-pdf" style="color:#f4a261"></i>
     ${escHtml(userName)} 様 ・ サービス実施報告書（${yInt}年${mInt}月）
   </span>
-  <button class="btn-preview-close" id="preview-save-btn" onclick="saveCurrentReport()" style="background:rgba(42,157,143,0.5);">
-    <i class="fa-solid fa-floppy-disk"></i> 保存
-  </button>
   <button class="btn-preview-close" onclick="closePreview()">
     <i class="fa-solid fa-xmark"></i> 閉じる
   </button>
