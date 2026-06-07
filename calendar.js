@@ -187,6 +187,7 @@ async function fetchCalendarData() {
     // 画面の描画
     renderMonthlyCalendar();
     renderSelectedDay();
+    renderBirthdayNotice();
 
     loading.classList.add('hidden');
     mainContent.classList.remove('hidden');
@@ -259,6 +260,7 @@ function extractOffices(data) {
             currentOfficeFilter = e.target.dataset.office;
             renderMonthlyCalendar();
             renderSelectedDay();
+            renderBirthdayNotice();
         });
     });
 }
@@ -402,9 +404,30 @@ function initDateTimeSelectors() {
     updateTimeSync(); // 初期化時に実行
 }
 
+function renderBirthdayNotice() {
+    const notice = document.getElementById('birthday-notice');
+    if (!notice) return;
+    const month = currentDate.getMonth(); // 0-indexed
+    const birthdays = customersData
+        .filter(c => {
+            if (!c.birthDate || c.status === '契約終了') return false;
+            if (c.office !== currentOfficeFilter) return false;
+            return new Date(c.birthDate).getUTCMonth() === month;
+        })
+        .map(c => ({ day: new Date(c.birthDate).getUTCDate(), name: c.name }))
+        .sort((a, b) => a.day - b.day);
+    if (birthdays.length === 0) {
+        notice.classList.add('hidden');
+        return;
+    }
+    notice.textContent = '今月誕生日の方：' + birthdays.map(b => `${b.day}日 ${b.name}さん`).join('、');
+    notice.classList.remove('hidden');
+}
+
 function changeMonth(offset) {
     currentDate.setMonth(currentDate.getMonth() + offset);
     renderMonthlyCalendar();
+    renderBirthdayNotice();
 }
 
 function getFilteredData() {

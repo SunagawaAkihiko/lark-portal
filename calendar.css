@@ -63,6 +63,16 @@ body {
     color: white;
 }
 
+/* 誕生日通知バー */
+.birthday-notice {
+    background: #fff8e1;
+    border-left: 4px solid #f59e0b;
+    color: #78350f;
+    padding: 0.45rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
 /* メインコンテナ */
 .calendar-container {
     padding: 1rem;
