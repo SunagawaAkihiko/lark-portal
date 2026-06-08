@@ -1392,17 +1392,23 @@ async function unlockSalary() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解除中…';
   try {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 30000);
     const r = await fetch(`${API_BASE}/api/salary/unlock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month }),
+      signal: ctrl.signal,
     });
+    clearTimeout(tid);
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || '確定解除失敗');
     alert(`${month.replace('-','年')}月分の確定を解除しました。`);
-    await loadSalary(); // 再読み込みしてリアルタイム計算を表示
+    await loadSalary();
   } catch(e) {
-    alert('確定解除エラー: ' + e.message);
+    const msg = e.name === 'AbortError' ? 'タイムアウトしました。時間をおいて再試行してください。' : e.message;
+    alert('確定解除エラー: ' + msg);
+  } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定を解除して再計算';
   }
