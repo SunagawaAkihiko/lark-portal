@@ -3110,10 +3110,8 @@ async function startSlipPDF() {
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
 
-      // scale:1.5 でキャプチャしてJPEG変換（PNG比70%前後ファイルサイズ削減）
-      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      // A4横: 297mm × 210mm に収める
+      const canvas  = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       if (i > 0) pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
     }
@@ -3157,9 +3155,14 @@ async function startSlipEmailSend() {
       printArea.innerHTML = buildSlipHTML(row, salaryCurrentMonth);
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
-      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
-      const pdfBase64 = pdf.output('datauristring');
+      const canvas  = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
+      const pdfBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('PDF変換エラー'));
+        reader.readAsDataURL(pdf.output('blob'));
+      });
 
       const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
         method: 'POST',
@@ -3865,8 +3868,8 @@ async function startBonusSlipPDF() {
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
 
-      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const canvas  = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       if (i > 0) pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
     }
@@ -3930,9 +3933,14 @@ async function startBonusSlipEmailSend() {
       printArea.innerHTML = buildBonusSlipHTML(row, bonusCurrentDate);
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
-      const canvas  = await html2canvas(printArea, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
-      const pdfBase64 = pdf.output('datauristring');
+      const canvas  = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
+      const pdfBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('PDF変換エラー'));
+        reader.readAsDataURL(pdf.output('blob'));
+      });
 
       const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
         method: 'POST',
