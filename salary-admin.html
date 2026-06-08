@@ -2268,7 +2268,7 @@ function renderKintaiTable(records, month, staffName) {
         const rec     = matrix[dateStr]?.[name];
         const nextRec = matrix[nextDateStr]?.[name];
         if (!rec || !nextRec) continue;
-        if (rec.attendTime && !rec.leaveTime && rec.nightCount > 0 && nextRec.leaveTime) {
+        if (rec.attendTime && rec.nightCount > 0 && nextRec.leaveTime) {
           rec.leaveTime = nextRec.leaveTime;
           nextRec.leaveTime = '';
           // 翌日が完全に空になった（attendTime も leaveType もなし）→ 行を削除
