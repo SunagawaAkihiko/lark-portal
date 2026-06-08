@@ -2110,7 +2110,25 @@ function renderKintaiTable(records, month, staffName) {
   if (staffName) {
     // ── 1人の日別一覧（1テーブル：日付列 + 勤怠列を同一行に並べる） ──
     const byDate = {};
-    records.forEach(r => { byDate[r.date] = r; });
+    records.forEach(r => {
+      const ex = byDate[r.date];
+      if (ex) {
+        // 夜勤の明け日と次シフトの入り日が同日に重なる場合はマージする
+        byDate[r.date] = {
+          ...ex,
+          attendTime:   ex.attendTime   || r.attendTime,
+          leaveTime:    ex.leaveTime    || r.leaveTime,
+          workingHours: ex.workingHours || r.workingHours,
+          overtime:     (ex.overtime    || 0) + (r.overtime    || 0),
+          lateMin:      (ex.lateMin     || 0) + (r.lateMin     || 0),
+          earlyMin:     (ex.earlyMin    || 0) + (r.earlyMin    || 0),
+          nightCount:   (ex.nightCount  || 0) + (r.nightCount  || 0),
+          dayCount:     (ex.dayCount    || 0) + (r.dayCount    || 0),
+        };
+      } else {
+        byDate[r.date] = r;
+      }
+    });
     // openId は records 内の任意レコードから取得する（日付レコードがない日の編集でも使用）
     const staffOpenId = records[0]?.openId || '';
 
@@ -2225,7 +2243,20 @@ function renderKintaiTable(records, month, staffName) {
     const matrix = {};
     records.forEach(r => {
       if (!matrix[r.date]) matrix[r.date] = {};
-      matrix[r.date][r.staffName] = r;
+      const ex = matrix[r.date][r.staffName];
+      if (ex) {
+        matrix[r.date][r.staffName] = {
+          ...ex,
+          attendTime:   ex.attendTime   || r.attendTime,
+          leaveTime:    ex.leaveTime    || r.leaveTime,
+          workingHours: ex.workingHours || r.workingHours,
+          overtime:     (ex.overtime    || 0) + (r.overtime    || 0),
+          nightCount:   (ex.nightCount  || 0) + (r.nightCount  || 0),
+          dayCount:     (ex.dayCount    || 0) + (r.dayCount    || 0),
+        };
+      } else {
+        matrix[r.date][r.staffName] = r;
+      }
     });
     const nameToOpenId = {};
     records.forEach(r => { if (r.openId && r.staffName) nameToOpenId[r.staffName] = r.openId; });
@@ -2303,9 +2334,10 @@ function renderKintaiTable(records, month, staffName) {
         if (rec?.leaveType) {
           html += `<td style="text-align:center;cursor:pointer" onclick="openKintaiEdit(${payload})">${leaveBadge(rec.leaveType)}</td>`;
         } else if (rec) {
-          html += `<td style="font-size:0.72rem;cursor:pointer" onclick="openKintaiEdit(${payload})">
-            <span class="col-attend">${rec.attendTime}</span>〜<span class="col-leave">${rec.leaveTime||'?'}</span>
-          </td>`;
+          const att = rec.attendTime ? `<span class="col-attend">${rec.attendTime}</span>` : '';
+          const lev = rec.leaveTime  ? `<span class="col-leave">${rec.leaveTime}</span>`   : '';
+          const sep = att && lev ? '〜' : att ? '<span style="color:#bbb">〜</span>' : '<span style="color:#bbb">〜</span>';
+          html += `<td style="font-size:0.72rem;cursor:pointer" onclick="openKintaiEdit(${payload})">${att}${sep}${lev}</td>`;
         } else {
           html += `<td style="cursor:pointer" onclick="openKintaiEdit(${payload})"></td>`;
         }
