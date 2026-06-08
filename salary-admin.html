@@ -2258,6 +2258,27 @@ function renderKintaiTable(records, month, staffName) {
         matrix[r.date][r.staffName] = r;
       }
     });
+    // ── 全員表示: 夜勤の退勤時刻を入り日に統合（1行=1回の勤務にして見やすくする） ──
+    // 入り日（attendTime あり・leaveTime なし・nightCount>0）に対し翌日の leaveTime を移す。
+    // 連勤の場合は d=1→2→3... と順に処理することで自然にカスケードする。
+    for (const name of names) {
+      for (let d = 1; d < daysInMonth; d++) {
+        const dateStr     = `${month}-${String(d).padStart(2,'0')}`;
+        const nextDateStr = `${month}-${String(d+1).padStart(2,'0')}`;
+        const rec     = matrix[dateStr]?.[name];
+        const nextRec = matrix[nextDateStr]?.[name];
+        if (!rec || !nextRec) continue;
+        if (rec.attendTime && !rec.leaveTime && rec.nightCount > 0 && nextRec.leaveTime) {
+          rec.leaveTime = nextRec.leaveTime;
+          nextRec.leaveTime = '';
+          // 翌日が完全に空になった（attendTime も leaveType もなし）→ 行を削除
+          if (!nextRec.attendTime && !nextRec.leaveType) {
+            delete matrix[nextDateStr][name];
+          }
+        }
+      }
+    }
+
     const nameToOpenId = {};
     records.forEach(r => { if (r.openId && r.staffName) nameToOpenId[r.staffName] = r.openId; });
     const colSummary = {};
