@@ -1376,6 +1376,17 @@ async function lockSalary() {
     if (!j.ok) throw new Error(j.error || '確定保存失敗');
     alert(`${month.replace('-','年')}月分の給与を確定しました（${j.count}人分保存）。`);
     await loadSalary(); // 再読み込みしてロック状態を反映
+    // 一覧表PDFをメールで送信
+    try {
+      const pdfBase64 = await captureSalaryPdfBase64();
+      await fetch(`${API_BASE}/api/salary/send-list-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month, type: 'salary', pdfBase64 }),
+      });
+    } catch(emailErr) {
+      console.warn('[lockSalary] 一覧表メール送信エラー:', emailErr);
+    }
   } catch(e) {
     alert('確定保存エラー: ' + e.message);
     btn.disabled = false;
@@ -1574,7 +1585,7 @@ function renderSalaryTable(rows, month) {
 //   - 縦方向はA4横1ページに必ず収める（スケール自動計算）
 //   - 横方向が溢れた場合は次ページへ水平分割して追加する
 // ============================================================
-async function renderToPdf(element, filename) {
+async function renderToPdf(element, filename, returnBase64 = false) {
   // A4横向き・余白8mm後の利用可能寸法（mm）
   const PAGE_W = 281; // 297 - 8*2
   const PAGE_H = 194; // 210 - 8*2
@@ -1619,7 +1630,127 @@ async function renderToPdf(element, filename) {
     pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
   }
 
+  if (returnBase64) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.readAsDataURL(pdf.output('blob'));
+    });
+  }
   pdf.save(filename);
+}
+
+// 給与一覧表をキャプチャしてbase64文字列で返す（メール送信用）
+async function captureSalaryPdfBase64() {
+  const label      = document.getElementById('salary-print-label').textContent;
+  const scroll     = document.getElementById('salary-scroll');
+  const tabContent = scroll.closest('.tab-content');
+  const body       = document.body;
+
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = 'pdf-sticky-reset';
+  tmpStyle.textContent = `
+    .salary-table { width: max-content !important; }
+    .salary-table thead th { position: static !important; top: auto !important; }
+    .salary-table .col-item { position: static !important; left: auto !important; }
+    .table-scroll-wrap { overflow: visible !important; }
+  `;
+  document.head.appendChild(tmpStyle);
+
+  const header = scroll.querySelector('.salary-print-header');
+  if (header) {
+    document.getElementById('salary-print-title').textContent = label;
+    document.getElementById('salary-print-sub').textContent   = '合同会社 GLAD Life Create';
+    header.style.display = 'block';
+  }
+
+  const saved = {
+    bodyH: body.style.height, bodyOv: body.style.overflow,
+    tabFlex: tabContent.style.flex, tabH: tabContent.style.height, tabOv: tabContent.style.overflow,
+    sFlx: scroll.style.flex, sH: scroll.style.height,
+    sW: scroll.style.width, sOv: scroll.style.overflow, sMxH: scroll.style.maxHeight,
+  };
+  body.style.height = 'auto'; body.style.overflow = 'visible';
+  tabContent.style.flex = 'none'; tabContent.style.height = 'auto'; tabContent.style.overflow = 'visible';
+  scroll.style.flex = 'none'; scroll.style.height = 'auto'; scroll.style.width = 'max-content';
+  scroll.style.overflow = 'visible'; scroll.style.maxHeight = 'none';
+
+  try {
+    return await renderToPdf(scroll, null, true);
+  } finally {
+    body.style.height = saved.bodyH; body.style.overflow = saved.bodyOv;
+    tabContent.style.flex = saved.tabFlex; tabContent.style.height = saved.tabH; tabContent.style.overflow = saved.tabOv;
+    scroll.style.flex = saved.sFlx; scroll.style.height = saved.sH; scroll.style.width = saved.sW;
+    scroll.style.overflow = saved.sOv; scroll.style.maxHeight = saved.sMxH;
+    document.getElementById('pdf-sticky-reset')?.remove();
+    if (header) header.style.display = '';
+  }
+}
+
+// 賞与一覧表をキャプチャしてbase64文字列で返す（メール送信用）
+async function captureBonusPdfBase64() {
+  const label      = document.getElementById('bonus-print-label').textContent;
+  const scroll     = document.getElementById('bonus-scroll');
+  const tabContent = scroll.closest('.tab-content');
+  const body       = document.body;
+
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = 'pdf-sticky-reset-bonus';
+  tmpStyle.textContent = `
+    .salary-table { width: max-content !important; }
+    .salary-table thead th { position: static !important; top: auto !important; }
+    .salary-table .col-item { position: static !important; left: auto !important; }
+    .table-scroll-wrap { overflow: visible !important; }
+    .bonus-input { border: none !important; background: transparent !important; }
+  `;
+  document.head.appendChild(tmpStyle);
+
+  const header = scroll.querySelector('.salary-print-header');
+  if (header) {
+    document.getElementById('bonus-print-title').textContent = label;
+    document.getElementById('bonus-print-sub').textContent   = '合同会社 GLAD Life Create';
+    header.style.display = 'block';
+  }
+
+  const sv = {
+    bodyH: body.style.height, bodyOv: body.style.overflow,
+    tabFlex: tabContent.style.flex, tabH: tabContent.style.height, tabOv: tabContent.style.overflow,
+    sFlx: scroll.style.flex, sH: scroll.style.height,
+    sW: scroll.style.width, sOv: scroll.style.overflow, sMxH: scroll.style.maxHeight,
+  };
+  body.style.height = 'auto'; body.style.overflow = 'visible';
+  tabContent.style.flex = 'none'; tabContent.style.height = 'auto'; tabContent.style.overflow = 'visible';
+  scroll.style.flex = 'none'; scroll.style.height = 'auto'; scroll.style.width = 'max-content';
+  scroll.style.overflow = 'visible'; scroll.style.maxHeight = 'none';
+
+  const blankStaffs = bonusStaffList.filter(staffName => {
+    const el = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="支給合計"]`);
+    return !el || parseInt(el.dataset.numval || 0, 10) === 0;
+  });
+  const hiddenEls = [];
+  blankStaffs.forEach(staffName => {
+    Array.from(scroll.querySelectorAll('th.col-staff')).forEach(th => {
+      if (th.textContent === staffName) {
+        hiddenEls.push({ el: th, orig: th.style.display });
+        th.style.display = 'none';
+      }
+    });
+    scroll.querySelectorAll(`td[data-staff="${staffName}"]`).forEach(td => {
+      hiddenEls.push({ el: td, orig: td.style.display });
+      td.style.display = 'none';
+    });
+  });
+
+  try {
+    return await renderToPdf(scroll, null, true);
+  } finally {
+    hiddenEls.forEach(item => { item.el.style.display = item.orig; });
+    document.getElementById('pdf-sticky-reset-bonus')?.remove();
+    if (header) header.style.display = '';
+    Object.assign(body.style,       { height: sv.bodyH, overflow: sv.bodyOv });
+    Object.assign(tabContent.style, { flex: sv.tabFlex, height: sv.tabH, overflow: sv.tabOv });
+    Object.assign(scroll.style,     { flex: sv.sFlx, height: sv.sH, width: sv.sW, overflow: sv.sOv, maxHeight: sv.sMxH });
+  }
 }
 
 async function downloadSalary() {
@@ -3675,6 +3806,17 @@ async function lockBonus() {
     if (!j.ok) throw new Error(j.error);
     alert(`${y}年${m}月${d}日の賞与を確定しました（${j.count}人分保存）。`);
     await loadBonus();
+    // 一覧表PDFをメールで送信
+    try {
+      const pdfBase64 = await captureBonusPdfBase64();
+      await fetch(`${API_BASE}/api/salary/send-list-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: date, type: 'bonus', pdfBase64 }),
+      });
+    } catch(emailErr) {
+      console.warn('[lockBonus] 一覧表メール送信エラー:', emailErr);
+    }
   } catch(e) {
     alert('確定保存エラー: ' + e.message);
     btn.disabled = false;
