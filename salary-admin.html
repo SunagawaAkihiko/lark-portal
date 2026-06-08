@@ -897,7 +897,7 @@
     <span class="month-label" id="salary-print-label"></span>
     <span id="salary-lock-badge" class="lock-badge hidden"></span>
     <button id="salary-lock-btn"   class="btn-lock   hidden" onclick="lockSalary()">
-      <i class="fa-solid fa-lock"></i> 給与を確定してLarkに保存
+      <i class="fa-solid fa-lock"></i> 社労士確認・保存
     </button>
     <button id="salary-unlock-btn" class="btn-unlock hidden" onclick="unlockSalary()">
       <i class="fa-solid fa-lock-open"></i> 確定を解除して再計算
@@ -941,7 +941,7 @@
     <span class="month-label" id="bonus-print-label"></span>
     <span id="bonus-lock-badge" class="lock-badge hidden"></span>
     <button id="bonus-lock-btn"   class="btn-lock   hidden" onclick="lockBonus()">
-      <i class="fa-solid fa-lock"></i> 賞与を確定してLarkに保存
+      <i class="fa-solid fa-lock"></i> 社労士確認・保存
     </button>
     <button id="bonus-unlock-btn" class="btn-unlock hidden" onclick="unlockBonus()">
       <i class="fa-solid fa-lock-open"></i> 確定を解除して再編集
@@ -1379,7 +1379,7 @@ async function lockSalary() {
   } catch(e) {
     alert('確定保存エラー: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 給与を確定してLarkに保存';
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 社労士確認・保存';
   }
 }
 
@@ -3672,7 +3672,7 @@ async function lockBonus() {
   } catch(e) {
     alert('確定保存エラー: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 賞与を確定してLarkに保存';
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> 社労士確認・保存';
   }
 }
 
