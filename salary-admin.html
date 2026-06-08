@@ -3272,6 +3272,7 @@ function buildSlipHTML(row, month) {
         ${c('非課税計',   f(row['非課税計']))}
         ${cb()}
         ${ch('総支給額',  f(row['総支給額']))}
+        ${cb()}
       </tr>
     </table>
   </div>
@@ -3290,6 +3291,7 @@ function buildSlipHTML(row, month) {
         ${c('課税対象額', f(row['課税対象額']))}
         ${c('源泉所得税', f(row['源泉所得税']))}
         ${c('住民税',     f(row['住民税']))}
+        ${cb()}
       </tr>
       <tr>
         ${c('その他控除', f(row['その他控除']))}
