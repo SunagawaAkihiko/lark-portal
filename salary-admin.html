@@ -4353,6 +4353,15 @@ function buildBonusSlipHTML(row, date) {
 </div>
 
 <script>
+// 振込一覧の表示順（新規スタッフは末尾に追加）
+const FURIKOMI_ORDER = [
+  '砂川明彦', '砂川竜馬', '鞍馬玲菜', '砂川繁', '中村ともみ',
+  '中村考', '榊志満子', '御手洗悦子', '中村夢永', '中川いずみ',
+  '井上ひかる', '松山朋美', '川原将也', '奥田愛美', '池田祐子',
+  '三原和樹', '吉山康子', '田中謹礼', '柏木愛', '小路悦子',
+  '荒木由美子', '秋吉布美子',
+];
+
 function openFurikomiModal(type) {
   let rows, label;
   if (type === 'salary') {
@@ -4368,6 +4377,17 @@ function openFurikomiModal(type) {
     const [y, m, d] = bonusCurrentDate.split('-');
     label = `${y}年${m}月${d}日 賞与`;
   }
+
+  // 所定の順番で並び替え。リストにないスタッフは末尾に追加
+  rows.sort((a, b) => {
+    const ai = FURIKOMI_ORDER.indexOf(a.name);
+    const bi = FURIKOMI_ORDER.indexOf(b.name);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
   document.getElementById('furikomi-modal-title').innerHTML =
     '<i class="fa-solid fa-list"></i> 振込額一覧';
   document.getElementById('furikomi-modal-sub').textContent = label;
