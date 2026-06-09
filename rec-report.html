@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>レク報告</title>
+  <title>レク予定・実施報告</title>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -170,11 +170,26 @@
     .toast.success { background: #2e7d32; }
     .toast.error   { background: #c62828; }
 
+    /* ===== 予定／実施タブ ===== */
+    .type-tab-row {
+      width: 100%; display: flex; gap: 0.5rem;
+      padding-top: 0.4rem;
+      border-top: 1px solid rgba(255,255,255,0.18);
+    }
+    .type-tab {
+      flex: 1; padding: 0.45rem 0; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6);
+      transition: background 0.2s, color 0.2s;
+    }
+    .type-tab.active { background: #2980b9; color: white; }
+
     /* ===== 横画面 ===== */
     @media (orientation: landscape) {
       .office-tabs { padding: 0 0.8rem 0.5rem; gap: 0.4rem; }
       .office-tabs-label { padding: 0.5rem 0 0.1rem; }
       .office-tab { padding: 0.3rem 0; font-size: 0.82rem; }
+      .type-tab { padding: 0.3rem 0; font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -270,6 +285,7 @@
   let allCustomers = [];  // 全利用者データ { name, office, status }
   let offices      = [];  // 事業所リスト
   let activeOffice = '';  // 選択中の事業所
+  let activeType   = '実施'; // 選択中の報告分類（予定 or 実施）
 
   // ===== 初期化 =====
   async function init() {
@@ -316,7 +332,7 @@
   // ===== タブ生成 =====
   function buildTabs() {
     const bar = document.getElementById('tabBar');
-    bar.innerHTML = '<span class="office-tabs-label"><i class="fa-solid fa-users"></i> レク報告</span>';
+    bar.innerHTML = '<span class="office-tabs-label"><i class="fa-solid fa-users"></i> レク予定・実施報告</span>';
     offices.forEach(office => {
       const btn = document.createElement('button');
       btn.className   = 'office-tab';
@@ -324,6 +340,42 @@
       btn.onclick = () => switchOffice(office);
       bar.appendChild(btn);
     });
+
+    // 予定 / 実施 タブ行
+    const row = document.createElement('div');
+    row.className = 'type-tab-row';
+    ['予定', '実施'].forEach(type => {
+      const btn = document.createElement('button');
+      btn.className   = 'type-tab' + (type === activeType ? ' active' : '');
+      btn.id          = `typeTab-${type}`;
+      btn.textContent = type;
+      btn.onclick     = () => switchType(type);
+      row.appendChild(btn);
+    });
+    bar.appendChild(row);
+  }
+
+  // ===== 予定／実施 切り替え =====
+  function switchType(type) {
+    activeType = type;
+    document.querySelectorAll('.type-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.id === `typeTab-${type}`);
+    });
+    // フォームのラベル・プレースホルダー・ボタンを切り替える
+    const recDateLabel = document.getElementById('fieldRecDate')
+      .closest('div').querySelector('.field-label');
+    recDateLabel.innerHTML = type === '予定'
+      ? 'レク予定日<span class="required">＊</span>'
+      : 'レク実施日<span class="required">＊</span>';
+    document.getElementById('fieldContent').placeholder = type === '予定'
+      ? '予定しているレクリエーションの内容を入力してください'
+      : '実施したレクリエーションの内容を入力してください';
+    document.querySelector('.form-card-title').textContent = type === '予定'
+      ? 'レク予定を登録'
+      : 'レクリエーション報告を登録';
+    document.getElementById('submitBtn').innerHTML = type === '予定'
+      ? '<i class="fa-solid fa-paper-plane"></i> 予 定 を 登 録'
+      : '<i class="fa-solid fa-paper-plane"></i> 報 告 す る';
   }
 
   // ===== 事業所切り替え =====
@@ -420,12 +472,13 @@
           content,
           cost,
           participants,
+          reportType: activeType,
         }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      showToast('報告しました', 'success');
+      showToast(activeType === '予定' ? '予定を登録しました' : '報告しました', 'success');
 
       // フォームをリセットして次の入力に備える
       document.getElementById('fieldContent').value = '';
