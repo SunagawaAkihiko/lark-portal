@@ -44,7 +44,7 @@ const portalLinks = [
         url: "purchase-request.html"
     },
     {
-        title: "レクレーション報告",
+        title: "レク予定・実施報告",
         description: "",
         icon: "fa-users",
         url: "rec-report.html"
