@@ -4399,10 +4399,15 @@ function openFurikomiModal(type) {
   document.getElementById('furikomi-modal-sub').textContent = label;
 
   const fmt = v => Number(v).toLocaleString('ja-JP') + ' 円';
+  const total = rows.reduce((s, r) => s + r.amount, 0);
   const tbody = document.getElementById('furikomi-list-body');
   tbody.innerHTML = rows.map(r =>
     `<tr><td>${r.name}</td><td>${fmt(r.amount)}</td></tr>`
-  ).join('');
+  ).join('') +
+  `<tr style="border-top:2px solid var(--border)">
+    <td style="font-weight:700;color:var(--brown-dark)">合計</td>
+    <td style="font-weight:700;color:var(--primary)">${fmt(total)}</td>
+  </tr>`;
 
   document.getElementById('furikomi-modal').classList.remove('hidden');
 }
