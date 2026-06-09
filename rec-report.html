@@ -230,9 +230,9 @@
         <input type="date" class="field-input" id="fieldRecDate">
       </div>
 
-      <!-- 報告者 -->
+      <!-- 報告者 / 発案者 -->
       <div>
-        <div class="field-label">報告者<span class="required">＊</span></div>
+        <div class="field-label" id="labelReporter">報告者<span class="required">＊</span></div>
         <select class="field-select" id="fieldReporter">
           <option value="">-- 選択してください --</option>
         </select>
@@ -245,9 +245,9 @@
           placeholder="実施したレクリエーションの内容を入力してください"></textarea>
       </div>
 
-      <!-- 費用 -->
+      <!-- 費用 / 必要予算 / 使用した費用 -->
       <div>
-        <div class="field-label">費用</div>
+        <div class="field-label" id="labelCost">使用した費用</div>
         <div class="cost-wrap">
           <span class="cost-prefix">¥</span>
           <input type="number" class="field-input" id="fieldCost" placeholder="0" min="0">
@@ -367,6 +367,12 @@
     recDateLabel.innerHTML = type === '予定'
       ? 'レク予定日<span class="required">＊</span>'
       : 'レク実施日<span class="required">＊</span>';
+    document.getElementById('labelReporter').innerHTML = type === '予定'
+      ? '発案者<span class="required">＊</span>'
+      : '報告者<span class="required">＊</span>';
+    document.getElementById('labelCost').textContent = type === '予定'
+      ? '必要予算'
+      : '使用した費用';
     document.getElementById('fieldContent').placeholder = type === '予定'
       ? '予定しているレクリエーションの内容を入力してください'
       : '実施したレクリエーションの内容を入力してください';
