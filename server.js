@@ -65,7 +65,7 @@ function requireOfficeWifi(req, res, next) {
 // デプロイのたびにこの値を更新する。
 // URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
 // LarkのWebViewがキャッシュを使わず最新のHTMLを取得するよう強制する。
-const PAGE_VERSION = 'v8';
+const PAGE_VERSION = 'v9';
 
 // HTMLページへのアクセス時に _v パラメータが最新でなければリダイレクトする
 app.use((req, res, next) => {
