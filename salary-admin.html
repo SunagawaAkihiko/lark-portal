@@ -4361,6 +4361,12 @@ const FURIKOMI_ORDER = [
   '三原和樹', '吉山康子', '田中謹礼', '柏木愛', '小路悦子',
   '荒木由美子', '秋吉布美子',
 ];
+// 空白除去して比較用インデックスを返す
+const furikomiIdx = name => {
+  const n = (name || '').replace(/\s/g, '');
+  const i = FURIKOMI_ORDER.findIndex(o => o.replace(/\s/g, '') === n);
+  return i;
+};
 
 function openFurikomiModal(type) {
   let rows, label;
@@ -4380,8 +4386,8 @@ function openFurikomiModal(type) {
 
   // 所定の順番で並び替え。リストにないスタッフは末尾に追加
   rows.sort((a, b) => {
-    const ai = FURIKOMI_ORDER.indexOf(a.name);
-    const bi = FURIKOMI_ORDER.indexOf(b.name);
+    const ai = furikomiIdx(a.name);
+    const bi = furikomiIdx(b.name);
     if (ai === -1 && bi === -1) return 0;
     if (ai === -1) return 1;
     if (bi === -1) return -1;
