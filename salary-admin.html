@@ -1619,12 +1619,23 @@ async function renderToPdf(element, filename, returnBase64 = false) {
   const PAGE_H = 194; // 210 - 8*2
   const MARGIN = 8;
 
-  // html2canvas でキャプチャ（scale:1.5 = 印刷品質を保ちつつファイルサイズ削減）
-  const canvas = await html2canvas(element, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
+  // html2canvas でキャプチャ（scale:1.0 でピクセル数削減）
+  const SCALE = 1.0;
+  const canvas = await html2canvas(element, { scale: SCALE, useCORS: true, backgroundColor: '#ffffff', logging: false });
 
-  // CSSピクセル換算（scale:1.5 なので÷1.5）
-  const csW = canvas.width  / 1.5;
-  const csH = canvas.height / 1.5;
+  // グレースケール変換（ファイルサイズ削減）
+  const gCtx = canvas.getContext('2d');
+  const imgData = gCtx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+    d[i] = d[i + 1] = d[i + 2] = g;
+  }
+  gCtx.putImageData(imgData, 0, 0);
+
+  // CSSピクセル換算
+  const csW = canvas.width  / SCALE;
+  const csH = canvas.height / SCALE;
 
   // 幅に合わせたスケール係数（mm/cssPixel）
   const scaleW = PAGE_W / csW;
@@ -1641,9 +1652,9 @@ async function renderToPdf(element, filename, returnBase64 = false) {
   for (let i = 0; i < numPages; i++) {
     if (i > 0) pdf.addPage();
 
-    // このページで切り取るキャンバス領域（scale:1.5座標系）
-    const srcX = Math.round(i * pageW_px * 1.5);
-    const srcW = Math.round(Math.min(pageW_px, csW - i * pageW_px) * 1.5);
+    // このページで切り取るキャンバス領域（SCALE座標系）
+    const srcX = Math.round(i * pageW_px * SCALE);
+    const srcW = Math.round(Math.min(pageW_px, csW - i * pageW_px) * SCALE);
 
     // スライスキャンバスを作成してPDFへ追加
     const slice = document.createElement('canvas');
@@ -1652,10 +1663,10 @@ async function renderToPdf(element, filename, returnBase64 = false) {
     slice.getContext('2d').drawImage(canvas, srcX, 0, srcW, canvas.height, 0, 0, srcW, canvas.height);
 
     // スライス幅に対応するmm幅（最終ページは短くなる）
-    const imgW = (srcW / 1.5) * finalScale;
+    const imgW = (srcW / SCALE) * finalScale;
     const imgH = csH * finalScale;
-    // JPEG形式（quality:0.92）でPNG比70%前後ファイルサイズを削減
-    pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, imgW, imgH);
+    // JPEG形式（quality:0.72）・グレースケール済みでファイルサイズを300KB以内に抑制
+    pdf.addImage(slice.toDataURL('image/jpeg', 0.72), 'JPEG', MARGIN, MARGIN, imgW, imgH);
   }
 
   if (returnBase64) {
