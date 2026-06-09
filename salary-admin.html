@@ -922,7 +922,7 @@
       <i class="fa-solid fa-lock"></i> 社労士確認・保存
     </button>
     <button id="salary-unlock-btn" class="btn-unlock hidden" onclick="unlockSalary()">
-      <i class="fa-solid fa-lock-open"></i> 確定を解除して再計算
+      <i class="fa-solid fa-lock-open"></i> 確定解除
     </button>
     <button class="btn-secondary" id="salary-pdf-btn" onclick="downloadSalary()">
       <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
@@ -969,7 +969,7 @@
       <i class="fa-solid fa-lock"></i> 社労士確認・保存
     </button>
     <button id="bonus-unlock-btn" class="btn-unlock hidden" onclick="unlockBonus()">
-      <i class="fa-solid fa-lock-open"></i> 確定を解除して再編集
+      <i class="fa-solid fa-lock-open"></i> 確定解除
     </button>
     <button class="btn-secondary" id="bonus-pdf-btn" onclick="downloadBonus()" style="margin-left:0.4rem">
       <i class="fa-solid fa-file-pdf"></i> 一覧表PDF
@@ -1369,13 +1369,13 @@ async function loadSalary() {
     const lockBtn   = document.getElementById('salary-lock-btn');
     const unlockBtn = document.getElementById('salary-unlock-btn');
     if (j.locked) {
-      badge.textContent = '🔒 確定済み（保存データ）';
+      badge.textContent = '🔒 確定';
       badge.className   = 'lock-badge locked';
       badge.classList.remove('hidden');
       lockBtn.classList.add('hidden');
       unlockBtn.classList.remove('hidden');
     } else {
-      badge.textContent = '🔓 未確定（リアルタイム計算）';
+      badge.textContent = '🔓 未確定';
       badge.className   = 'lock-badge unlocked';
       badge.classList.remove('hidden');
       lockBtn.classList.remove('hidden');
@@ -1449,7 +1449,7 @@ async function unlockSalary() {
     alert('確定解除エラー: ' + msg);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定を解除して再計算';
+    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定解除';
   }
 }
 
@@ -3642,7 +3642,7 @@ async function loadBonus() {
     const lockBtn   = document.getElementById('bonus-lock-btn');
     const unlockBtn = document.getElementById('bonus-unlock-btn');
     if (j2.locked) {
-      badge.textContent = '🔒 確定済み（保存データ）';
+      badge.textContent = '🔒 確定';
       badge.className   = 'lock-badge locked';
       badge.classList.remove('hidden');
       lockBtn.classList.add('hidden');
@@ -3927,7 +3927,7 @@ async function unlockBonus() {
   } catch(e) {
     alert('確定解除エラー: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定を解除して再編集';
+    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 確定解除';
   }
 }
 
