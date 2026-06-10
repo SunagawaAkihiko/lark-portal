@@ -139,6 +139,18 @@ const portalLinks = [
         description: "業務や操作に関するマニュアル",
         icon: "fa-book",
         url: "manual.html"
+    },
+    {
+        title: "BCP計画書",
+        description: "自然災害・感染症の事業継続計画を閲覧・印刷",
+        icon: "fa-shield-halved",
+        url: "https://attendance-app-irf1.onrender.com/bcp_viewer.html"
+    },
+    {
+        title: "BCP机上訓練",
+        description: "災害・感染症を想定した訓練チェックリストの記録",
+        icon: "fa-person-running",
+        url: "https://attendance-app-irf1.onrender.com/bcp_training.html"
     }
 ];
 
