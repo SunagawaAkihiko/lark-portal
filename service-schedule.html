@@ -269,6 +269,43 @@
     .edit-save-btn:hover { background: #047857; }
     .edit-save-btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
+    /* ===== 変更タブ：月間単位数サマリー ===== */
+    .edit-monthly-summary {
+      margin-top: 0.75rem; padding: 0.5rem 0.75rem;
+      background: var(--primary-light);
+      border: 1px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+      border-radius: 8px;
+      display: flex; align-items: center; gap: 0.45rem;
+      font-size: 0.82rem;
+    }
+    .edit-monthly-summary .monthly-val {
+      font-size: 1.05rem; font-weight: 700; color: var(--primary-color); margin-left: auto;
+    }
+    /* ===== 変更タブ：サービス追加 ===== */
+    .add-service-toggle-btn {
+      width: 100%; margin-top: 0.75rem; padding: 0.55rem 1rem;
+      border: 2px dashed var(--primary-color); border-radius: 8px;
+      background: none; color: var(--primary-color);
+      font-family: inherit; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      transition: background 0.15s;
+    }
+    .add-service-toggle-btn:hover, .add-service-toggle-btn.open { background: var(--primary-light); }
+    .add-service-form-body {
+      margin-top: 0.75rem; padding: 0.75rem;
+      background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px;
+    }
+    .add-submit-btn {
+      width: 100%; padding: 0.75rem;
+      background: var(--primary-color); color: white;
+      border: none; border-radius: 8px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .add-submit-btn:hover { filter: brightness(0.9); }
+    .add-submit-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
     /* ===== メインレイアウト（時間割削除後：中央1カラム） ===== */
     .main-layout {
       display: flex;
@@ -1138,6 +1175,65 @@
         <div class="rec-list-empty">氏名を選択するとサービス一覧が表示されます</div>
       </div>
 
+      <!-- 月間単位数サマリー -->
+      <div class="edit-monthly-summary" id="edit-monthly-summary" style="display:none">
+        <i class="fa-solid fa-chart-simple" style="color:var(--primary-color)"></i>
+        <span style="color:var(--text-muted)">月間単位数合計（概算）</span>
+        <span class="monthly-val" id="edit-monthly-units-value">0</span>
+        <span style="color:var(--text-muted);font-size:0.78rem">単位/月</span>
+      </div>
+
+      <!-- サービス追加セクション -->
+      <div id="edit-add-section" style="display:none">
+        <button class="add-service-toggle-btn" id="edit-add-toggle-btn" onclick="toggleEditAddForm()">
+          <i class="fa-solid fa-plus-circle"></i> このお客様にサービスを追加する
+        </button>
+        <div class="add-service-form-body" id="edit-add-form" style="display:none">
+          <div class="field-group">
+            <label class="field-label">作業項目</label>
+            <select class="form-select" id="add-task" onchange="onAddFormChange()">
+              <option value="">-- 選択してください --</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">サービス略称</label>
+            <select class="form-select" id="add-service" onchange="onAddFormChange()">
+              <option value="">-- 選択してください --</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">提供曜日<span class="req">*</span></label>
+            <div class="day-checkboxes" id="add-day-checkboxes"></div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">提供時間<span class="req">*</span></label>
+            <select class="form-select" id="add-time">
+              <option value="">作業項目を先に選択してください</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">勤務区分</label>
+            <select class="form-select" id="add-kinmu"></select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">記録内容テンプレート（任意）</label>
+            <select class="form-select" id="add-record">
+              <option value="">-- 選択しない --</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">適用期間（任意）</label>
+            <div class="date-row">
+              <input type="date" class="form-input" id="add-start">
+              <input type="date" class="form-input" id="add-end">
+            </div>
+          </div>
+          <button class="add-submit-btn" id="add-submit-btn" onclick="submitAddService()">
+            <i class="fa-solid fa-plus"></i> 追加する
+          </button>
+        </div>
+      </div>
+
       <!-- 編集フォーム（レコード選択後に表示） -->
       <div id="edit-form-area" style="display:none; margin-top:0.75rem; border-top:1px solid var(--border-color); padding-top:0.75rem;">
         <!-- 一括変更モード時のバナー（通常は非表示） -->
@@ -1447,6 +1543,13 @@ async function reloadServiceCodeFields() {
     : Object.keys(durationMap).sort((a, b) => a.localeCompare(b, 'ja'));
   svcList.forEach(s => svcEl.appendChild(new Option(s, s)));
   if (prevVal) svcEl.value = prevVal;
+
+  // 追加フォームのサービス略称も同様に再構築する
+  const addSvcEl2   = document.getElementById('add-service');
+  const addPrevVal  = addSvcEl2.value;
+  while (addSvcEl2.options.length > 1) addSvcEl2.remove(1);
+  svcList.forEach(s => addSvcEl2.appendChild(new Option(s, s)));
+  if (addPrevVal) addSvcEl2.value = addPrevVal;
 }
 
 /**
@@ -1516,6 +1619,21 @@ async function loadFields() {
     st.勤務区分.forEach(k => editKinmuEl.appendChild(new Option(k, k)));
     const editDayEl = document.getElementById('edit-day');
     st.提供曜日.forEach(d => editDayEl.appendChild(new Option(d, d)));
+
+    // 追加フォームの選択肢を初期化する
+    const addTaskEl = document.getElementById('add-task');
+    st.作業項目.forEach(t => addTaskEl.appendChild(new Option(t, t)));
+    const addSvcEl = document.getElementById('add-service');
+    svcList.forEach(s => addSvcEl.appendChild(new Option(s, s)));
+    const addKinmuEl = document.getElementById('add-kinmu');
+    st.勤務区分.forEach(k => addKinmuEl.appendChild(new Option(k, k)));
+    const addDayBox = document.getElementById('add-day-checkboxes');
+    st.提供曜日.forEach(d => {
+      const lbl = document.createElement('label');
+      lbl.className = 'day-check-label';
+      lbl.innerHTML = `<input type="checkbox" value="${d}"> ${DAY_LABELS[d] || d}`;
+      addDayBox.appendChild(lbl);
+    });
 
     // 各フォーム部品の変更でonFormChangeを呼ぶ
     document.getElementById('f-task').addEventListener('change',    onFormChange);
@@ -2741,11 +2859,144 @@ function loadEditRecords() {
   document.getElementById('edit-form-hint').style.display = '';
   selectedRecord  = null;
   bulkEditRecords = null;
-  renderRecordsByTask(
-    document.getElementById('edit-name').value,
-    document.getElementById('edit-records-list'),
-    'edit'
-  );
+  const name = document.getElementById('edit-name').value;
+  renderRecordsByTask(name, document.getElementById('edit-records-list'), 'edit');
+  updateEditMonthlySummary(name);
+  document.getElementById('edit-add-section').style.display = name ? '' : 'none';
+  document.getElementById('edit-add-form').style.display = 'none';
+  document.getElementById('edit-add-toggle-btn').classList.remove('open');
+}
+
+// ============================================================
+// 変更タブ：月間単位数サマリー＆サービス追加
+// ============================================================
+
+function calcEditMonthlyUnits(name) {
+  const recs = currentRecords.filter(r => r.氏名 === name);
+  const groups = {};
+  recs.forEach(r => {
+    const key = `${r.作業項目}|${r.サービス略称}`;
+    if (!groups[key]) groups[key] = { task: r.作業項目, service: r.サービス略称 };
+  });
+  return Object.values(groups).reduce((sum, g) => {
+    return sum + (unitMap[g.service] || 0) * (g.task === '入浴介助' ? 14 : 31);
+  }, 0);
+}
+
+function updateEditMonthlySummary(name) {
+  const el = document.getElementById('edit-monthly-summary');
+  if (!name || !currentRecords.some(r => r.氏名 === name)) { el.style.display = 'none'; return; }
+  document.getElementById('edit-monthly-units-value').textContent = calcEditMonthlyUnits(name).toLocaleString();
+  el.style.display = '';
+}
+
+function toggleEditAddForm() {
+  const form   = document.getElementById('edit-add-form');
+  const btn    = document.getElementById('edit-add-toggle-btn');
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : '';
+  btn.classList.toggle('open', !isOpen);
+}
+
+function onAddFormChange() {
+  updateAddTimeOptions();
+  updateAddRecordTemplates();
+}
+
+function updateAddTimeOptions() {
+  const task    = document.getElementById('add-task').value;
+  const service = document.getElementById('add-service').value;
+  const timeEl  = document.getElementById('add-time');
+  timeEl.innerHTML = '<option value="">-- 選択してください --</option>';
+  const taskDef = TASK_WINDOWS[task];
+  if (!taskDef) { timeEl.options[0].text = '作業項目を先に選択してください'; return; }
+  const upperLimit = durationMap[service] || null;
+  const duration   = upperLimit ? upperLimit - 1 : null;
+  for (const win of taskDef.windows) {
+    for (let startMins = win.start; startMins < win.end; startMins += 5) {
+      if (duration !== null && startMins + duration > win.end) continue;
+      const normalStart = startMins % 1440;
+      const normalEnd   = (startMins + (duration ?? 0)) % 1440;
+      const displayText = duration !== null
+        ? `${minsToTimeStr(normalStart)}〜${minsToTimeStr(normalEnd)}`
+        : minsToTimeStr(normalStart);
+      const storedMins  = duration !== null
+        ? ((startMins + duration - 4 + 1440) % 1440)
+        : startMins % 1440;
+      timeEl.appendChild(new Option(displayText, minsToTimeStr(storedMins)));
+    }
+  }
+}
+
+function updateAddRecordTemplates() {
+  const task     = document.getElementById('add-task').value;
+  const recordEl = document.getElementById('add-record');
+  recordEl.innerHTML = '<option value="">-- 選択しない --</option>';
+  if (!task || !fieldsCache) return;
+  const templates = (fieldsCache.templateMap?.[task]) ?? (fieldsCache.static?.記録内容?.[task]) ?? [];
+  templates.forEach(t => {
+    const label = t.length > 40 ? t.slice(0, 40) + '…' : t;
+    recordEl.appendChild(new Option(label, t));
+  });
+}
+
+function getAddSelectedDays() {
+  return [...document.querySelectorAll('#add-day-checkboxes input[type=checkbox]:checked')]
+    .map(cb => cb.value);
+}
+
+async function submitAddService() {
+  const name    = document.getElementById('edit-name').value;
+  const task    = document.getElementById('add-task').value;
+  const service = document.getElementById('add-service').value;
+  const days    = getAddSelectedDays();
+  const time    = document.getElementById('add-time').value;
+  const kinmu   = document.getElementById('add-kinmu').value;
+  const record  = document.getElementById('add-record').value;
+  const start   = document.getElementById('add-start').value;
+  const end     = document.getElementById('add-end').value;
+
+  if (!name)             return showToast('氏名を選択してください', 'error');
+  if (days.length === 0) return showToast('提供曜日を1つ以上選択してください', 'error');
+  if (!time)             return showToast('提供時間を選択してください', 'error');
+
+  const btn = document.getElementById('add-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div> 追加中...';
+
+  try {
+    const res = await fetch(`${SERVER}/api/service-schedule`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        事業所: currentOffice, 氏名: name, 作業項目: task,
+        サービス略称: service, 提供曜日: days, 提供時間: time,
+        勤務区分: kinmu, 記録内容: record, 開始日: start, 終了日: end,
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast(`${data.count || days.length}件追加しました`, 'success');
+
+    // フォームをリセットして閉じる
+    document.getElementById('add-task').value    = '';
+    document.getElementById('add-service').value = '';
+    document.getElementById('add-time').innerHTML   = '<option value="">作業項目を先に選択してください</option>';
+    document.getElementById('add-record').innerHTML = '<option value="">-- 選択しない --</option>';
+    document.getElementById('add-start').value = '';
+    document.getElementById('add-end').value   = '';
+    document.querySelectorAll('#add-day-checkboxes input[type=checkbox]').forEach(cb => cb.checked = false);
+    document.getElementById('edit-add-form').style.display = 'none';
+    document.getElementById('edit-add-toggle-btn').classList.remove('open');
+
+    await loadSchedule();
+    loadEditRecords();
+  } catch (err) {
+    showToast(`追加失敗: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus"></i> 追加する';
+  }
 }
 
 /**
