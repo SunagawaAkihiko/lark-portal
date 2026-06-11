@@ -412,9 +412,9 @@ function renderBirthdayNotice() {
         .filter(c => {
             if (!c.birthDate || c.status === '契約終了') return false;
             if (c.office !== currentOfficeFilter) return false;
-            return new Date(c.birthDate).getUTCMonth() === month;
+            return new Date(c.birthDate).getMonth() === month;
         })
-        .map(c => ({ day: new Date(c.birthDate).getUTCDate(), name: c.name }))
+        .map(c => ({ day: new Date(c.birthDate).getDate(), name: c.name }))
         .sort((a, b) => a.day - b.day);
     if (birthdays.length === 0) {
         notice.classList.add('hidden');
