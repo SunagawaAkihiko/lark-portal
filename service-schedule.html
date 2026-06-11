@@ -2528,6 +2528,7 @@ async function submitAll() {
 
     showToast(`${successCount}件登録しました`, 'success');
     cart = [];
+    btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> <span id="submit-all-label">まとめて登録する</span>`;
     renderCart();
     updateCartDisplay();
     await loadSchedule();
