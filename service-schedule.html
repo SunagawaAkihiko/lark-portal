@@ -2522,10 +2522,7 @@ async function submitAll() {
         }),
       });
       const data = await res.json();
-      if (!data.ok) {
-        if (data.sentFields) console.error('[登録エラー] 送信フィールド:', data.sentFields, 'Lark詳細:', data.larkDetail);
-        throw new Error(data.error);
-      }
+      if (!data.ok) throw new Error(data.error);
       successCount += data.count || 1;
     }
 
