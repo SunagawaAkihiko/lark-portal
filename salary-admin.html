@@ -3299,6 +3299,13 @@ function openSlipModal(mode = 'pdf') {
             : '<i class="fa-solid fa-receipt"></i> 給与明細PDF 出力';
   document.getElementById('slip-dl-btn').classList.toggle('hidden', isEmail);
   document.getElementById('slip-email-btn').classList.toggle('hidden', !isEmail);
+  const timingSection = document.getElementById('slip-timing-section');
+  timingSection.classList.toggle('hidden', !isEmail);
+  if (isEmail) {
+    document.querySelector('input[name="slip-timing"][value="now"]').checked = true;
+    document.getElementById('slip-datetime-row').style.display = 'none';
+    document.getElementById('slip-email-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> メール送信';
+  }
   document.getElementById('slip-modal').classList.remove('hidden');
 }
 
@@ -3358,27 +3365,39 @@ async function startSlipPDF() {
   }
 }
 
-/** 選択スタッフの給与明細PDFを生成してメール送信する */
+function onSlipTimingChange() {
+  const isSchedule = document.querySelector('input[name="slip-timing"]:checked').value === 'schedule';
+  document.getElementById('slip-datetime-row').style.display = isSchedule ? '' : 'none';
+  document.getElementById('slip-email-btn').innerHTML = isSchedule
+    ? '<i class="fa-solid fa-clock"></i> 予約する'
+    : '<i class="fa-solid fa-paper-plane"></i> メール送信';
+}
+
+/** 選択スタッフの給与明細PDFを生成してメール送信（即時 or 予約） */
 async function startSlipEmailSend() {
   const selected = [...document.querySelectorAll('.slip-staff-cb:checked')].map(cb => cb.value);
   if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
 
+  const isSchedule = document.querySelector('input[name="slip-timing"]:checked')?.value === 'schedule';
+  if (isSchedule) {
+    const scheduledAt = document.getElementById('slip-scheduled-at').value;
+    if (!scheduledAt) { alert('送信日時を入力してください。'); return; }
+    if (new Date(scheduledAt) <= new Date()) { alert('送信日時は現在より後を指定してください。'); return; }
+    await scheduleSlipEmailSend(selected, scheduledAt, 'salary');
+    return;
+  }
+
   const btn      = document.getElementById('slip-email-btn');
   const progress = document.getElementById('slip-progress');
   btn.disabled   = true;
-
   const printArea = document.getElementById('slip-print-area');
   let sent = 0, skipped = 0;
-
   try {
     for (let i = 0; i < selected.length; i++) {
       const name = selected[i];
       const row  = salaryRows.find(r => r.staffName === name);
       if (!row) { skipped++; continue; }
-
       progress.textContent = `処理中… ${i + 1} / ${selected.length}  ${name}`;
-
-      // 1人分のPDFをBase64で生成する
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       printArea.innerHTML = buildSlipHTML(row, salaryCurrentMonth);
@@ -3388,11 +3407,10 @@ async function startSlipEmailSend() {
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
       const pdfBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
+        reader.onload  = () => resolve(reader.result);
         reader.onerror = () => reject(new Error('PDF変換エラー'));
         reader.readAsDataURL(pdf.output('blob'));
       });
-
       const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3406,6 +3424,57 @@ async function startSlipEmailSend() {
   } catch(e) {
     progress.textContent = `⚠ エラー: ${e.message}`;
     console.error('[slip-email]', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** PDF生成→サーバーへ予約登録する（給与・賞与共用） */
+async function scheduleSlipEmailSend(selected, scheduledAt, type) {
+  const rows       = type === 'bonus' ? bonusRows       : salaryRows;
+  const month      = type === 'bonus' ? bonusCurrentMonth : salaryCurrentMonth;
+  const buildHTML  = type === 'bonus' ? buildBonusSlipHTML : buildSlipHTML;
+  const printArea  = document.getElementById(type === 'bonus' ? 'bonus-slip-print-area' : 'slip-print-area');
+  const btn        = document.getElementById(type === 'bonus' ? 'bonus-slip-email-btn' : 'slip-email-btn');
+  const progress   = document.getElementById(type === 'bonus' ? 'bonus-slip-progress' : 'slip-progress');
+
+  btn.disabled = true;
+  let scheduled = 0;
+  try {
+    for (let i = 0; i < selected.length; i++) {
+      const name = selected[i];
+      const row  = rows.find(r => r.staffName === name);
+      if (!row) continue;
+      progress.textContent = `PDF生成中… ${i + 1} / ${selected.length}  ${name}`;
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      printArea.innerHTML = buildHTML(row, month);
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+      const canvas = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
+      const pdfBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('PDF変換エラー'));
+        reader.readAsDataURL(pdf.output('blob'));
+      });
+      const r2 = await fetch(`${API_BASE}/api/salary/schedule-payslip-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffName: name, month, type, pdfBase64, scheduledAt }),
+      });
+      const j2 = await r2.json();
+      if (!j2.ok) throw new Error(j2.error);
+      scheduled++;
+    }
+    const d = new Date(scheduledAt);
+    const label = `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    progress.textContent = `✅ ${scheduled}件を ${label} に予約しました`;
+    setTimeout(() => { type === 'bonus' ? closeBonusSlipModal() : closeSlipModal(); }, 2500);
+  } catch(e) {
+    progress.textContent = `⚠ エラー: ${e.message}`;
+    console.error('[slip-schedule]', e);
   } finally {
     btn.disabled = false;
   }
@@ -4052,6 +4121,13 @@ function openBonusSlipModal(mode = 'pdf') {
             : '<i class="fa-solid fa-receipt"></i> 賞与明細PDF 出力';
   document.getElementById('bonus-slip-dl-btn').classList.toggle('hidden', isEmail);
   document.getElementById('bonus-slip-email-btn').classList.toggle('hidden', !isEmail);
+  const bonusTimingSection = document.getElementById('bonus-slip-timing-section');
+  bonusTimingSection.classList.toggle('hidden', !isEmail);
+  if (isEmail) {
+    document.querySelector('input[name="bonus-slip-timing"][value="now"]').checked = true;
+    document.getElementById('bonus-slip-datetime-row').style.display = 'none';
+    document.getElementById('bonus-slip-email-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> メール送信';
+  }
   document.getElementById('bonus-slip-modal').classList.remove('hidden');
 }
 
@@ -4129,47 +4205,108 @@ async function startBonusSlipPDF() {
   }
 }
 
-/** 選択スタッフの賞与明細PDFを生成してメール送信する */
-async function startBonusSlipEmailSend() {
-  const selected = [...document.querySelectorAll('.bonus-slip-staff-cb:checked')].map(cb => cb.value);
-  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+function onBonusSlipTimingChange() {
+  const isSchedule = document.querySelector('input[name="bonus-slip-timing"]:checked').value === 'schedule';
+  document.getElementById('bonus-slip-datetime-row').style.display = isSchedule ? '' : 'none';
+  document.getElementById('bonus-slip-email-btn').innerHTML = isSchedule
+    ? '<i class="fa-solid fa-clock"></i> 予約する'
+    : '<i class="fa-solid fa-paper-plane"></i> メール送信';
+}
 
-  const btn      = document.getElementById('bonus-slip-email-btn');
-  const progress = document.getElementById('bonus-slip-progress');
-  btn.disabled   = true;
-
-  const printArea = document.getElementById('bonus-slip-print-area');
-  const getVal = (staffName, field) => {
+/** 賞与明細：DOMから各スタッフのrow objectを組み立てるヘルパー */
+function buildBonusRowFromDOM(staffName) {
+  const getVal = (field) => {
     const input = document.querySelector(`.bonus-input[data-staff="${staffName}"][data-field="${field}"]`);
     if (input) return parseInt(input.value, 10) || 0;
     const cell  = document.querySelector(`.bonus-calc-cell[data-staff="${staffName}"][data-calc="${field}"]`);
     return cell ? parseInt(cell.dataset.numval || 0, 10) : 0;
   };
+  return {
+    staffName,
+    賞与支給額:   getVal('賞与支給額'),
+    調整手当:     getVal('調整手当'),
+    食費:         getVal('食費'),
+    健康保険:     getVal('健康保険'),
+    介護保険:     getVal('介護保険'),
+    厚生年金:     getVal('厚生年金'),
+    子育て支援金: getVal('子育て支援金'),
+    雇用保険:     getVal('雇用保険'),
+    社会保険計:   getVal('社会保険計'),
+    課税対象額:   getVal('課税対象額'),
+    源泉所得税:   getVal('源泉所得税'),
+    支給合計:     getVal('支給合計'),
+    控除合計:     getVal('控除合計'),
+    差引支給額:   getVal('差引支給額'),
+  };
+}
 
+/** 選択スタッフの賞与明細PDFを生成してメール送信（即時 or 予約） */
+async function startBonusSlipEmailSend() {
+  const selected = [...document.querySelectorAll('.bonus-slip-staff-cb:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('スタッフを1名以上選択してください。'); return; }
+
+  const isSchedule = document.querySelector('input[name="bonus-slip-timing"]:checked')?.value === 'schedule';
+  if (isSchedule) {
+    const scheduledAt = document.getElementById('bonus-slip-scheduled-at').value;
+    if (!scheduledAt) { alert('送信日時を入力してください。'); return; }
+    if (new Date(scheduledAt) <= new Date()) { alert('送信日時は現在より後を指定してください。'); return; }
+
+    const btn      = document.getElementById('bonus-slip-email-btn');
+    const progress = document.getElementById('bonus-slip-progress');
+    const printArea = document.getElementById('bonus-slip-print-area');
+    btn.disabled = true;
+    let scheduled = 0;
+    try {
+      for (let i = 0; i < selected.length; i++) {
+        const name = selected[i];
+        const row  = buildBonusRowFromDOM(name);
+        progress.textContent = `PDF生成中… ${i + 1} / ${selected.length}  ${name}`;
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        printArea.innerHTML = buildBonusSlipHTML(row, bonusCurrentDate);
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r));
+        const canvas = await html2canvas(printArea, { scale: 1.0, useCORS: true, backgroundColor: '#ffffff' });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
+        const pdfBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('PDF変換エラー'));
+          reader.readAsDataURL(pdf.output('blob'));
+        });
+        const r2 = await fetch(`${API_BASE}/api/salary/schedule-payslip-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ staffName: name, month: bonusCurrentDate, type: 'bonus', pdfBase64, scheduledAt }),
+        });
+        const j2 = await r2.json();
+        if (!j2.ok) throw new Error(j2.error);
+        scheduled++;
+      }
+      const d = new Date(scheduledAt);
+      const label = `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      progress.textContent = `✅ ${scheduled}件を ${label} に予約しました`;
+      setTimeout(closeBonusSlipModal, 2500);
+    } catch(e) {
+      progress.textContent = `⚠ エラー: ${e.message}`;
+      console.error('[bonus-slip-schedule]', e);
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  // 即時送信
+  const btn      = document.getElementById('bonus-slip-email-btn');
+  const progress = document.getElementById('bonus-slip-progress');
+  btn.disabled   = true;
+  const printArea = document.getElementById('bonus-slip-print-area');
   let sent = 0, skipped = 0;
   try {
     for (let i = 0; i < selected.length; i++) {
       const name = selected[i];
       progress.textContent = `処理中… ${i + 1} / ${selected.length}  ${name}`;
-
-      const row = {
-        staffName:    name,
-        賞与支給額:   getVal(name, '賞与支給額'),
-        調整手当:     getVal(name, '調整手当'),
-        食費:         getVal(name, '食費'),
-        健康保険:     getVal(name, '健康保険'),
-        介護保険:     getVal(name, '介護保険'),
-        厚生年金:     getVal(name, '厚生年金'),
-        子育て支援金: getVal(name, '子育て支援金'),
-        雇用保険:     getVal(name, '雇用保険'),
-        社会保険計:   getVal(name, '社会保険計'),
-        課税対象額:   getVal(name, '課税対象額'),
-        源泉所得税:   getVal(name, '源泉所得税'),
-        支給合計:     getVal(name, '支給合計'),
-        控除合計:     getVal(name, '控除合計'),
-        差引支給額:   getVal(name, '差引支給額'),
-      };
-
+      const row = buildBonusRowFromDOM(name);
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       printArea.innerHTML = buildBonusSlipHTML(row, bonusCurrentDate);
@@ -4179,11 +4316,10 @@ async function startBonusSlipEmailSend() {
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 297, 210);
       const pdfBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
+        reader.onload  = () => resolve(reader.result);
         reader.onerror = () => reject(new Error('PDF変換エラー'));
         reader.readAsDataURL(pdf.output('blob'));
       });
-
       const r2 = await fetch(`${API_BASE}/api/salary/send-payslip-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4295,6 +4431,20 @@ function buildBonusSlipHTML(row, date) {
       <input type="checkbox" id="slip-check-all" onchange="toggleAllSlipStaff(this.checked)"> 全員選択
     </label>
     <div class="slip-staff-list" id="slip-staff-list"></div>
+    <!-- 送信タイミング（メール送信モード時のみ表示） -->
+    <div id="slip-timing-section" class="hidden" style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:#f0f4f8;border-radius:8px;font-size:0.85rem;">
+      <div style="font-weight:700;margin-bottom:0.4rem;"><i class="fa-solid fa-clock"></i> 送信タイミング</div>
+      <label style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem;cursor:pointer;">
+        <input type="radio" name="slip-timing" value="now" checked onchange="onSlipTimingChange()"> 今すぐ送信
+      </label>
+      <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+        <input type="radio" name="slip-timing" value="schedule" onchange="onSlipTimingChange()"> 日時を指定して送信
+      </label>
+      <div id="slip-datetime-row" style="display:none;margin-top:0.45rem;">
+        <input type="datetime-local" id="slip-scheduled-at"
+          style="width:100%;padding:0.4rem 0.5rem;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;box-sizing:border-box;">
+      </div>
+    </div>
     <div class="modal-btns" style="margin-top:0.8rem">
       <button class="btn-cancel" onclick="closeSlipModal()">キャンセル</button>
       <button class="btn-primary" id="slip-dl-btn" onclick="startSlipPDF()">
@@ -4321,6 +4471,20 @@ function buildBonusSlipHTML(row, date) {
       <input type="checkbox" id="bonus-slip-check-all" onchange="toggleAllBonusSlipStaff(this.checked)"> 全員選択
     </label>
     <div class="slip-staff-list" id="bonus-slip-staff-list"></div>
+    <!-- 送信タイミング（メール送信モード時のみ表示） -->
+    <div id="bonus-slip-timing-section" class="hidden" style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:#f0f4f8;border-radius:8px;font-size:0.85rem;">
+      <div style="font-weight:700;margin-bottom:0.4rem;"><i class="fa-solid fa-clock"></i> 送信タイミング</div>
+      <label style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem;cursor:pointer;">
+        <input type="radio" name="bonus-slip-timing" value="now" checked onchange="onBonusSlipTimingChange()"> 今すぐ送信
+      </label>
+      <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+        <input type="radio" name="bonus-slip-timing" value="schedule" onchange="onBonusSlipTimingChange()"> 日時を指定して送信
+      </label>
+      <div id="bonus-slip-datetime-row" style="display:none;margin-top:0.45rem;">
+        <input type="datetime-local" id="bonus-slip-scheduled-at"
+          style="width:100%;padding:0.4rem 0.5rem;border:1px solid #ccc;border-radius:6px;font-size:0.85rem;box-sizing:border-box;">
+      </div>
+    </div>
     <div class="modal-btns" style="margin-top:0.8rem">
       <button class="btn-cancel" onclick="closeBonusSlipModal()">キャンセル</button>
       <button class="btn-primary" id="bonus-slip-dl-btn" onclick="startBonusSlipPDF()">
