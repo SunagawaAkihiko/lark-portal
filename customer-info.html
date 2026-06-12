@@ -824,7 +824,7 @@
       const res  = await fetch(`${API_BASE}/api/medicine/add-photo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yakuRecordId: activeYakuRecordId, customerName, photoBase64: base64 }),
+        body: JSON.stringify({ yakuRecordId: activeYakuRecordId, customerName, office: activeOffice, photoBase64: base64 }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
