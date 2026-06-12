@@ -819,7 +819,7 @@
 
       // 選択中の利用者名を取得する
       const customer = allCustomers.find(c => c.recordId === activeRecordId);
-      const customerName = customer ? (`${customer.lastName} ${customer.firstName}`.trim() || customer.name) : '';
+      const customerName = customer ? (`${customer.lastName}${customer.firstName}`.trim() || customer.name) : '';
 
       const res  = await fetch(`${API_BASE}/api/medicine/add-photo`, {
         method: 'POST',
