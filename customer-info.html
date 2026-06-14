@@ -630,7 +630,7 @@
           ${row('氏名',    `${c.fam1LastName} ${c.fam1FirstName}`.trim())}
           ${row('フリガナ', `${c.fam1LastNameKana} ${c.fam1FirstNameKana}`.trim())}
           ${row('続柄',    c.fam1Relationship)}
-          ${row('電話番号', c.fam1Phone)}
+          ${rowTel('電話番号', c.fam1Phone)}
           ${row('住所',    c.fam1Address)}
         </div>
       </div>` : '';
@@ -642,7 +642,7 @@
           ${row('氏名',    `${c.fam2LastName} ${c.fam2FirstName}`.trim())}
           ${row('フリガナ', `${c.fam2LastNameKana} ${c.fam2FirstNameKana}`.trim())}
           ${row('続柄',    c.fam2Relationship)}
-          ${row('電話番号', c.fam2Phone)}
+          ${rowTel('電話番号', c.fam2Phone)}
         </div>
       </div>` : '';
 
@@ -674,6 +674,12 @@
   function row(label, value) {
     const v = value && String(value).trim() ? value : '―';
     return `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${v}</span></div>`;
+  }
+  function rowTel(label, value) {
+    if (!value || !String(value).trim()) return row(label, '―');
+    const tel  = escHtml(String(value).trim());
+    const link = `<a class="relation-tel" href="tel:${tel}"><i class="fa-solid fa-phone"></i>${tel}</a>`;
+    return `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${link}</span></div>`;
   }
 
   // ===== 既往歴パネルを描画する =====
