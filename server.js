@@ -12,13 +12,22 @@
 //   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
 // ============================================================
 
-const express = require('express');
-const path    = require('path');
-const app     = express();
-const PORT    = process.env.PORT || 3000;
+const express      = require('express');
+const path         = require('path');
+const cookieParser = require('cookie-parser');
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+// 施設外からのアクセスを許可する Lark open_id のリスト（カンマ区切り環境変数）
+const ALLOWED_OPEN_IDS  = new Set(
+  (process.env.ALLOWED_OPEN_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+);
+const COOKIE_SECRET      = process.env.COOKIE_SECRET || 'glad-staff-secret';
+const STAFF_ACCESS_COOKIE = 'glad_staff_access';
 
 // Render / Cloudflare 等のリバースプロキシ背後でも実クライアントIPを取得する
 app.set('trust proxy', 1);
+app.use(cookieParser(COOKIE_SECRET));
 
 // ---- アクセス元IP取得 ----
 // Cloudflare の CF-Connecting-IP → x-forwarded-for → req.ip の順に試す
@@ -48,8 +57,14 @@ function getAllOfficeIPs() {
 }
 
 // ---- 会社Wi-Fiチェックミドルウェア ----
-// 登録済み拠点IP以外からのアクセスは wifi-required.html を返す
+// 登録済み拠点IP または 許可済みLarkアカウントのCookieがあればアクセスを許可する
 function requireOfficeWifi(req, res, next) {
+  // 許可済みLarkアカウントのCookieがあれば施設外からもアクセス許可
+  if (ALLOWED_OPEN_IDS.size > 0) {
+    const openId = req.signedCookies[STAFF_ACCESS_COOKIE];
+    if (openId && ALLOWED_OPEN_IDS.has(openId)) return next();
+  }
+
   const clientIP  = getClientIP(req);
   const officeIPs = getAllOfficeIPs();
 
@@ -60,6 +75,67 @@ function requireOfficeWifi(req, res, next) {
   console.log(`[Wi-Fi制限] 拒否 IP=${clientIP}`);
   res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
 }
+
+// ---- Lark OAuth ルート ----
+// GET /auth/lark → Lark認可画面にリダイレクト
+app.get('/auth/lark', (req, res) => {
+  const appId = process.env.LARK_APP_ID;
+  if (!appId || ALLOWED_OPEN_IDS.size === 0) {
+    return res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
+  }
+  const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/auth/lark/callback`);
+  res.redirect(`https://open.larksuite.com/open-apis/authen/v1/index?redirect_uri=${redirectUri}&app_id=${appId}`);
+});
+
+// GET /auth/lark/callback → コード交換 → open_id確認 → Cookie発行
+app.get('/auth/lark/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.status(400).sendFile(path.join(__dirname, 'wifi-required.html'));
+
+  try {
+    const basicAuth = Buffer.from(
+      `${process.env.LARK_APP_ID}:${process.env.LARK_APP_SECRET}`
+    ).toString('base64');
+
+    // 認可コード → ユーザーアクセストークン
+    const tokenRes  = await fetch('https://open.larksuite.com/open-apis/authen/v1/oidc/access_token', {
+      method: 'POST',
+      headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_type: 'authorization_code', code }),
+    });
+    const tokenData = await tokenRes.json();
+    const userToken = tokenData.data?.access_token;
+    if (!userToken) throw new Error('ユーザートークン取得失敗');
+
+    // ユーザー情報取得
+    const userRes  = await fetch('https://open.larksuite.com/open-apis/authen/v1/user_info', {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    const userData = await userRes.json();
+    const openId   = userData.data?.open_id;
+    const name     = userData.data?.name;
+
+    console.log(`[auth/lark] ログイン試行: ${name} (${openId})`);
+
+    if (!ALLOWED_OPEN_IDS.has(openId)) {
+      console.log(`[auth/lark] アクセス拒否: ${name} (${openId})`);
+      return res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
+    }
+
+    // 許可済み → 署名付きCookieを発行して /staff へリダイレクト
+    res.cookie(STAFF_ACCESS_COOKIE, openId, {
+      signed:   true,
+      httpOnly: true,
+      maxAge:   30 * 24 * 60 * 60 * 1000, // 30日
+      sameSite: 'lax',
+    });
+    console.log(`[auth/lark] アクセス許可: ${name} (${openId})`);
+    res.redirect('/staff');
+  } catch (e) {
+    console.error('[auth/lark] エラー:', e.message);
+    res.status(500).send('認証エラーが発生しました。もう一度お試しください。');
+  }
+});
 
 // ---- キャッシュバスティング用バージョン定数 ----
 // デプロイのたびにこの値を更新する。
