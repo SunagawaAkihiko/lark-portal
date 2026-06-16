@@ -5,10 +5,11 @@
 // ルーティング:
 //   GET /staff    → 会社Wi-Fiチェック後に index.html を返す（スタッフ用入口）
 //   GET /staff/   → /staff へリダイレクト
-//   その他        → 制限なしで静的ファイルを配信（管理者用）
+//   スタッフ共通ツール(.html) → 会社Wi-FiチェックまたはLark認証Cookieが必要
+//   管理者専用ページ(PUBLIC_HTML_PAGES) → 制限なし（URLを知っている管理者のみ使用）
 //
 // Wi-Fi制限の仕組み:
-//   環境変数 SHOP_{KEY}_IP に登録された拠点IPからのアクセスのみ /staff を許可する。
+//   環境変数 SHOP_{KEY}_IP に登録された拠点IPからのアクセスのみ許可する。
 //   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
 // ============================================================
 
@@ -222,6 +223,34 @@ app.get('/auth/lark/callback', async (req, res) => {
   }
 });
 
+// ---- 管理者専用ページ（URLを知っている管理者本人のみが使う想定）----
+// これらのページは個別のWi-Fi制限・Lark認証チェックの対象外とする
+const PUBLIC_HTML_PAGES = new Set([
+  'wifi-required.html',
+  'admin.html',
+  'payment-collection.html',
+  'customer-register.html',
+  'customer-register-preview.html',
+  'staff-register.html',
+  'staff-register-preview.html',
+  'staff-admin-edit.html',
+  'staff-admin-edit-preview.html',
+  'service-schedule.html',
+  'supply-admin.html',
+  'salary-admin.html',
+  'performance-report.html',
+  'shift.html',
+]);
+
+// ---- スタッフ共通ツールページにもWi-Fi制限をかける ----
+// /staff のカードを経由せず直接URLを指定して開かれた場合も同じくチェックする
+app.use((req, res, next) => {
+  if (!req.path.endsWith('.html')) return next();
+  const filename = path.basename(req.path);
+  if (PUBLIC_HTML_PAGES.has(filename)) return next();
+  return requireOfficeWifi(req, res, next);
+});
+
 // ---- キャッシュバスティング用バージョン定数 ----
 // デプロイのたびにこの値を更新する。
 // URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
@@ -253,7 +282,9 @@ app.get('/staff/', (req, res) => {
   res.redirect(301, '/staff');
 });
 
-// ---- その他のルート（管理者用・制限なし）----
+// ---- 静的ファイル配信 ----
+// .html はここに来る前に上のミドルウェアでWi-Fi制限済み（PUBLIC_HTML_PAGES以外）。
+// CSS・JS・画像等はno-cache対象外でそのまま配信する。
 // HTMLはWebViewキャッシュを防ぐためno-cacheヘッダーを付与する
 app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {
