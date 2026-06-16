@@ -226,7 +226,7 @@ app.get('/auth/lark/callback', async (req, res) => {
 // デプロイのたびにこの値を更新する。
 // URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
 // LarkのWebViewがキャッシュを使わず最新のHTMLを取得するよう強制する。
-const PAGE_VERSION = 'v10';
+const PAGE_VERSION = 'v11';
 
 // HTMLページへのアクセス時に _v パラメータが最新でなければリダイレクトする
 app.use((req, res, next) => {

@@ -228,11 +228,16 @@ function createCard(link) {
     return card;
 }
 
-// Run on DOM loaded
-document.addEventListener('DOMContentLoaded', () => {
+// Run on DOM loaded (readyState check handles Lark WebView where DOMContentLoaded may have already fired)
+function _init() {
     buildDashboard();
     syncLayout();
-});
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+} else {
+    _init();
+}
 
 // ============================================================
 // レイアウト切り替え
