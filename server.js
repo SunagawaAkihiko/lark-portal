@@ -106,7 +106,7 @@ function getSignedCookie(req, name) {
 function setSignedCookie(res, name, value, options = {}) {
   const sig = crypto.createHmac('sha256', COOKIE_SECRET).update(value).digest('base64');
   const encoded = encodeURIComponent(`s:${value}.${sig}`);
-  let cookie = `${name}=${encoded}; HttpOnly; SameSite=Lax`;
+  let cookie = `${name}=${encoded}; HttpOnly; SameSite=Lax; Path=/`;
   if (options.maxAge) cookie += `; Max-Age=${Math.floor(options.maxAge / 1000)}`;
   if (options.secure)  cookie += '; Secure';
   res.setHeader('Set-Cookie', cookie);
