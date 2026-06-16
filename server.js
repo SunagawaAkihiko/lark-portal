@@ -180,19 +180,31 @@ app.get('/auth/lark/callback', async (req, res) => {
   if (!code) return sendWifiRequired(res, 400);
 
   try {
-    const basicAuth = Buffer.from(
-      `${process.env.LARK_APP_ID}:${process.env.LARK_APP_SECRET}`
-    ).toString('base64');
+    // app_access_token取得（oidc/access_tokenの認証にはBasic認証ではなくこのトークンのBearerが必要）
+    const appTokenRes  = await fetch('https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app_id: process.env.LARK_APP_ID, app_secret: process.env.LARK_APP_SECRET }),
+    });
+    const appTokenData = await appTokenRes.json();
+    const appAccessToken = appTokenData.app_access_token;
+    if (!appAccessToken) {
+      console.error('[auth/lark] アプリトークン取得失敗:', JSON.stringify(appTokenData));
+      throw new Error('アプリトークン取得失敗');
+    }
 
     // 認可コード → ユーザーアクセストークン
     const tokenRes  = await fetch('https://open.larksuite.com/open-apis/authen/v1/oidc/access_token', {
       method: 'POST',
-      headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${appAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ grant_type: 'authorization_code', code }),
     });
     const tokenData = await tokenRes.json();
     const userToken = tokenData.data?.access_token;
-    if (!userToken) throw new Error('ユーザートークン取得失敗');
+    if (!userToken) {
+      console.error('[auth/lark] ユーザートークン取得失敗:', JSON.stringify(tokenData));
+      throw new Error('ユーザートークン取得失敗');
+    }
 
     // ユーザー情報取得
     const userRes  = await fetch('https://open.larksuite.com/open-apis/authen/v1/user_info', {
