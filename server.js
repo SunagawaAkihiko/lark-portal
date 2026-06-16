@@ -25,6 +25,55 @@ const ALLOWED_OPEN_IDS  = new Set(
 const COOKIE_SECRET      = process.env.COOKIE_SECRET || 'glad-staff-secret';
 const STAFF_ACCESS_COOKIE = 'glad_staff_access';
 
+// ---- Wi-Fi制限ページHTML（ファイル読み込みではなく直接埋め込み）----
+const WIFI_REQUIRED_HTML = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会社Wi-Fiに接続してください</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 40px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .icon { font-size: 64px; margin-bottom: 24px; }
+    h1 { font-size: 20px; font-weight: 700; color: #1a202c; margin-bottom: 12px; }
+    p { font-size: 15px; color: #4a5568; line-height: 1.7; margin-bottom: 8px; }
+    .hint { margin-top: 28px; background: #ebf8ff; border-radius: 10px; padding: 16px; font-size: 14px; color: #2b6cb0; line-height: 1.6; }
+    .retry-btn { display: inline-block; margin-top: 28px; padding: 14px 32px; background: #4299e1; color: #fff; border-radius: 10px; font-size: 16px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .divider { margin: 28px 0 0; border: none; border-top: 1px solid #e2e8f0; }
+    .lark-auth-section { margin-top: 20px; }
+    .lark-auth-section p { font-size: 13px; color: #718096; margin-bottom: 12px; }
+    .lark-login-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1456f0; color: #fff; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📶</div>
+    <h1>会社Wi-Fiに接続してください</h1>
+    <p>このツールは会社のWi-Fi接続中のみ<br>ご利用いただけます。</p>
+    <div class="hint">スマートフォンのWi-Fi設定から<br>会社のWi-Fiに接続後、<br>再度アクセスしてください。</div>
+    <button class="retry-btn" onclick="location.reload()">再試行</button>
+    <hr class="divider">
+    <div class="lark-auth-section">
+      <p>大浦家・上津役家のアカウントは<br>施設外からアクセスできます</p>
+      <a href="/auth/lark" class="lark-login-btn">
+        <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="8" fill="white" fill-opacity="0.2"/>
+          <path d="M20 8L32 14V26L20 32L8 26V14L20 8Z" fill="white"/>
+        </svg>
+        Larkで認証する
+      </a>
+    </div>
+  </div>
+</body>
+</html>`;
+
+function sendWifiRequired(res, status = 403) {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.status(status).send(WIFI_REQUIRED_HTML);
+}
+
 // ---- Cookie ユーティリティ（crypto 組み込みモジュールで実装）----
 function parseCookies(req) {
   const header = req.headers.cookie || '';
@@ -106,18 +155,14 @@ function requireOfficeWifi(req, res, next) {
   }
 
   console.log(`[Wi-Fi制限] 拒否 IP=${clientIP}`);
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
+  sendWifiRequired(res);
 }
 
 // ---- Lark OAuth ルート ----
 // GET /auth/lark → Lark認可画面にリダイレクト
 app.get('/auth/lark', (req, res) => {
   const appId = process.env.LARK_APP_ID;
-  if (!appId) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
-  }
+  if (!appId) return sendWifiRequired(res);
   const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/auth/lark/callback`);
   res.redirect(`https://open.larksuite.com/open-apis/authen/v1/index?redirect_uri=${redirectUri}&app_id=${appId}`);
 });
@@ -125,7 +170,7 @@ app.get('/auth/lark', (req, res) => {
 // GET /auth/lark/callback → コード交換 → open_id確認 → Cookie発行
 app.get('/auth/lark/callback', async (req, res) => {
   const { code } = req.query;
-  if (!code) return res.status(400).sendFile(path.join(__dirname, 'wifi-required.html'));
+  if (!code) return sendWifiRequired(res, 400);
 
   try {
     const basicAuth = Buffer.from(
