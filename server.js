@@ -12,9 +12,9 @@
 //   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
 // ============================================================
 
-const express      = require('express');
-const path         = require('path');
-const cookieParser = require('cookie-parser');
+const express = require('express');
+const path    = require('path');
+const crypto  = require('crypto');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -25,9 +25,42 @@ const ALLOWED_OPEN_IDS  = new Set(
 const COOKIE_SECRET      = process.env.COOKIE_SECRET || 'glad-staff-secret';
 const STAFF_ACCESS_COOKIE = 'glad_staff_access';
 
+// ---- Cookie ユーティリティ（crypto 組み込みモジュールで実装）----
+function parseCookies(req) {
+  const header = req.headers.cookie || '';
+  const result = {};
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx < 0) continue;
+    const key = part.slice(0, idx).trim();
+    try { result[key] = decodeURIComponent(part.slice(idx + 1).trim()); } catch { result[key] = part.slice(idx + 1).trim(); }
+  }
+  return result;
+}
+
+function getSignedCookie(req, name) {
+  const raw = parseCookies(req)[name];
+  if (!raw || !raw.startsWith('s:')) return null;
+  const withoutPrefix = raw.slice(2);
+  const lastDot = withoutPrefix.lastIndexOf('.');
+  if (lastDot < 0) return null;
+  const value = withoutPrefix.slice(0, lastDot);
+  const sig   = withoutPrefix.slice(lastDot + 1);
+  const expected = crypto.createHmac('sha256', COOKIE_SECRET).update(value).digest('base64');
+  return sig === expected ? value : null;
+}
+
+function setSignedCookie(res, name, value, options = {}) {
+  const sig = crypto.createHmac('sha256', COOKIE_SECRET).update(value).digest('base64');
+  const encoded = encodeURIComponent(`s:${value}.${sig}`);
+  let cookie = `${name}=${encoded}; HttpOnly; SameSite=Lax`;
+  if (options.maxAge) cookie += `; Max-Age=${Math.floor(options.maxAge / 1000)}`;
+  if (options.secure)  cookie += '; Secure';
+  res.setHeader('Set-Cookie', cookie);
+}
+
 // Render / Cloudflare 等のリバースプロキシ背後でも実クライアントIPを取得する
 app.set('trust proxy', 1);
-app.use(cookieParser(COOKIE_SECRET));
 
 // ---- アクセス元IP取得 ----
 // Cloudflare の CF-Connecting-IP → x-forwarded-for → req.ip の順に試す
@@ -61,7 +94,7 @@ function getAllOfficeIPs() {
 function requireOfficeWifi(req, res, next) {
   // 許可済みLarkアカウントのCookieがあれば施設外からもアクセス許可
   if (ALLOWED_OPEN_IDS.size > 0) {
-    const openId = req.signedCookies[STAFF_ACCESS_COOKIE];
+    const openId = getSignedCookie(req, STAFF_ACCESS_COOKIE);
     if (openId && ALLOWED_OPEN_IDS.has(openId)) return next();
   }
 
@@ -132,11 +165,9 @@ app.get('/auth/lark/callback', async (req, res) => {
     }
 
     // 許可済み → 署名付きCookieを発行して /staff へリダイレクト
-    res.cookie(STAFF_ACCESS_COOKIE, openId, {
-      signed:   true,
-      httpOnly: true,
-      maxAge:   30 * 24 * 60 * 60 * 1000, // 30日
-      sameSite: 'lax',
+    setSignedCookie(res, STAFF_ACCESS_COOKIE, openId, {
+      maxAge:  30 * 24 * 60 * 60 * 1000, // 30日
+      secure:  req.secure || req.headers['x-forwarded-proto'] === 'https',
     });
     console.log(`[auth/lark] アクセス許可: ${name} (${openId})`);
     res.redirect('/staff');
