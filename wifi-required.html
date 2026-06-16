@@ -62,32 +62,6 @@
       cursor: pointer;
       border: none;
     }
-    .divider {
-      margin: 28px 0 0;
-      border: none;
-      border-top: 1px solid #e2e8f0;
-    }
-    .lark-auth-section {
-      margin-top: 20px;
-    }
-    .lark-auth-section p {
-      font-size: 13px;
-      color: #718096;
-      margin-bottom: 12px;
-    }
-    .lark-login-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      background: #1456f0;
-      color: #fff;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -101,18 +75,6 @@
       再度アクセスしてください。
     </div>
     <button class="retry-btn" onclick="location.reload()">再試行</button>
-
-    <hr class="divider">
-    <div class="lark-auth-section">
-      <p>大浦家・上津役家のアカウントは<br>施設外からアクセスできます</p>
-      <a href="/auth/lark" class="lark-login-btn">
-        <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="40" height="40" rx="8" fill="white" fill-opacity="0.2"/>
-          <path d="M20 8L32 14V26L20 32L8 26V14L20 8Z" fill="white"/>
-        </svg>
-        Larkで認証する
-      </a>
-    </div>
   </div>
 </body>
 </html>
