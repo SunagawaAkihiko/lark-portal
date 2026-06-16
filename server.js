@@ -13,6 +13,10 @@
 //   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
 //   admin.htmlにアクセスするとCookie(glad_admin_access)が発行され、
 //   以降admin.html内のカードから開く各ページもWi-Fi制限なしで閲覧できる。
+//   テナント内Larkユーザーは /auth/lark でLark認証して施設外アクセス許可を得る。
+//   テナント外（外部）ユーザーはLark認証が使えないため、/auth/guest/:token という
+//   本人だけに伝える秘密URLでCookie(glad_guest_access)を発行し代替する。
+//   環境変数 GUEST_TOKEN_<ラベル>=秘密トークン文字列 で人ごとに登録する。
 // ============================================================
 
 const express = require('express');
@@ -28,6 +32,18 @@ const ALLOWED_OPEN_IDS  = new Set(
 const COOKIE_SECRET      = process.env.COOKIE_SECRET || 'glad-staff-secret';
 const STAFF_ACCESS_COOKIE = 'glad_staff_access';
 const ADMIN_ACCESS_COOKIE = 'glad_admin_access';
+const GUEST_ACCESS_COOKIE = 'glad_guest_access';
+
+// テナント外ユーザー用の秘密トークン → ラベル（環境変数 GUEST_TOKEN_<ラベル>=トークン文字列）
+const GUEST_TOKENS = {};
+const GUEST_LABELS = new Set();
+for (const [key, val] of Object.entries(process.env)) {
+  const m = key.match(/^GUEST_TOKEN_(.+)$/);
+  if (m && val) {
+    GUEST_TOKENS[val] = m[1];
+    GUEST_LABELS.add(m[1]);
+  }
+}
 
 // ---- Wi-Fi制限ページHTML（ファイル読み込みではなく直接埋め込み）----
 const WIFI_REQUIRED_HTML = `<!DOCTYPE html>
@@ -60,7 +76,7 @@ const WIFI_REQUIRED_HTML = `<!DOCTYPE html>
     <button class="retry-btn" onclick="location.reload()">再試行</button>
     <hr class="divider">
     <div class="lark-auth-section">
-      <p>大浦家・上津役家のアカウントは<br>施設外からアクセスできます</p>
+      <p>施設外アクセスを許可されている方は<br>Larkで認証してください</p>
       <a href="/auth/lark" class="lark-login-btn">
         <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect width="40" height="40" rx="8" fill="white" fill-opacity="0.2"/>
@@ -154,6 +170,10 @@ function requireOfficeWifi(req, res, next) {
   // admin.html（URLを知っている管理者のみが開く前提）経由のCookieがあれば許可
   if (getSignedCookie(req, ADMIN_ACCESS_COOKIE) === '1') return next();
 
+  // /auth/guest/:token（本人だけに伝える秘密URL）経由のCookieがあれば許可
+  const guestLabel = getSignedCookie(req, GUEST_ACCESS_COOKIE);
+  if (guestLabel && GUEST_LABELS.has(guestLabel)) return next();
+
   const clientIP  = getClientIP(req);
   const officeIPs = getAllOfficeIPs();
 
@@ -239,6 +259,20 @@ app.get('/auth/lark/callback', async (req, res) => {
     console.error('[auth/lark] エラー:', e.message);
     res.status(500).send('認証エラーが発生しました。もう一度お試しください。');
   }
+});
+
+// ---- ゲスト用秘密URL（Lark認証が使えないテナント外ユーザー向け）----
+// 本人だけに伝える秘密URLにアクセスするとCookieが発行され、
+// 以降はどの回線からでも /staff 等にWi-Fi制限なしでアクセスできる
+app.get('/auth/guest/:token', (req, res) => {
+  const label = GUEST_TOKENS[req.params.token];
+  if (!label) return sendWifiRequired(res, 403);
+  setSignedCookie(res, GUEST_ACCESS_COOKIE, label, {
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1年
+    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+  });
+  console.log(`[guest] アクセス許可: ${label}`);
+  res.redirect('/staff');
 });
 
 // ---- 管理者専用ページ（URLを知っている管理者本人のみが使う想定）----
