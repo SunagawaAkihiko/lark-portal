@@ -11,6 +11,8 @@
 // Wi-Fi制限の仕組み:
 //   環境変数 SHOP_{KEY}_IP に登録された拠点IPからのアクセスのみ許可する。
 //   打刻サーバーと同じ命名規則。例: SHOP_A_IP=1.2.3.4  SHOP_B_IP=5.6.7.8
+//   admin.htmlにアクセスするとCookie(glad_admin_access)が発行され、
+//   以降admin.html内のカードから開く各ページもWi-Fi制限なしで閲覧できる。
 // ============================================================
 
 const express = require('express');
@@ -25,6 +27,7 @@ const ALLOWED_OPEN_IDS  = new Set(
 );
 const COOKIE_SECRET      = process.env.COOKIE_SECRET || 'glad-staff-secret';
 const STAFF_ACCESS_COOKIE = 'glad_staff_access';
+const ADMIN_ACCESS_COOKIE = 'glad_admin_access';
 
 // ---- Wi-Fi制限ページHTML（ファイル読み込みではなく直接埋め込み）----
 const WIFI_REQUIRED_HTML = `<!DOCTYPE html>
@@ -148,6 +151,9 @@ function requireOfficeWifi(req, res, next) {
     if (openId && ALLOWED_OPEN_IDS.has(openId)) return next();
   }
 
+  // admin.html（URLを知っている管理者のみが開く前提）経由のCookieがあれば許可
+  if (getSignedCookie(req, ADMIN_ACCESS_COOKIE) === '1') return next();
+
   const clientIP  = getClientIP(req);
   const officeIPs = getAllOfficeIPs();
 
@@ -265,6 +271,17 @@ app.use((req, res, next) => {
   params.set('_v', PAGE_VERSION);
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.redirect(302, `${req.path}?${params.toString()}`);
+});
+
+// ---- 管理者用Cookie発行 ----
+// admin.html（URLを知っている管理者本人のみが開く想定）にアクセスした際、
+// 以降admin.html内のカードから開く各ページもWi-Fi制限なしで閲覧できるようCookieを発行する
+app.get('/admin.html', (req, res, next) => {
+  setSignedCookie(res, ADMIN_ACCESS_COOKIE, '1', {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30日
+    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+  });
+  next();
 });
 
 // ---- /staff ルート（スタッフ個人スマホ用・Wi-Fi限定）----
