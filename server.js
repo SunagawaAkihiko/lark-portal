@@ -73,6 +73,7 @@ function requireOfficeWifi(req, res, next) {
   }
 
   console.log(`[Wi-Fi制限] 拒否 IP=${clientIP}`);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
 }
 
@@ -80,7 +81,8 @@ function requireOfficeWifi(req, res, next) {
 // GET /auth/lark → Lark認可画面にリダイレクト
 app.get('/auth/lark', (req, res) => {
   const appId = process.env.LARK_APP_ID;
-  if (!appId || ALLOWED_OPEN_IDS.size === 0) {
+  if (!appId) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
   }
   const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/auth/lark/callback`);
@@ -118,8 +120,15 @@ app.get('/auth/lark/callback', async (req, res) => {
     console.log(`[auth/lark] ログイン試行: ${name} (${openId})`);
 
     if (!ALLOWED_OPEN_IDS.has(openId)) {
-      console.log(`[auth/lark] アクセス拒否: ${name} (${openId})`);
-      return res.status(403).sendFile(path.join(__dirname, 'wifi-required.html'));
+      console.log(`[auth/lark] アクセス拒否: ${name} (${openId}) ← ALLOWED_OPEN_IDS に追加してください`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.status(403).send(
+        `<html><body style="font-family:sans-serif;padding:40px;text-align:center">` +
+        `<h2>アクセスできません</h2>` +
+        `<p>このアカウント（${name}）は許可リストに登録されていません。</p>` +
+        `<p style="color:#666;font-size:13px">open_id: <code>${openId}</code></p>` +
+        `</body></html>`
+      );
     }
 
     // 許可済み → 署名付きCookieを発行して /staff へリダイレクト
@@ -141,7 +150,7 @@ app.get('/auth/lark/callback', async (req, res) => {
 // デプロイのたびにこの値を更新する。
 // URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
 // LarkのWebViewがキャッシュを使わず最新のHTMLを取得するよう強制する。
-const PAGE_VERSION = 'v9';
+const PAGE_VERSION = 'v10';
 
 // HTMLページへのアクセス時に _v パラメータが最新でなければリダイレクトする
 app.use((req, res, next) => {
