@@ -403,9 +403,10 @@ function createCard(link) {
     var card = document.createElement('div');
     card.className = 'card';
     card.style.cursor = 'pointer';
+    var baseUrl = link.url.indexOf('http') === 0 ? link.url : '/' + link.url;
     var url = window.ADMIN_MODE && link.url.endsWith('.html')
-        ? link.url + '?mode=admin'
-        : link.url;
+        ? baseUrl + '?mode=admin'
+        : baseUrl;
     card.addEventListener('click', function() { window.location.href = url; });
     card.innerHTML =
         '<div class="card-icon"><i class="fa-solid ' + link.icon + '"></i></div>' +
