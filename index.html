@@ -18,7 +18,7 @@
         <div class="shape shape-2"></div>
         <div class="shape shape-3"></div>
     </div>
-    
+
     <div class="container">
         <header>
             <h1><i class="fa-solid fa-briefcase"></i> お仕事ツール</h1>
@@ -29,12 +29,233 @@
                 <!-- Links will be injected here by JavaScript -->
             </div>
         </main>
-        
+
         <footer>
             <p>Designed for better productivity.</p>
         </footer>
     </div>
 
-    <script src="script.js?v=11"></script>
+    <script>
+const portalLinks = [
+    {
+        title: "予定カレンダー",
+        description: "本日の予定確認とスケジュールの新規登録",
+        icon: "fa-calendar-days",
+        url: "calendar.html"
+    },
+    {
+        title: "各種データ",
+        description: "バイタル、体重、排便、食事摂取量、水分摂取量などのデータ閲覧・登録を行います",
+        icon: "fa-database",
+        url: "care-record.html"
+    },
+    {
+        title: "ヘルパー記録",
+        description: "ヘルパー記録の入力・確認",
+        icon: "fa-clipboard-user",
+        url: "helper-record.html"
+    },
+    {
+        title: "入居者物品提供",
+        description: "入居者へ消耗品を提供した際に使用",
+        icon: "fa-box-open",
+        url: "consumable-record.html"
+    },
+    {
+        title: "消耗品注文",
+        description: "",
+        icon: "fa-cart-shopping",
+        url: "consumable-order.html"
+    },
+    {
+        title: "物品購入申請",
+        description: "新しい物品の購入を提案・申請します",
+        icon: "fa-file-invoice-dollar",
+        url: "purchase-request.html"
+    },
+    {
+        title: "レク予定・実施報告",
+        description: "",
+        icon: "fa-users",
+        url: "rec-report.html"
+    },
+    {
+        title: "入金確認",
+        description: "利用料入金の登録・確認",
+        icon: "fa-yen-sign",
+        url: "payment-confirm.html"
+    },
+    {
+        title: "入金管理",
+        description: "未入金の確認・入金登録・領収書メール送信",
+        icon: "fa-yen-sign",
+        url: "payment-collection.html",
+        adminOnly: true
+    },
+    {
+        title: "お客様情報登録",
+        description: "新しい利用者の基本情報・家族情報・住所等を登録します",
+        icon: "fa-user-plus",
+        url: "customer-register.html",
+        adminOnly: true,
+        selfEntry: true
+    },
+    {
+        title: "スタッフ入職登録",
+        description: "入職時の基本情報・住所・保有資格などを登録します",
+        icon: "fa-user-tie",
+        url: "staff-register.html",
+        adminOnly: true,
+        selfEntry: true
+    },
+    {
+        title: "スタッフマイページ",
+        description: "給与明細・有休残日数・出勤記録などを本人が確認できます",
+        icon: "fa-id-card",
+        url: "https://attendance-app-irf1.onrender.com/staff-mypage.html",
+        adminOnly: true,
+        selfEntry: true
+    },
+    {
+        title: "スタッフ給与設定",
+        description: "入職スタッフの雇用形態・手当・シフト・給与情報を設定します",
+        icon: "fa-user-gear",
+        url: "staff-admin-edit.html",
+        adminOnly: true
+    },
+    {
+        title: "顧客別作業設定",
+        description: "事業所別の時間割を確認しながら顧客のサービス登録・管理を行います",
+        icon: "fa-calendar-check",
+        url: "service-schedule.html",
+        adminOnly: true
+    },
+    {
+        title: "物品提供管理",
+        description: "入居者への物品提供履歴の確認・編集と消耗品マスタの商品登録",
+        icon: "fa-box-open",
+        url: "supply-admin.html",
+        adminOnly: true
+    },
+    {
+        title: "給与・出勤管理",
+        description: "給与一覧表・有休管理・出勤簿・保険料設定",
+        icon: "fa-money-bill-wave",
+        url: "salary-admin.html",
+        adminOnly: true
+    },
+    {
+        title: "実績報告書",
+        description: "利用者毎・作業項目別・記録分類別の月次集計とPDF出力",
+        icon: "fa-chart-pie",
+        url: "performance-report.html",
+        adminOnly: true
+    },
+    {
+        title: "シフト管理",
+        description: "月次シフトの自動作成・手動調整・PDF出力",
+        icon: "fa-calendar-alt",
+        url: "shift.html",
+        adminOnly: true
+    },
+    {
+        title: "入居者情報",
+        description: "入居者情報の閲覧・薬手帳の登録ができます",
+        icon: "fa-address-card",
+        url: "customer-info.html"
+    },
+    {
+        title: "各種マニュアル",
+        description: "業務や操作に関するマニュアル",
+        icon: "fa-book",
+        url: "manual.html"
+    },
+    {
+        title: "BCP（事業継続計画）",
+        description: "計画書の閲覧・印刷と机上訓練の記録",
+        icon: "fa-shield-halved",
+        url: "https://attendance-app-irf1.onrender.com/bcp.html"
+    }
+];
+
+function createSectionDivider(type) {
+    const div = document.createElement('div');
+    if (type === 'staff') {
+        div.className = 'section-divider section-divider--staff';
+        div.innerHTML = '<i class="fa-solid fa-users"></i> スタッフ共通ツール';
+    } else if (type === 'admin') {
+        div.className = 'section-divider section-divider--admin';
+        div.innerHTML = '<i class="fa-solid fa-lock"></i> 管理者専用ツール';
+    } else {
+        div.className = 'section-divider section-divider--self';
+        div.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> ご本人入力フォーム';
+    }
+    return div;
+}
+
+function buildDashboard() {
+    const grid = document.getElementById('link-grid');
+    grid.innerHTML = '';
+
+    const staffLinks = portalLinks.filter(function(link) { return !link.adminOnly; });
+    const selfLinks  = portalLinks.filter(function(link) { return  link.adminOnly &&  link.selfEntry; });
+    const adminLinks = portalLinks.filter(function(link) { return  link.adminOnly && !link.selfEntry; });
+
+    if (window.ADMIN_MODE === true) {
+        grid.appendChild(createSectionDivider('staff'));
+        staffLinks.forEach(function(link) { grid.appendChild(createCard(link)); });
+        grid.appendChild(createSectionDivider('admin'));
+        adminLinks.forEach(function(link) { grid.appendChild(createCard(link)); });
+        grid.appendChild(createSectionDivider('self'));
+        selfLinks.forEach(function(link) { grid.appendChild(createCard(link)); });
+    } else {
+        staffLinks.forEach(function(link) { grid.appendChild(createCard(link)); });
+    }
+}
+
+function createCard(link) {
+    const card = document.createElement('a');
+    card.className = 'card';
+    const url = window.ADMIN_MODE && link.url.endsWith('.html')
+        ? link.url + '?mode=admin'
+        : link.url;
+    card.href = url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.innerHTML =
+        '<div class="card-icon"><i class="fa-solid ' + link.icon + '"></i></div>' +
+        '<div class="card-text"><h2 class="card-title">' + link.title + '</h2>' +
+        (link.description ? '<p class="card-desc">' + link.description + '</p>' : '') +
+        '</div>';
+    return card;
+}
+
+function syncLayout() {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const container   = document.querySelector('.container');
+    const grid        = document.getElementById('link-grid');
+    if (!container || !grid) return;
+    container.classList.toggle('container--landscape', isLandscape);
+    grid.classList.toggle('grid--landscape', isLandscape);
+}
+
+buildDashboard();
+syncLayout();
+
+window.addEventListener('resize', syncLayout);
+
+(function () {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    const BASE = 'width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover';
+    window.addEventListener('orientationchange', function() {
+        meta.content = 'width=1, initial-scale=1';
+        setTimeout(function() {
+            meta.content = BASE;
+            setTimeout(syncLayout, 50);
+        }, 150);
+    });
+}());
+    </script>
 </body>
 </html>
