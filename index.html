@@ -400,12 +400,13 @@ function buildDashboard() {
 }
 
 function createCard(link) {
-    var card = document.createElement('a');
+    var card = document.createElement('div');
     card.className = 'card';
+    card.style.cursor = 'pointer';
     var url = window.ADMIN_MODE && link.url.endsWith('.html')
         ? link.url + '?mode=admin'
         : link.url;
-    card.href = url;
+    card.addEventListener('click', function() { window.location.href = url; });
     card.innerHTML =
         '<div class="card-icon"><i class="fa-solid ' + link.icon + '"></i></div>' +
         '<div class="card-text"><h2 class="card-title">' + link.title + '</h2>' +

@@ -226,7 +226,7 @@ app.get('/auth/lark/callback', async (req, res) => {
 // デプロイのたびにこの値を更新する。
 // URLに _v パラメータがない or 古い場合は最新バージョン付きURLへリダイレクトし、
 // LarkのWebViewがキャッシュを使わず最新のHTMLを取得するよう強制する。
-const PAGE_VERSION = 'v12';
+const PAGE_VERSION = 'v13';
 
 // HTMLページへのアクセス時に _v パラメータが最新でなければリダイレクトする
 app.use((req, res, next) => {
@@ -242,6 +242,9 @@ app.use((req, res, next) => {
 // URLを /staff（末尾スラッシュなし）にすることで、index.html内の
 // 相対リンク（care-record.html等）が /care-record.html に正しく解決される
 app.get('/staff', requireOfficeWifi, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
