@@ -406,8 +406,6 @@ function createCard(link) {
         ? link.url + '?mode=admin'
         : link.url;
     card.href = url;
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
     card.innerHTML =
         '<div class="card-icon"><i class="fa-solid ' + link.icon + '"></i></div>' +
         '<div class="card-text"><h2 class="card-title">' + link.title + '</h2>' +
