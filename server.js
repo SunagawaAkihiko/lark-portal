@@ -194,6 +194,9 @@ app.use(express.static(__dirname, {
   }
 }));
 
+// /ping（コールドスタート防止用ヘルスチェック）
+app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 app.listen(PORT, () => {
   const ips = [...getAllOfficeIPs()];
   console.log(`lark-portal 起動中 (port=${PORT})`);
