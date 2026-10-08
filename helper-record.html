@@ -625,6 +625,9 @@
       <button class="filter-btn" id="pdfBtn" onclick="downloadPDF()" title="PDFダウンロード" style="background:#457b9d">
         <i class="fa-solid fa-file-pdf"></i>
       </button>
+      <button class="filter-btn" id="auditPdfBtn" onclick="downloadAuditPdf()" title="監査用PDF出力（スタッフ×日マトリクス）" style="background:#6c5ce7">
+        <i class="fa-solid fa-table-cells"></i>
+      </button>
     </div>
     <!-- 件数表示 -->
     <div id="recordCount" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
@@ -3859,6 +3862,130 @@
       } finally {
         pdfBtn.disabled = false;
         pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+      }
+    }
+
+    // "H:MM" / "HH:MM" 形式の時刻文字列を分数に変換する（ソート用）
+    function timeStrToMinutesClient(t) {
+      const [h, m] = (t || '0:00').split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    }
+
+    // 運営指導・監査提出用：スタッフ×日のマトリクス形式でPDF出力する。
+    // 画面の氏名・区分フィルターは無視し、選択中の事業所・年月の全記録を対象にする
+    // （特定利用者だけに絞った状態で出力して他スタッフが漏れる事故を防ぐため）。
+    async function downloadAuditPdf() {
+      const monthVal = document.getElementById('filterMonth').value || '';
+      const [year, month] = monthVal.split('-');
+      if (!year || !month) { alert('年月を選択してください。'); return; }
+
+      const btn = document.getElementById('auditPdfBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      try {
+        const params = new URLSearchParams({ office: activeOffice, year, month });
+        const res  = await fetch(`${API_BASE}/api/helper/records?${params}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        const records = data.records || [];
+
+        const lastDay   = new Date(Number(year), Number(month), 0).getDate();
+        const days      = Array.from({ length: lastDay }, (_, i) => i + 1);
+        const dowLabels = ['日','月','火','水','木','金','土'];
+
+        // スタッフ×日のマトリクスを構築する（開始・終了時刻が算出できたレコードのみ対象）
+        const staffSet = new Set();
+        const matrix = {}; // { スタッフ名: { 日: [{start,end}, ...] } }
+        for (const r of records) {
+          if (!r.スタッフ || !r.startTime || !r.endTime) continue;
+          const jst = new Date(r.実施日 + 9 * 3600 * 1000);
+          const day = jst.getUTCDate();
+          staffSet.add(r.スタッフ);
+          if (!matrix[r.スタッフ]) matrix[r.スタッフ] = {};
+          if (!matrix[r.スタッフ][day]) matrix[r.スタッフ][day] = [];
+          matrix[r.スタッフ][day].push({ start: r.startTime, end: r.endTime });
+        }
+        if (staffSet.size === 0) { alert('対象データがありません。'); return; }
+
+        const staffList = Array.from(staffSet).sort((a, b) => a.localeCompare(b, 'ja'));
+        for (const staff of staffList) {
+          for (const day of days) {
+            const cell = matrix[staff]?.[day];
+            if (cell) cell.sort((a, b) => timeStrToMinutesClient(a.start) - timeStrToMinutesClient(b.start));
+          }
+        }
+
+        // ヘッダー行（日付＋曜日、土日は色分け）
+        let headHtml = `<th style="padding:3px 4px;text-align:left;white-space:nowrap;width:70px">スタッフ</th>`;
+        for (const day of days) {
+          const dow = dowLabels[new Date(Number(year), Number(month) - 1, day).getDay()];
+          const color = dow === '日' ? '#ff8787' : dow === '土' ? '#74c0fc' : '#fff';
+          headHtml += `<th style="padding:3px 1px;text-align:center;color:${color};font-size:8px">${day}<br>${dow}</th>`;
+        }
+
+        // ボディ行
+        let bodyHtml = '';
+        staffList.forEach((staff, idx) => {
+          const rowBg = idx % 2 === 0 ? '#ffffff' : '#fdf6ec';
+          bodyHtml += `<tr style="background:${rowBg};border-bottom:1px solid #ddd">`;
+          bodyHtml += `<td style="padding:3px 4px;white-space:nowrap;font-weight:700">${escHtml(staff)}</td>`;
+          for (const day of days) {
+            const cell = matrix[staff]?.[day];
+            const text = cell ? cell.map(c => `${c.start}~${c.end}`).join('<br>') : '';
+            bodyHtml += `<td style="padding:2px 1px;text-align:center;font-size:7px;line-height:1.3;border-left:1px solid #eee">${text}</td>`;
+          }
+          bodyHtml += `</tr>`;
+        });
+
+        let title = `シフト実績表　${year}年${month}月`;
+        if (activeOffice) title += `　${activeOffice}`;
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = [
+          'position:fixed','top:-9999px','left:0',
+          'width:2200px','background:#fff',
+          'padding:20px 24px','box-sizing:border-box',
+          'font-family:"Zen Kaku Gothic New",sans-serif','color:#333',
+        ].join(';');
+        wrap.innerHTML = `
+          <div style="margin-bottom:10px;display:flex;align-items:baseline;gap:12px">
+            <span style="font-size:14px;font-weight:700">${title}</span>
+            <span style="font-size:10px;color:#888">${staffList.length}名</span>
+            <span style="font-size:9px;color:#aaa;margin-left:auto">出力日: ${new Date().toLocaleDateString('ja-JP')}</span>
+          </div>
+          <table style="border-collapse:collapse;width:100%;table-layout:fixed">
+            <thead><tr style="background:#4a3f35;color:#fff">${headHtml}</tr></thead>
+            <tbody>${bodyHtml}</tbody>
+          </table>`;
+        document.body.appendChild(wrap);
+
+        const canvas = await html2canvas(wrap, { scale: 1.5, useCORS: true, logging: false });
+        document.body.removeChild(wrap);
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const pdf    = new jspdf.jsPDF('l', 'mm', 'a4');
+        const pdfW   = pdf.internal.pageSize.getWidth();
+        const pdfH   = pdf.internal.pageSize.getHeight();
+        const ratio  = pdfW / canvas.width;
+        const imgH   = canvas.height * ratio;
+
+        let yOff = 0;
+        while (yOff < imgH) {
+          if (yOff > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -yOff, pdfW, imgH);
+          yOff += pdfH;
+        }
+
+        const officePart = activeOffice ? `_${activeOffice}` : '';
+        pdf.save(`シフト実績表_${year}年${month}月${officePart}.pdf`);
+
+      } catch (e) {
+        console.error('[downloadAuditPdf]', e);
+        alert('PDF生成に失敗しました: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-table-cells"></i>';
       }
     }
 
